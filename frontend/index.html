@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="无职游戏：扫雷、照明与数独三关解谜游戏。" />
+    <meta name="theme-color" content="#102b3c" />
+    <title>无职游戏</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css?v=20261018-timer2" />
+  </head>
+  <body>
+    <div class="world-background" aria-hidden="true"></div>
+    <main class="page">
+      <section id="landing" aria-labelledby="landing-title">
+        <header class="landing-header">
+          <span class="brand"><span class="brand-mark" aria-hidden="true">◇</span> 无职游戏</span>
+          <nav class="site-nav" aria-label="主导航">
+            <a href="./ranking.html">排行榜</a>
+            <a href="./index.html" aria-current="page">无职游戏</a>
+            <a href="./forum.html">论坛</a>
+          </nav>
+          <span class="header-note">一座小岛 · 三场挑战</span>
+        </header>
+        <div class="landing-hero">
+          <p class="eyebrow"><span aria-hidden="true"></span> 解谜之旅，从这里开始</p>
+          <h1 id="landing-title">无职游戏<span>让好奇心，带你出发。</span></h1>
+          <p class="hero-description">暂别忙碌，潜入这片蔚蓝。<br />在数字与光影之间，找到你的答案。</p>
+          <a class="explore-link" href="#level-select">选择你的挑战 <span aria-hidden="true">↓</span></a>
+        </div>
+        <div class="level-select" id="level-select">
+          <div class="section-heading"><h2>冒险启程</h2><span>自由选择关卡，随时开始</span></div>
+          <div class="level-grid">
+            <button type="button" id="start-button" class="level-card mine-card">
+              <span class="level-art"><img src="./assets/minesweeper.webp" width="320" height="320" alt="" /></span>
+              <span class="level-content"><span class="level-number">第一关 / 01</span><span class="level-title">扫雷</span><span class="level-description">步步推理，避开暗藏的危险。</span><span class="level-meta">10 × 10 棋盘<span>10 颗地雷</span></span></span>
+              <span class="level-arrow" aria-hidden="true">↗</span>
+            </button>
+            <button type="button" id="akari-entry" class="level-card light-card">
+              <span class="level-art"><img src="./assets/bulb.webp" width="320" height="320" alt="" /></span>
+              <span class="level-content"><span class="level-number">第二关 / 02</span><span class="level-title">照明</span><span class="level-description">点亮一盏灯，驱散每一处黑暗。</span><span class="level-meta">10 × 10 棋盘<span>光影推理</span></span></span>
+              <span class="level-arrow" aria-hidden="true">↗</span>
+            </button>
+            <button type="button" id="sudoku-entry" class="level-card sudoku-card">
+              <span class="level-art sudoku-art" aria-hidden="true"><span>1</span><span>2</span><span></span><span></span><span>5</span><span>6</span><span>7</span><span></span><span>9</span></span>
+              <span class="level-content"><span class="level-number">第三关 / 03</span><span class="level-title">数独</span><span class="level-description">在九宫格里，发现秩序之美。</span><span class="level-meta">9 × 9 棋盘<span>中等难度</span></span></span>
+              <span class="level-arrow" aria-hidden="true">↗</span>
+            </button>
+          </div>
+        </div>
+        <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span><span>扫雷 / 照明 / 数独</span></footer>
+      </section>
+
+      <section id="game-screen" class="game-panel hidden" aria-labelledby="game-title">
+        <div class="top-row">
+          <button type="button" id="back-button">返回首页</button>
+          <span class="screen-brand">无职游戏</span>
+          <button type="button" id="restart-button">重新开始</button>
+        </div>
+        <div class="game-heading"><img src="./assets/minesweeper.webp" width="64" height="64" alt="" /><div><p class="eyebrow">第一关 / MINESWEEPER</p><h1 id="game-title">扫雷</h1><p>每一步，都离答案更近。</p></div></div>
+        <div class="game-tools"><button type="button" id="mine-sound" aria-label="关闭爆炸音效" aria-pressed="false">音效：开</button></div>
+        <div class="stats" aria-label="游戏数据">
+          <span>剩余地雷：<strong id="mines-left">10</strong></span>
+          <span>已排查：<strong id="cleared-count">0</strong></span>
+          <span>用时：<strong id="timer">00:00</strong></span>
+        </div>
+        <p id="board-caption">点选一个格子，再选择操作。棋盘可左右滑动。</p>
+        <div class="board-viewport" id="board-viewport" tabindex="0" aria-label="扫雷棋盘，可滑动查看">
+          <div class="board" id="board" role="group" aria-label="扫雷格子"></div>
+        </div>
+        <div class="controls">
+          <p id="selection-label">尚未选择格子</p>
+          <div class="action-buttons">
+            <button type="button" id="flag-button" disabled>标记</button>
+            <button type="button" id="reveal-button" disabled>排雷</button>
+          </div>
+        </div>
+        <div class="game-bottom">
+          <p id="game-message" role="status" aria-live="polite"></p>
+          <button type="button" id="mine-next" class="next-level hidden">下一关：照明 →</button>
+        </div>
+      </section>
+
+      <section id="sudoku-screen" class="game-panel hidden" aria-labelledby="sudoku-title">
+        <div class="top-row">
+          <button type="button" id="sudoku-back">返回首页</button>
+          <span class="screen-brand">无职游戏</span>
+          <button type="button" id="sudoku-restart">重新开始</button>
+        </div>
+        <div class="game-heading"><div><p class="eyebrow">第三关 / SUDOKU</p><h1 id="sudoku-title">数独</h1><p>中等难度 · 固定题盘 · 34 个已给数字</p></div></div>
+        <p class="level-timer">本关用时 <strong id="sudoku-timer">00:00</strong></p>
+        <div class="sudoku-board" id="sudoku-board" role="group" aria-label="数独棋盘"></div>
+        <p id="sudoku-selection">请选择一个空格。</p>
+        <div class="sudoku-keypad" id="sudoku-keypad" role="group" aria-label="填写数字">
+          <button type="button" data-digit="1">1</button>
+          <button type="button" data-digit="2">2</button>
+          <button type="button" data-digit="3">3</button>
+          <button type="button" data-digit="4">4</button>
+          <button type="button" data-digit="5">5</button>
+          <button type="button" data-digit="6">6</button>
+          <button type="button" data-digit="7">7</button>
+          <button type="button" data-digit="8">8</button>
+          <button type="button" data-digit="9">9</button>
+        </div>
+        <div class="sudoku-actions">
+          <button type="button" id="sudoku-clear">清除选中格</button>
+          <button type="button" id="sudoku-check">检查进度</button>
+        </div>
+        <div class="game-bottom"><button type="button" id="settlement-open" class="next-level hidden">开始结算</button></div>
+        <p id="sudoku-message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="akari-screen" class="game-panel hidden" aria-labelledby="akari-title">
+        <div class="top-row">
+          <button type="button" id="akari-back">返回首页</button>
+          <span class="screen-brand">无职游戏</span>
+          <button type="button" id="akari-restart">重新开始</button>
+        </div>
+        <div class="game-heading"><img src="./assets/bulb.webp" width="64" height="64" alt="" /><div><p class="eyebrow">第二关 / AKARI</p><h1 id="akari-title">照明</h1><p>让光，抵达每一个角落。</p></div></div>
+        <p class="level-timer">本关用时 <strong id="akari-timer">00:00</strong></p>
+        <p>点击未照亮的蓝紫色格放置灯泡，再点一次可撤掉。黑色墙格不可放灯；照亮的格子显示为暖黄色。棋盘可在区域内滑动。</p>
+        <div class="akari-viewport" tabindex="0" aria-label="照明棋盘，可滑动查看">
+          <div class="akari-board" id="akari-board" role="group" aria-label="照明格子"></div>
+        </div>
+        <div class="game-bottom">
+          <p id="akari-status">已照亮：0 格</p>
+          <button type="button" id="akari-next" class="next-level hidden">下一关：数独 →</button>
+        </div>
+        <p id="akari-message" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <div class="dialog-backdrop hidden" id="rules-dialog" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+      <div class="dialog-card">
+        <h2 id="rules-title">游戏规则</h2>
+        <ol>
+          <li>棋盘有 10 × 10 个格子，其中藏有 10 颗雷。</li>
+          <li>先点选一个格子，再点击“标记”或“排雷”。</li>
+          <li>数字表示周围八个格子中的地雷数量。</li>
+          <li>排开所有安全格即可获胜；排到地雷则失败。首次排雷也可能踩雷。</li>
+        </ol>
+        <p>在手机上可以左右滑动棋盘。</p>
+        <button type="button" id="rules-close">开始扫雷</button>
+      </div>
+    </div>
+
+    <div class="dialog-backdrop hidden" id="sudoku-rules-dialog" role="dialog" aria-modal="true" aria-labelledby="sudoku-rules-title">
+      <div class="dialog-card">
+        <h2 id="sudoku-rules-title">数独规则</h2>
+        <ol>
+          <li>在空格中填入 1 到 9。</li>
+          <li>每一行、每一列、每个 3 × 3 宫格都要包含 1 到 9，不能重复。</li>
+          <li>题目给出的数字不能修改。点选空格后，用下方数字按钮填写；“清除选中格”可擦除填写的数字。</li>
+          <li>填对全部空格即可通关。“检查进度”会提示重复数字或剩余空格，不会给出答案。</li>
+        </ol>
+        <button type="button" id="sudoku-rules-close">开始数独</button>
+      </div>
+    </div>
+
+    <div class="dialog-backdrop hidden" id="akari-rules-dialog" role="dialog" aria-modal="true" aria-labelledby="akari-rules-title">
+      <div class="dialog-card">
+        <h2 id="akari-rules-title">照明规则</h2>
+        <ol>
+          <li>蓝紫色是未照亮的可放灯格，点击放灯泡；再点一次撤掉。照亮后格子变为暖黄色。</li>
+          <li>黑色是不可放灯的墙格。灯光沿上下左右照射，遇到墙格或棋盘边缘停止。</li>
+          <li>数字墙格表示上下左右相邻格子需要放几盏灯；没有数字的墙格只负责挡光。</li>
+          <li>灯泡不能照到另一盏灯。照亮所有可放灯格，并满足全部数字墙格，就能通关。</li>
+        </ol>
+        <button type="button" id="akari-rules-close">开始照明</button>
+      </div>
+    </div>
+
+    <div class="dialog-backdrop hidden" id="result-dialog" role="dialog" aria-modal="true" aria-labelledby="result-title">
+      <div class="dialog-card">
+        <h2 id="result-title">游戏结束</h2>
+        <p id="result-description"></p>
+        <div class="dialog-actions">
+          <button type="button" id="result-primary">重新开始</button>
+          <button type="button" id="result-secondary">返回首页</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dialog-backdrop hidden" id="settlement-dialog" role="dialog" aria-modal="true" aria-labelledby="settlement-title">
+      <div class="dialog-card settlement-card">
+        <p class="eyebrow">冒险记录 / RESULTS</p>
+        <h2 id="settlement-title">本轮结算</h2>
+        <p id="settlement-note"></p>
+        <ol class="settlement-levels" aria-label="各关通关时间">
+          <li><span><small>第一关</small>扫雷</span><strong id="settlement-mine">—</strong></li>
+          <li><span><small>第二关</small>照明</span><strong id="settlement-akari">—</strong></li>
+          <li><span><small>第三关</small>数独</span><strong id="settlement-sudoku">—</strong></li>
+        </ol>
+        <div class="settlement-total"><span id="settlement-total-label">总共花费时间</span><strong id="settlement-total">00:00</strong></div>
+        <div class="dialog-actions">
+          <button type="button" id="settlement-home">返回首页</button>
+          <button type="button" id="settlement-ranking" disabled>查看排行（暂未开放）</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./src/main.js?v=20261018-timer2"></script>
+  </body>
+</html>
