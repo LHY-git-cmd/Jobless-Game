@@ -75,6 +75,8 @@ flyway -configFiles=backend/flyway.conf info
 
 ## 宝塔与 Nginx
 
+采用“Docker 后端 + 宝塔已有 Nginx/MySQL”的离线镜像部署时，参见 [服务器快速部署](./deploy/server/README.md)。该包沿用下面的代理和限流模板，提供 Linux 宿主机网络 Compose 与隐藏读取密码的配置脚本，无需在服务器安装 Python 项目依赖。
+
 排行榜新增 API 同样通过下述 `/api/` 通用代理，不需要增加常驻服务。
 
 1. 复用现有 Nginx/MySQL，站点根目录指向 `frontend/`，后端和配置不得放入 Web 根目录。准备虚拟环境、`backend/.env` 并完成迁移。

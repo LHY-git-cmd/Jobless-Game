@@ -66,6 +66,11 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V1__create_auth_tables.sql     # 用户、会话与相关唯一/到期索引
 │   │   └── V2__create_ranking_tables.sql  # 当前轮次、成绩、最佳摘要及排序/去重索引
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
+│   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
+│   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
+│   │   │   ├── compose.yaml              # 宿主机网络 API 与一次性 Flyway
+│   │   │   ├── configure.py              # 隐藏输入密码，生成私密配置并自动 URL 编码
+│   │   │   └── build_release.py          # 构建 amd64 镜像并打包网页、迁移和配置模板
 │   │   ├── docker/                       # 本机完整容器部署、说明与真实 HTTP 验证
 │   │   │   ├── README.md                 # 启停、迁移、数据持久化及资源边界
 │   │   │   ├── api.Dockerfile            # 非 root、单 worker API 镜像
@@ -158,6 +163,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       └── extract_minesweeper.py         # 提取、处理扫雷格子素材
 │
 └── artifacts/                            # 验证过程产生的截图、日志与辅助检查材料
+    ├── server-deploy/                    # 离线服务器部署 ZIP、校验文件及兼容性验证日志；不提交
     ├── backend/                          # 后端测试和可选真实 MySQL/Flyway 日志
     │   └── *.log                         # 完整测试输出；不纳入版本管理
     └── frontend/                         # 前端浏览器验证脚本和验证产物

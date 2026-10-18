@@ -49,6 +49,8 @@
 
 ## 部署
 
+服务器已安装宝塔 Nginx/MySQL 时，可使用 [宝塔服务器快速部署](./backend/deploy/server/README.md)：在开发机生成离线 ZIP，服务器导入 API/Flyway 镜像，交互填写数据库凭据后单次迁移并启动后端。前端由宝塔提供，后端只监听本机；无域名时先用公网 IP 的 HTTP 临时验收，正式使用需配置 HTTPS。
+
 本机完整 Docker 验证（Nginx、FastAPI、MySQL 与一次性 Flyway）已提供，入口为 `http://127.0.0.1:8080/`。首次准备 `.env.docker` 后运行 `docker compose --env-file .env.docker up -d --build --wait --wait-timeout 180`。配置、数据卷、资源限制与验证步骤见 [Docker 部署说明](./backend/deploy/docker/README.md)。该配置只绑定本机，不替代服务器 HTTPS 与资源验收。
 
 Nginx 站点根目录指向 `frontend/`，使用 HTTPS 并将同源 `/api/` 转发到本机单进程 FastAPI；后端和真实配置放在 Web 根目录之外。Flyway 在维护窗口单次执行后退出。宝塔、Nginx、systemd 以及低资源配置模板位于 `backend/deploy/`，具体步骤见 [部署说明](./backend/README.md)。切换前备份原配置与文件，先验证后切换。
