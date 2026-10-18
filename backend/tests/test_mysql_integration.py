@@ -44,7 +44,7 @@ class MySQLIntegrationTests(TestCase):
         if url.drivername != "mysql+pymysql" or not (url.database or "").startswith("jobless_auth_test_"):
             raise ValueError("只允许 mysql+pymysql 且数据库名以 jobless_auth_test_ 开头的专用测试库")
         cls.engine = create_engine(url, pool_size=3, max_overflow=0, pool_timeout=.2, connect_args={"connect_timeout": 3, "read_timeout": 5, "write_timeout": 5})
-        unexpected = set(inspect(cls.engine).get_table_names()) - {"users", "auth_sessions", "flyway_schema_history"}
+        unexpected = set(inspect(cls.engine).get_table_names()) - {"users", "auth_sessions", "flyway_schema_history", "challenge_progress", "completion_records", "leaderboard_entries"}
         if unexpected:
             raise ValueError("测试库存在其他业务表，已停止")
         env = dict(os.environ)
@@ -132,6 +132,35 @@ class MySQLIntegrationTests(TestCase):
         self.assertEqual(sum(outcome is not None for outcome in outcomes), 1)
         with self.sessions() as db:
             self.assertEqual(len(db.scalars(select(User).where(User.username_key == name)).all()), 1)
+
+    def test_ranking_concurrent_retry_and_retention(self):
+        """真实 InnoDB 用户锁使并发重复提交只记一次，V2 快照与保留规则可读。"""
+        from backend.app.services import ranking_service
+        from backend.app.models.schemas.ranking import StartRequest, CompleteRequest
+        from backend.app.models.entities.ranking import CompletionRecord
+        name = self.new_name()
+        with self.sessions() as db:
+            user, _, raw, _ = auth_service.login_transaction(LoginRequest(username=name, password="test-password"), db, get_settings())
+            user_id = user.id
+            state = ranking_service.start_transaction(raw, StartRequest(request_id=uuid4()), db)
+        payload = CompleteRequest(category="mine", revision=0, attempt_id=state["levels"][0]["attempt_id"], duration_seconds=10)
+
+        def submit():
+            """每个并发写入独立使用会话，依赖真实行锁而非进程锁。"""
+            with self.sessions() as db:
+                return ranking_service.complete_transaction(raw, state["run_id"], payload, db, get_settings())
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda _: submit(), range(2)))
+        self.assertEqual(results[0], results[1])
+        with self.sessions() as db:
+            self.assertEqual(len(db.scalars(select(CompletionRecord).where(CompletionRecord.user_id == user_id)).all()), 1)
+            self.assertEqual(ranking_service.records_transaction(raw, "mine", db)["best"]["duration_seconds"], 10)
+            for category, seconds in [("akari", 20), ("sudoku", 30)]:
+                idx = ranking_service.GAMES.index(category)
+                payload = CompleteRequest(category=category, revision=0, attempt_id=state["levels"][idx]["attempt_id"], duration_seconds=seconds)
+                state = ranking_service.complete_transaction(raw, state["run_id"], payload, db, get_settings())
+            self.assertEqual(ranking_service.records_transaction(raw, "total", db)["best"]["times"], [10, 20, 30])
 
     def test_pool_exhaustion_returns_bounded_503(self):
         # 占满真实测试库三条连接，API 应在 pool_timeout 后返回 503。

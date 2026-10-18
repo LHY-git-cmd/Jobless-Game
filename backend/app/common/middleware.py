@@ -19,7 +19,8 @@ class LoginBodyLimit:
             await original_send(message)
         if scope["type"] == "http" and scope["path"].startswith("/api/"):
             send = secure_send
-        if scope["type"] != "http" or scope["path"] != "/api/auth/login":
+        if scope["type"] != "http" or not (scope["path"] == "/api/auth/login" or
+                (scope["path"].startswith("/api/challenges/") and scope.get("method") == "POST")):
             return await self.app(scope, receive, send)
         body = bytearray()
         while True:

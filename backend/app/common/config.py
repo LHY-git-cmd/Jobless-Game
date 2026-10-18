@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     login_window_seconds: int = Field(default=60, ge=1, le=3600)
     login_hash_concurrency: int = Field(default=1, ge=1, le=1)
     max_request_body_bytes: int = Field(default=4096, ge=256, le=4096)
+    dev_quick_complete_enabled: bool = False
 
     model_config = SettingsConfigDict(env_file=Path(__file__).resolve().parents[2] / ".env", env_prefix="", extra="ignore", hide_input_in_errors=True)
 
