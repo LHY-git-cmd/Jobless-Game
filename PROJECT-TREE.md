@@ -112,7 +112,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── auth-game.js                  # 第一关登录拦截与授权入口续接
 │   │   ├── auth-page.js                  # 排行榜和论坛的登录初始化
 │   │   ├── mine-effects.js               # 扫雷连锁爆炸动画与音效控制
-│   │   ├── ranking-client.js             # 同源请求、挑战幂等负载、状态代数与失败重试
+│   │   ├── ranking-client.js             # 同源请求、HTTP 兼容 UUID、挑战幂等负载及失败重试
 │   │   ├── ranking-page.js               # 四榜共享分页、反馈与原轮次明细渲染
 │   │   ├── personal-records.js           # 首页我的通关记录：分类、最佳/最近三次、账号隔离与刷新
 │   │   ├── music.js                      # 全站音乐开关、结算胜利音效、静音与播放位置管理
@@ -139,7 +139,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── mine-effects.test.js          # 爆炸顺序、动画与声音控制测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
 │       ├── completion.test.js            # 逐关解锁、冻结计时、保存重试与开发通关回归
-│       ├── ranking-client.test.js        # 幂等负载、旧响应隔离及网络失败语义
+│       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
 │       └── music.test.js                 # 音轨切换、同轮一次、静音、播放拒绝与切页状态
 │
@@ -163,6 +163,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
     └── frontend/                         # 前端浏览器验证脚本和验证产物
         ├── verify_login.py               # 早期登录验收材料；当前逐关回归使用 verify_ranking.py
         ├── verify_ranking.py             # 临时数据库与真实浏览器：逐关、开发按钮及四榜验收
+        ├── verify_http_start.py          # 非安全 HTTP 浏览器环境下真实登录、开局重试与重新开始
         ├── verify_akari_completion.py     # 照明通关及结果界面验证脚本
         ├── verify_settlement.py          # 三关完成、祝贺与结算流程验证脚本
         ├── verify_live_timers.py         # 游戏实时计时显示验证脚本

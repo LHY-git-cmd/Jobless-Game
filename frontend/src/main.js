@@ -8,7 +8,7 @@ import { createSudoku, selectSudokuCell, setSudokuValue, sudokuConflicts, checkS
 import { AKARI_SIZE, akariCell, createAkari, inspectAkari, toggleBulb } from "./akari.js";
 import { createExplosionSequence, createExplosionSound, explosionOrder } from "./mine-effects.js";
 import { createSession, restartLevel, startLevel, completeLevel, levelSeconds, sessionSummary, formatTime } from "./session.js";
-import { ChallengeClient, rankingRequest } from "./ranking-client.js";
+import { ChallengeClient, rankingRequest } from "./ranking-client.js?v=20261018-http-uuid";
 
 const $ = (id) => document.getElementById(id);
 const ui = {

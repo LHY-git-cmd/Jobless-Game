@@ -1,10 +1,53 @@
 /** 挑战客户端测试：失败重试冻结负载、旧响应隔离与顺序解锁。 */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ChallengeClient, rankingRequest } from "../src/ranking-client.js";
+import { ChallengeClient, createRequestId, rankingRequest } from "../src/ranking-client.js";
 
 /** 返回符合接口约定的三关测试状态。 */
 function state() { return { run_id: "run", revision: 0, levels: [0, 1, 2].map((i) => ({ attempt_id: `a${i}`, seconds: null })), total_recorded: false }; }
+
+test("安全上下文仍可使用原生 UUID 且保留 Crypto 方法接收者", () => {
+  const cryptoApi = {
+    randomUUID() {
+      assert.equal(this, cryptoApi);
+      return "823996ac-a872-492d-a938-6981cd31a060";
+    },
+  };
+  assert.equal(createRequestId(cryptoApi), "823996ac-a872-492d-a938-6981cd31a060");
+});
+
+test("无安全随机数接口时给出可读错误而不退回普通随机数", () => {
+  assert.throws(() => createRequestId({}), /更新浏览器/);
+  assert.throws(() => createRequestId(null), /更新浏览器/);
+});
+
+test("HTTP 环境没有 randomUUID 时默认客户端可创建、重开并复用失败请求编号", async (t) => {
+  // 模拟公网 HTTP 的 Web Crypto：保留安全随机数，移除仅安全上下文可用的 randomUUID。
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  const getRandomValues = globalThis.crypto.getRandomValues.bind(globalThis.crypto);
+  Object.defineProperty(globalThis, "crypto", { configurable: true, value: { getRandomValues } });
+  t.after(() => Object.defineProperty(globalThis, "crypto", descriptor));
+  const calls = [];
+  const failures = new Set();
+  const client = new ChallengeClient(async (path, options) => {
+    calls.push({ path, id: options.body.request_id });
+    if (!failures.has(path)) {
+      failures.add(path);
+      throw new Error("offline");
+    }
+    return state();
+  });
+  await assert.rejects(client.start(), /offline/);
+  await client.start();
+  await assert.rejects(client.restart(0), /offline/);
+  await client.restart(0);
+  const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  assert.match(calls[0].id, uuidV4);
+  assert.match(calls[2].id, uuidV4);
+  assert.equal(calls[0].id, calls[1].id);
+  assert.equal(calls[2].id, calls[3].id);
+  assert.notEqual(calls[0].id, calls[2].id);
+});
 
 test("通关失败后的重试复用冻结负载并只解锁下一关", async () => {
   const calls = [];
