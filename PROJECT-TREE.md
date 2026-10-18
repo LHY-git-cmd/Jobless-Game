@@ -90,6 +90,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   └── ranking-implementation-report.md   # 排行榜实际产出、测试与待完成环境验收
 │
 ├── frontend/                             # 可独立预览的网页前端及其测试
+│   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
 │   ├── index.html                        # 游戏入口、三关界面及游戏弹窗
 │   ├── ranking.html                      # 完整三关总榜，可展开最佳轮次明细
 │   ├── ranking-mine.html                 # 扫雷历史最佳通关排行
@@ -118,6 +119,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   └── dev-quick-complete.js          # 可移除的开发验收：只求解当前关合法终盘
 │   │
 │   ├── assets/                           # 网页直接加载的处理后静态素材
+│   │   ├── favicon.png                   # 海岛方形图标的 180px PNG 预览
 │   │   ├── island.webp                   # 桌面海岛背景
 │   │   ├── island-mobile.webp            # 手机海岛背景
 │   │   ├── minesweeper.webp              # 扫雷入口图
