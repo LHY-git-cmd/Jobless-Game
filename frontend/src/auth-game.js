@@ -2,7 +2,7 @@
 import { initAuth } from "./auth.js";
 
 const auth = initAuth();
-for (const id of ["start-button", "akari-entry", "sudoku-entry"]) {
+for (const id of ["start-button"]) {
   const button = document.getElementById(id);
   let checking = false;
   button.addEventListener("click", async () => {

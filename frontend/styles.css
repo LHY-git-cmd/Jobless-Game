@@ -337,3 +337,11 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .auth-logout { padding-inline: 8px; }
   .auth-card { padding-inline: 20px; }
 }
+
+/* 逐关挑战保存反馈、临时验收按钮与锁定入口。 */
+.dev-quick { margin: 4px 0 12px; border-style: dashed; border-color: var(--gold); color: var(--gold); font-size: 13px; }
+.challenge-status { position: fixed; z-index: 15; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; width: min(92%, 600px); padding: 12px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 8px 30px #0006; font-size: 14px; line-height: 1.6; }
+#save-status { color: var(--gold); line-height: 1.7; }
+.level-card:disabled { opacity: .65; }
+.level-card:disabled .level-arrow { font-size: 0; }
+.level-card:disabled .level-arrow::after { content: '待解锁'; font-size: 13px; white-space: nowrap; }

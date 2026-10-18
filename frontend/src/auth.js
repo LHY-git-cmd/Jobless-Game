@@ -50,7 +50,9 @@ export function initAuth() {
 
   /** 用户名只写入 textContent，避免把用户输入作为 HTML 插入。 */
   function renderUser(value) {
+    const previousId = user?.id;
     user = value;
+    if (previousId !== user?.id) document.dispatchEvent(new CustomEvent("auth-changed"));
     const label = host.querySelector(".auth-user");
     label.textContent = user?.username || "";
     label.classList.toggle("hidden", !user);

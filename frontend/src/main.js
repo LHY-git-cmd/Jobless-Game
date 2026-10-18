@@ -1,6 +1,6 @@
 /**
  * 无职游戏页面入口：管理扫雷、数独、照明三关与对应的规则弹窗。
- * 三关均可从入口直接进入，在浏览器运行；不保存进行中的棋局。
+ * 本轮必须按扫雷、照明、数独顺序挑战，在浏览器运行；不保存进行中的棋局。
  */
 
 import { createGame, revealSelected, selectCell, toggleFlag } from "./game.js";
@@ -8,6 +8,7 @@ import { createSudoku, selectSudokuCell, setSudokuValue, sudokuConflicts, checkS
 import { AKARI_SIZE, akariCell, createAkari, inspectAkari, toggleBulb } from "./akari.js";
 import { createExplosionSequence, createExplosionSound, explosionOrder } from "./mine-effects.js";
 import { createSession, restartLevel, startLevel, completeLevel, levelSeconds, sessionSummary, formatTime } from "./session.js";
+import { ChallengeClient, rankingRequest } from "./ranking-client.js";
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -36,6 +37,73 @@ let resultMode = "";
 let mineExplosion = null;
 let soundMuted = false;
 let session = createSession();
+const challenge = new ChallengeClient();
+let operationBusy = false;
+let saveBusy = false;
+let retryOperation = null;
+let currentIndex = 0;
+let quickEnabled = false;
+let development = false;
+
+/** 保存提示在结果弹窗和棋盘外同步显示，离开弹窗后也能重试。 */
+function recordStatus(message = "", retry = null) {
+  $("challenge-message").textContent = message;
+  $("challenge-status").classList[message ? "remove" : "add"]("hidden");
+  $("save-status").textContent = message;
+  $("challenge-retry").classList[retry ? "remove" : "add"]("hidden");
+  $("save-retry").classList[retry ? "remove" : "add"]("hidden");
+  retryOperation = retry;
+}
+
+/** 只有服务端已经接收本关才开启下一关，失效轮次不会借用旧完成状态。 */
+function syncProgressActions() {
+  $("mine-next").disabled = !challenge.saved(0) || operationBusy;
+  $("akari-next").disabled = !challenge.saved(1) || operationBusy;
+  $("settlement-open").disabled = !challenge.saved(2) || operationBusy;
+  if (resultMode.endsWith("won")) ui.resultPrimary.disabled = !challenge.saved(currentIndex) || operationBusy;
+  $("settlement-ranking").disabled = !challenge.state?.total_recorded;
+  for (const [index, id] of ["mine-quick", "akari-quick", "sudoku-quick"].entries()) {
+    $(id).classList[quickEnabled ? "remove" : "add"]("hidden");
+    $(id).disabled = operationBusy || saveBusy || currentIndex !== index || session.levels[index].seconds !== null;
+  }
+}
+
+/** 通关立即保存；失败保留同一负载和终盘，重试不重复增加记录。 */
+async function persistCompletion() {
+  if (saveBusy || !challenge.state) return;
+  const index = currentIndex;
+  const generation = challenge.generation;
+  saveBusy = true;
+  recordStatus("正在保存通关记录…");
+  syncProgressActions();
+  try {
+    await challenge.complete(index, session.levels[index].seconds, development);
+    recordStatus(index === 2 ? "三关成绩已保存，可查看总榜。" : "通关记录已保存，下一关已解锁。");
+  } catch (error) {
+    if (generation === challenge.generation) recordStatus(error.message, persistCompletion);
+  } finally {
+    if (generation === challenge.generation) { saveBusy = false; syncProgressActions(); }
+  }
+}
+
+/** 在服务端确认重开之前阻止棋盘操作，失败时可原样重试。 */
+async function requestRestart(index, restart) {
+  if (operationBusy || saveBusy) return;
+  const generation = challenge.generation;
+  operationBusy = true;
+  syncProgressActions();
+  recordStatus("正在重新开始…");
+  try {
+    await challenge.restart(index);
+    development = false;
+    restart();
+    recordStatus();
+  } catch (error) {
+    if (generation === challenge.generation) recordStatus(error.message, () => requestRestart(index, restart));
+  } finally {
+    if (generation === challenge.generation) { operationBusy = false; syncProgressActions(); }
+  }
+}
 const explosionSound = createExplosionSound(new URL("../assets/audio/explosion.wav", import.meta.url));
 const explosionSequence = createExplosionSequence({
   reveal(index) {
@@ -104,6 +172,7 @@ function enterGame() {
   sudoku = null;
   akari = null;
   restartGame();
+  currentIndex = 0;
   ui.landing.classList.add("hidden");
   ui.sudokuScreen.classList.add("hidden");
   ui.akariScreen.classList.add("hidden");
@@ -111,8 +180,10 @@ function enterGame() {
   ui.mineRules.classList.remove("hidden");
   $("rules-close").focus();
   window.scrollTo(0, 0);
+  syncProgressActions();
 }
 
+/** 清空当前扫雷棋盘与计时；服务端重开在外层确认。 */
 function restartGame() {
   restartLevel(session, 0);
   resetCompletionActions();
@@ -126,7 +197,10 @@ function restartGame() {
 
 /** 进入固定数独题盘；每次进入或重新开始都从原题开始。 */
 function enterSudoku() {
-  if (!ui.landing.classList.contains("hidden")) session = createSession();
+  if (operationBusy || saveBusy || challenge.restartPayload || !challenge.canEnter(2)) return;
+  currentIndex = 2;
+  development = false;
+  recordStatus();
   cancelMineExplosion();
   game = null;
   akari = null;
@@ -138,8 +212,10 @@ function enterSudoku() {
   ui.sudokuRules.classList.remove("hidden");
   $("sudoku-rules-close").focus();
   window.scrollTo(0, 0);
+  syncProgressActions();
 }
 
+/** 从固定数独题目重新绘制，已保存历史成绩不受影响。 */
 function restartSudoku() {
   restartLevel(session, 2);
   resetCompletionActions();
@@ -151,7 +227,10 @@ function restartSudoku() {
 
 /** 进入照明关时显示规则；重新开始只重置灯泡，不再弹规则。 */
 function enterAkari() {
-  if (!ui.landing.classList.contains("hidden")) session = createSession();
+  if (operationBusy || saveBusy || challenge.restartPayload || !challenge.canEnter(1)) return;
+  currentIndex = 1;
+  development = false;
+  recordStatus();
   cancelMineExplosion();
   game = null;
   sudoku = null;
@@ -163,8 +242,10 @@ function enterAkari() {
   ui.akariRules.classList.remove("hidden");
   $("akari-rules-close").focus();
   window.scrollTo(0, 0);
+  syncProgressActions();
 }
 
+/** 重置灯泡与本关计时，前序扫雷用时保持冻结。 */
 function restartAkari() {
   restartLevel(session, 1);
   resetCompletionActions();
@@ -174,7 +255,12 @@ function restartAkari() {
   renderAkari();
 }
 
+/** 离开或换号使所有未完成异步响应失效，下一轮只能从第一关开始。 */
 function returnHome() {
+  challenge.reset();
+  operationBusy = saveBusy = false;
+  development = false;
+  recordStatus();
   resetCompletionActions();
   cancelMineExplosion();
   ui.mineRules.classList.add("hidden");
@@ -241,6 +327,7 @@ function renderMineBoard() {
   ui.board.replaceChildren(fragment);
 }
 
+/** 刷新扫雷棋盘、操作状态和同一口径的计时。 */
 function renderMine() {
   if (!game) return;
   renderMineBoard();
@@ -259,6 +346,7 @@ function renderMine() {
   updateTimer();
 }
 
+/** 周期回调只更新用时文字，不向服务器轮询或重画棋盘。 */
 function updateTimer() {
   if (game) ui.timer.textContent = formatTime(levelSeconds(session, 0, game.endedAt ?? Date.now()));
   if (akari) $("akari-timer").textContent = formatTime(levelSeconds(session, 1));
@@ -354,6 +442,7 @@ function renderAkari() {
   updateTimer();
 }
 
+/** 扫雷胜利进入统一保存流程；失败不创建通关记录。 */
 function showMineResult(outcome) {
   if (outcome === "won") {
     completeLevel(session, 0);
@@ -371,9 +460,12 @@ function showMineResult(outcome) {
     ui.resultSecondary.textContent = "查看棋盘";
   }
   ui.result.classList.remove("hidden");
+  ui.resultPrimary.disabled = false;
+  if (outcome === "won") void persistCompletion();
   ui.resultPrimary.focus();
 }
 
+/** 数独完成后先祝贺，等待保存成功才能打开结算。 */
 function showSudokuResult() {
   completeLevel(session, 2);
   updateTimer();
@@ -385,9 +477,11 @@ function showSudokuResult() {
   ui.resultPrimary.textContent = "开始结算";
   ui.resultSecondary.textContent = "查看结果";
   ui.result.classList.remove("hidden");
+  void persistCompletion();
   ui.resultPrimary.focus();
 }
 
+/** 照明完成后冻结秒数并提交，保存失败时保持下一关锁定。 */
 function showAkariResult() {
   completeLevel(session, 1);
   updateTimer();
@@ -397,10 +491,13 @@ function showAkariResult() {
   ui.resultPrimary.textContent = "进入第三关";
   ui.resultSecondary.textContent = "查看结果";
   ui.result.classList.remove("hidden");
+  void persistCompletion();
   ui.resultPrimary.focus();
 }
 
+/** 数独有效输入起计时，异步重开期间不可继续操作旧局。 */
 function inputSudoku(value) {
+  if (operationBusy || challenge.restartPayload) return;
   if (!sudoku || !setSudokuValue(sudoku, value)) return;
   startLevel(session, 2);
   ui.sudokuMessage.textContent = sudoku.complete ? "" : sudokuConflicts(sudoku).size > 0 ? "存在重复数字，请检查。" : "";
@@ -408,9 +505,9 @@ function inputSudoku(value) {
   if (sudoku.complete) showSudokuResult();
 }
 
-/** 最后一关完成后按顺序结算；跳过的关卡明确标记，避免把缺失成绩当成零秒。 */
+/** 仅为成功保存完整三关的本轮展示结算。 */
 function openSettlement() {
-  if (!sudoku?.complete) return;
+  if (!sudoku?.complete || !challenge.state?.total_recorded || saveBusy) return;
   ui.result.classList.add("hidden");
   const summary = sessionSummary(session);
   ["mine", "akari", "sudoku"].forEach((name, index) => {
@@ -418,7 +515,8 @@ function openSettlement() {
   });
   $("settlement-note").textContent = summary.complete
     ? "三关全部通关，感谢你完成这场解谜之旅。"
-    : "本轮包含跳关记录，以下仅统计已完成的关卡。";
+    : "本轮尚未完成三关。";
+  $("settlement-note").textContent += "成绩已保存。";
   $("settlement-total-label").textContent = summary.complete ? "总共花费时间" : "已完成关卡用时合计";
   $("settlement-total").textContent = formatTime(summary.total);
   $("settlement-dialog").classList.remove("hidden");
@@ -427,11 +525,28 @@ function openSettlement() {
 
 // 棋盘使用事件委托，重新绘制格子后仍能处理点击。
 // 登录模块确认会话后才发出入口事件；规则阅读与计时继续由游戏模块管理。
-$("start-button").addEventListener("authorized-start", enterGame);
+$("start-button").addEventListener("authorized-start", async () => {
+  if (operationBusy || ui.landing.classList.contains("hidden")) return;
+  operationBusy = true;
+  const generation = challenge.generation;
+  $("start-button").disabled = true;
+  recordStatus("正在创建挑战…");
+  try {
+    await challenge.start();
+    recordStatus();
+    development = false;
+    enterGame();
+  } catch (error) { if (generation === challenge.generation) recordStatus(error.message); }
+  finally {
+    if (generation === challenge.generation) { operationBusy = false; syncProgressActions(); }
+    $("start-button").disabled = false;
+  }
+});
+// 即使手工派发后续入口事件，也必须通过本轮解锁检查。
 ui.sudokuEntry.addEventListener("authorized-start", enterSudoku);
 ui.akariEntry.addEventListener("authorized-start", enterAkari);
 $("back-button").addEventListener("click", returnHome);
-$("restart-button").addEventListener("click", restartGame);
+$("restart-button").addEventListener("click", () => requestRestart(0, restartGame));
 $("mine-sound").addEventListener("click", () => {
   soundMuted = !soundMuted;
   explosionSound.unlock();
@@ -441,21 +556,23 @@ $("mine-sound").addEventListener("click", () => {
   $("mine-sound").setAttribute("aria-pressed", String(soundMuted));
 });
 $("sudoku-back").addEventListener("click", returnHome);
-$("sudoku-restart").addEventListener("click", restartSudoku);
+$("sudoku-restart").addEventListener("click", () => requestRestart(2, restartSudoku));
 $("akari-back").addEventListener("click", returnHome);
-$("akari-restart").addEventListener("click", restartAkari);
+$("akari-restart").addEventListener("click", () => requestRestart(1, restartAkari));
 $("mine-next").addEventListener("click", enterAkari);
 $("akari-next").addEventListener("click", enterSudoku);
 $("rules-close").addEventListener("click", () => { ui.mineRules.classList.add("hidden"); ui.viewport.focus(); });
 $("sudoku-rules-close").addEventListener("click", () => { ui.sudokuRules.classList.add("hidden"); ui.sudokuBoard.querySelector("button")?.focus(); });
 $("akari-rules-close").addEventListener("click", () => { ui.akariRules.classList.add("hidden"); ui.akariBoard.querySelector("button:not(:disabled)")?.focus(); });
 ui.board.addEventListener("click", (event) => {
+  if (operationBusy || challenge.restartPayload) return;
   const button = event.target.closest("button[data-index]");
   if (!button || !game || !selectCell(game, Number(button.dataset.index))) return;
   ui.message.textContent = "格子已选中。";
   renderMine();
 });
 ui.flag.addEventListener("click", () => {
+  if (operationBusy || challenge.restartPayload) return;
   if (!game || !toggleFlag(game)) return;
   startLevel(session, 0);
   if (game.startedAt === null) game.startedAt = Date.now();
@@ -463,6 +580,7 @@ ui.flag.addEventListener("click", () => {
   renderMine();
 });
 ui.reveal.addEventListener("click", () => {
+  if (operationBusy || challenge.restartPayload) return;
   if (!game) return;
   // 在用户手势内恢复音频，后续连锁由同一个已解锁的音频上下文播放。
   explosionSound.unlock();
@@ -498,6 +616,7 @@ ui.sudokuCheck.addEventListener("click", () => {
     : result.status === "complete" ? "已完成。" : result.blanks > 0 ? `没有重复数字，还剩 ${result.blanks} 个空格。` : "已填满，但仍有错误。";
 });
 ui.akariBoard.addEventListener("click", (event) => {
+  if (operationBusy || challenge.restartPayload) return;
   const button = event.target.closest("button[data-index]");
   if (!button || !akari || !toggleBulb(akari, Number(button.dataset.index))) return;
   startLevel(session, 1);
@@ -506,13 +625,46 @@ ui.akariBoard.addEventListener("click", (event) => {
 });
 ui.resultPrimary.addEventListener("click", () => {
   if (resultMode === "mine-won") enterAkari();
-  else if (resultMode === "mine-lost") restartGame();
+  else if (resultMode === "mine-lost") void requestRestart(0, restartGame);
   else if (resultMode === "akari-won") enterSudoku();
   else if (resultMode === "sudoku-won") openSettlement();
 });
 ui.resultSecondary.addEventListener("click", viewResult);
 $("settlement-open").addEventListener("click", openSettlement);
 $("settlement-home").addEventListener("click", returnHome);
+$("settlement-ranking").addEventListener("click", () => {
+  if (challenge.state?.total_recorded) window.location.assign("./ranking.html");
+});
+for (const id of ["challenge-retry", "save-retry"]) $(id).addEventListener("click", () => { void retryOperation?.(); });
+document.addEventListener("auth-changed", returnHome);
+
+/** 临时开发入口只完成当前关，动态加载便于后续删除，不更改正常解锁链路。 */
+async function quickComplete() {
+  if (!quickEnabled || operationBusy || saveBusy || challenge.restartPayload || !challenge.canEnter(currentIndex) || session.levels[currentIndex].seconds !== null) return;
+  const index = currentIndex;
+  const generation = challenge.generation;
+  operationBusy = true;
+  syncProgressActions();
+  try {
+    const { solveCurrentLevel } = await import("./dev-quick-complete.js");
+    if (generation !== challenge.generation) return;
+    startLevel(session, index);
+    development = true;
+    solveCurrentLevel(index, [game, akari, sudoku][index]);
+    [renderMine, renderAkari, renderSudoku][index]();
+    [() => showMineResult("won"), showAkariResult, showSudokuResult][index]();
+  } catch (error) {
+    if (generation === challenge.generation) recordStatus(error.message);
+  } finally {
+    if (generation === challenge.generation) { operationBusy = false; syncProgressActions(); }
+  }
+}
+for (const id of ["mine-quick", "akari-quick", "sudoku-quick"]) $(id).addEventListener("click", quickComplete);
+// 配置读取失败只隐藏开发按钮，正常挑战仍可进行。
+void rankingRequest("challenges/config").then((config) => {
+  quickEnabled = config.quick_complete_enabled === true;
+  syncProgressActions();
+}).catch(() => {});
 document.addEventListener("keydown", (event) => {
   // 结算弹窗内循环键盘焦点，防止 Tab 落到后面的棋盘。
   const activeDialog = [$("settlement-dialog")]
