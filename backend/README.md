@@ -1,6 +1,6 @@
 # 登录后端运行与部署
 
-采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行，排行榜和论坛继续为占位页面。
+采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供逐关挑战、通关记录与四个排行榜，论坛仍为占位页面。
 
 ## 五层架构
 
@@ -51,7 +51,7 @@ flyway -configFiles=backend/flyway.conf migrate
 flyway -configFiles=backend/flyway.conf info
 ```
 
-确认目标库名、备份和维护窗口。首次应执行 `V1__create_auth_tables.sql`，第二次不应有待执行迁移。配置禁止 `clean` 和自动 baseline；禁止直接修改已执行 SQL，后续变更新增 `V2__...sql`。
+确认目标库名、备份和维护窗口。新库依次执行 `V1__create_auth_tables.sql` 和 `V2__create_ranking_tables.sql`；已有 V1 的库只新增 V2。再次 migrate 不应有待执行迁移。配置禁止 `clean` 和自动 baseline；禁止直接修改已执行 SQL，后续变更新增 V3 等新版本。
 
 2 核/2GB 与宝塔共存时先检查 `MemAvailable` 和现有服务占用；必要时停止本项目 Python，再单次执行迁移，完成后退出并启动 Python。`JAVA_ARGS=-Xms32m -Xmx256m` 仅为评估起点，不能视为 Flyway 全进程内存上限。
 
@@ -73,6 +73,8 @@ flyway -configFiles=backend/flyway.conf info
 
 ## 宝塔与 Nginx
 
+排行榜新增 API 同样通过下述 `/api/` 通用代理，不需要增加常驻服务。
+
 1. 复用现有 Nginx/MySQL，站点根目录指向 `frontend/`，后端和配置不得放入 Web 根目录。准备虚拟环境、`backend/.env` 并完成迁移。
 2. 将 `deploy/nginx-http.conf.example` 的速率区加到 **http 级别**；将 `nginx-site.conf.example` 合并到项目域名现有的 HTTPS server，保留宝塔证书配置并替换路径。代理模板复制为 `backend/deploy/nginx-proxy.conf`。先备份配置，执行 `nginx -t`，通过后再重载。
 3. 宝塔进程管理器或 `deploy/jobless-auth.service.example` 二选一。核对用户、目录与虚拟环境路径；一个 Uvicorn worker，绑定 `127.0.0.1:8001`，并发保护 32、backlog 32，仅信任本机代理头。公网防火墙不开放 8001。
@@ -88,6 +90,27 @@ cd /www/wwwroot/jobless-game
 
 每批独立事务，利用到期时间索引，每次最多十批，完成退出。若持续积压，先核实频率及负载再调整。
 
+## 排行榜与挑战
+
+排行榜与挑战 API：
+
+| 接口 | 行为 |
+| --- | --- |
+| `GET /api/challenges/config` | 仅返回开发通关按钮开关，默认关闭 |
+| `POST /api/challenges/start` | 登录后使用 request_id 幂等创建本轮；旧轮次失效 |
+| `POST /api/challenges/{run_id}/restart` | 校验已解锁、revision 和 request_id，重置本关与后续本轮状态 |
+| `POST /api/challenges/{run_id}/complete` | 校验本轮前序关及 attempt_id，单次只保存当前关；三关齐全自动保存总成绩 |
+| `GET /api/rankings/{category}?page=1&page_size=20` | 公开分页；category 为 total/mine/akari/sudoku；单页上限 50 |
+| `GET /api/records/me?category=total` | 登录用户自己的最佳与最近三次，重合使用同一记录 ID |
+
+新增 `challenge_progress`（每人最多一行）、`completion_records`（每人每类最多四条）和 `leaderboard_entries`（每人每类一行）。总成绩自带三项用时快照，不依赖单项历史记录长期存在；写入按用户行锁串行化，在同一事务维护最佳、最新记录和摘要。查询先用索引读取有限页，再统计更快人数得到跨页并列名次，不使用窗口函数或持久化名次。
+
+`duration_seconds` 必须为 0～604800 的整数；未完成用 null，不能把 0 当作未完成。`revision`、尝试和轮次必须匹配；重复上传相同数据不会追加记录，修改已经接收的成绩返回 409。未登录返回 401、顺序或轮次冲突 409、开发标记未启用 403、校验错误 422；写请求要求同源，实际请求体不超过 4KiB，数据库繁忙沿用 503。
+
+开发验收在专用开发库设置 `DEV_QUICK_COMPLETE_ENABLED=true` 并重启；前端读取开关后显示“开发验收：一键通关”，每次只完成当前关。默认及正式环境保持 false；关闭时专用开发标记写入被拒绝。后续移除配置、config 响应字段、`dev-quick-complete.js`、按钮和 main 中开发入口，再回归正常通关及结算。
+
+棋盘、完成判断与秒数仍来自浏览器，此实现校验身份和流程，不构成完整防作弊。测试成绩只写开发/临时数据库，禁止导入正式库。
+
 ## 测试
 
 在项目根目录执行，完整输出写入日志：
@@ -101,7 +124,9 @@ npm test *> ../artifacts/frontend/auth-tests.log
 
 `test_auth.py` 使用真实 Argon2id 与模拟数据库验证规则、安全与资源拒绝；`test_mysql_integration.py` 必须使用真实 MySQL/Flyway，未配置时跳过。后者要求设置 `TEST_DATABASE_URL`（库名以 `jobless_auth_test_` 开头）与 `TEST_FLYWAY_COMMAND`，测试库由管理员预先创建，不可填生产库。测试执行两次 Flyway、检查无 Pending，并验证唯一键竞争、持久化会话及真实连接池耗尽；只删除本用例创建的随机账号。
 
-`python artifacts/frontend/verify_login.py` 使用独立 Chrome 和内存数据库替身验证 UI，不连接本机或远程 MySQL，不替代真实迁移验收。需要 Chrome、`websocket-client`，可选依赖见 `requirements-browser.txt`。
+`artifacts/frontend/verify_login.py` 保留为早期登录验收材料，其数据库替身与自由选关步骤不支持当前挑战接口；当前登录与逐关回归使用下述 `verify_ranking.py`。需要 Chrome、`websocket-client`，可选依赖见 `requirements-browser.txt`。
+
+`python artifacts/frontend/verify_ranking.py` 使用临时 SQLite 与独立 Chrome 验证真实登录、逐关通关、保存失败重试、完整结算、四榜分页与手机布局，输出摘要并保存截图。临时数据在结束后清理；该验证不替代 MySQL JSON、行锁、外键与 Flyway 验收。`test_mysql_integration.py` 增加真实并发重复通关与总成绩快照验证；没有专用库和 Flyway 时明确跳过。
 
 ## 目标服务器资源验收
 
