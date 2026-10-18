@@ -1,11 +1,13 @@
 /** 三页复用的登录弹窗、会话恢复和关卡登录拦截；不改变关卡计时与规则。 */
 import { authRequest } from "./auth-client.js";
 import { usernameUnits, validateUsername, validatePassword } from "./auth-validation.js";
+import { initMusic } from "./music.js";
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
 export function initAuth() {
   const host = document.querySelector(".auth-controls");
   if (!host) return null;
+  initMusic();
   host.innerHTML = `<button type="button" class="auth-open" aria-haspopup="dialog">登录</button>
     <span class="auth-user hidden"></span><button type="button" class="auth-logout hidden">退出登录</button>
     <span class="auth-header-status" role="status"></span>`;

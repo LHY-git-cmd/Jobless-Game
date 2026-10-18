@@ -103,7 +103,7 @@ def main():
 
                 def evaluate(expression):
                     """执行真实页面表达式，支持等待网络请求。"""
-                    result = command("Runtime.evaluate", {"expression": expression, "returnByValue": True, "awaitPromise": True})
+                    result = command("Runtime.evaluate", {"expression": expression, "returnByValue": True, "awaitPromise": True, "userGesture": True})
                     if "exceptionDetails" in result:
                         raise AssertionError(result["exceptionDetails"])
                     return result.get("result", {}).get("value")
@@ -166,8 +166,20 @@ def main():
                 click("#sudoku-rules-close")
                 click("#sudoku-quick")
                 wait("!document.querySelector('#result-primary').disabled")
+                assert evaluate("document.querySelector('audio[data-music=victory]').paused")
                 click("#result-primary")
                 wait("!document.querySelector('#settlement-dialog').classList.contains('hidden')")
+                wait("!document.querySelector('audio[data-music=victory]').paused && document.querySelector('audio[data-music=victory]').currentTime>0")
+                assert evaluate("document.querySelector('audio[data-music=victory]').duration>0")
+                command("Input.dispatchKeyEvent", {"type":"keyDown", "key":"Escape", "code":"Escape", "windowsVirtualKeyCode":27})
+                command("Input.dispatchKeyEvent", {"type":"keyUp", "key":"Escape", "code":"Escape", "windowsVirtualKeyCode":27})
+                wait("document.querySelector('#settlement-dialog').classList.contains('hidden')")
+                assert evaluate("document.querySelector('audio[data-music=victory]').paused")
+                click("#settlement-open")
+                assert evaluate("document.querySelector('audio[data-music=victory]').paused")
+                click("#global-music")
+                assert evaluate("document.querySelector('#global-music').getAttribute('aria-pressed')==='false'")
+                checks.append("真实MP3结算播放、关闭停止、同轮不重播和全局音乐开关")
                 assert evaluate("document.querySelector('#settlement-ranking').disabled") is False
                 assert evaluate("document.querySelector('#settlement-note').textContent.includes('已保存')")
                 shot("ranking-settlement.png")
@@ -186,6 +198,7 @@ def main():
                     db.commit()
                 click("#settlement-ranking")
                 wait("!!document.querySelector('#ranking-rows') && document.querySelector('#ranking-rows').children.length===20")
+                assert evaluate("document.querySelector('#global-music').getAttribute('aria-pressed')==='false'")
                 click("#ranking-rows details summary")
                 shot("ranking-desktop.png")
                 click("#ranking-next")
@@ -204,6 +217,7 @@ def main():
                     wait("document.querySelector('#ranking-rows').children.length===1")
                     assert evaluate("document.documentElement.scrollWidth <= innerWidth")
                     assert evaluate("document.querySelector('.ranking-tabs [aria-current=page]').getAttribute('href')") == "./" + filename
+                    assert evaluate("document.querySelector('#global-music').getAttribute('aria-pressed')==='false'")
                 shot("ranking-single-mobile.png")
                 checks.append("三个独立单项页、登录跨页恢复、375px无横向溢出")
                 command("Network.setBlockedURLs", {"urls": ["*api/rankings/*"]})

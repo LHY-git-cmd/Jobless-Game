@@ -427,6 +427,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .records-badge { display: inline-block; margin-left: 8px; padding: 1px 5px; border: 1px solid #f0d49a55; border-radius: 4px; color: var(--gold); font-size: 10px; line-height: 1.5; }
 .records-list strong { font-size: 16px; font-weight: 500; }
 .records-footer { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.7; }
+.global-music { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 60; min-height: 44px; padding: 8px 14px; border-color: #f0d49a77; background: #102b3cf2; color: var(--gold); font-size: 13px; box-shadow: 0 4px 16px #06162444; }
 @media (max-width: 850px) {
   .landing-intro { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-block: 28px 36px; }
   .personal-records { width: 100%; min-height: 320px; }

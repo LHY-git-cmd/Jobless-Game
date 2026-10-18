@@ -258,6 +258,7 @@ function restartAkari() {
 
 /** 离开或换号使所有未完成异步响应失效，下一轮只能从第一关开始。 */
 function returnHome() {
+  document.dispatchEvent(new CustomEvent("settlement-closed"));
   challenge.reset();
   operationBusy = saveBusy = false;
   development = false;
@@ -521,6 +522,7 @@ function openSettlement() {
   $("settlement-total-label").textContent = summary.complete ? "总共花费时间" : "已完成关卡用时合计";
   $("settlement-total").textContent = formatTime(summary.total);
   $("settlement-dialog").classList.remove("hidden");
+  document.dispatchEvent(new CustomEvent("settlement-opened", { detail: { runId: challenge.state.run_id } }));
   $("settlement-home").focus();
 }
 
@@ -681,6 +683,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     if (!$("settlement-dialog").classList.contains("hidden")) {
       $("settlement-dialog").classList.add("hidden");
+      document.dispatchEvent(new CustomEvent("settlement-closed"));
       viewResult();
       return;
     }

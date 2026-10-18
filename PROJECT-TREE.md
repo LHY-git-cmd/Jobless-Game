@@ -104,6 +104,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── ranking-client.js             # 同源请求、挑战幂等负载、状态代数与失败重试
 │   │   ├── ranking-page.js               # 四榜共享分页、反馈与原轮次明细渲染
 │   │   ├── personal-records.js           # 首页我的通关记录：分类、最佳/最近三次、账号隔离与刷新
+│   │   ├── music.js                      # 全站音乐开关、结算胜利音效、静音与播放位置管理
 │   │   └── dev-quick-complete.js          # 可移除的开发验收：只求解当前关合法终盘
 │   │
 │   ├── assets/                           # 网页直接加载的处理后静态素材
@@ -112,7 +113,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── minesweeper.webp              # 扫雷入口图
 │   │   ├── bulb.webp                     # 照明入口图
 │   │   ├── audio/                        # 网页使用的音频资源
-│   │   │   └── explosion.wav             # 裁剪处理后的爆炸音效
+│   │   │   ├── explosion.wav             # 裁剪处理后的爆炸音效
+│   │   │   └── victory.mp3               # 用户指定的 PVZ 胜利音效；开始结算时播放一次
 │   │   └── minesweeper/                  # 扫雷格子状态素材
 │   │       └── *.webp                    # 覆盖格、打开格、旗帜、地雷、爆炸与数字图片
 │   │
@@ -125,7 +127,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
 │       ├── completion.test.js            # 逐关解锁、冻结计时、保存重试与开发通关回归
 │       ├── ranking-client.test.js        # 幂等负载、旧响应隔离及网络失败语义
-│       └── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
+│       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
+│       └── music.test.js                 # 音轨切换、同轮一次、静音、播放拒绝与切页状态
 │
 ├── source/                               # 原始素材和将其转换为网页资源的处理脚本
 │   ├── audio/                            # 原始音频与裁剪处理脚本

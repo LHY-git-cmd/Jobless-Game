@@ -27,6 +27,10 @@
 
 开发阶段可在**专用开发数据库**环境设置 `DEV_QUICK_COMPLETE_ENABLED=true` 并重启后端，启用各关“开发验收：一键通关”。按钮只完成当前关，随后按正常保存、解锁和结算流程验收。默认关闭；正式环境保持 `false`，测试记录不导入正式库。该功能集中在 `frontend/src/dev-quick-complete.js` 及对应配置/标记处理，便于后续移除。
 
+各页左下角提供全局“音乐：开/关”，设置在当前标签页的页面跳转间保持。最后一关成功保存后，点击“开始结算”播放 `frontend/assets/audio/victory.mp3`，来自用户提供的 `花亦落心亦冷 - PVZ胜利音效.mp3`；每轮只播放一次，关闭结算或返回首页停止，静音时不补放。浏览器禁止自动播放时，等待用户点击或键盘操作后重试，隐藏页面暂停播放。
+
+背景音乐的循环、音量、胜利音期间暂停及切页位置恢复逻辑已具备，但**背景素材尚未接入**：用户指定的 `backmusic-墨澜音 - 阿尔法脑波音乐 (记忆力提升).ncm` 是加密封装，浏览器不能直接播放。需提供同曲可播放的 MP3/M4A/FLAC 后放入静态音频目录，并设置 `frontend/src/music.js` 的 `BACKGROUND_URL`；当前为 null，不请求缺失文件。背景曲尚未完成播放验收。
+
 ## 本地预览
 
 完整登录运行方式见 [后端运行与部署](./backend/README.md)：配置 MySQL、执行 Flyway 后，在项目根目录运行 `python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --workers 1 --limit-concurrency 32`，打开 `http://127.0.0.1:8001/`。Python 依赖与环境示例位于 `backend/`。
