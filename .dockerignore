@@ -1,0 +1,21 @@
+# 作用：只允许容器需要的源码进入构建上下文，排除本机密钥、原始素材和日志。
+**
+!backend/
+!backend/app/
+!backend/app/**
+!backend/requirements.txt
+!backend/cleanup_sessions.py
+!backend/deploy/
+!backend/deploy/docker/
+!backend/deploy/docker/**
+!frontend/
+!frontend/*.html
+!frontend/styles.css
+!frontend/src/
+!frontend/src/**
+!frontend/assets/
+!frontend/assets/**
+**/__pycache__/
+**/*.pyc
+**/.env
+**/.env.*

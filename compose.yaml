@@ -1,0 +1,135 @@
+# 作用：本机完整验证栈。只公开本机 Web 端口，MySQL 数据保存在独立命名卷。
+name: jobless-game-local
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  mysql:
+    image: mysql:8.4.7
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: jobless_game_local
+      MYSQL_USER: jobless_app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请先配置 .env.docker 中的 MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请先配置 .env.docker 中的 MYSQL_ROOT_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_bin
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=20
+      - --table-open-cache=128
+      - --temptable-max-ram=32M
+      - --tmp-table-size=16M
+      - --max-heap-table-size=16M
+      - --performance-schema=OFF
+      - --mysqlx=0
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks: [game]
+    mem_limit: 640m
+    cpus: 1.0
+    pids_limit: 128
+    logging: *logging
+    healthcheck:
+      # 使用应用账号执行真实 SQL，避免仅检测 mysqld 进程存活。
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql --protocol=TCP -h 127.0.0.1 -u jobless_app -D jobless_game_local -Nse 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  migrate:
+    image: redgate/flyway:13.6.0
+    restart: "no"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:mysql://mysql:3306/jobless_game_local?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      FLYWAY_USER: jobless_app
+      FLYWAY_PASSWORD: ${MYSQL_PASSWORD:?请先配置 .env.docker 中的 MYSQL_PASSWORD}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CLEAN_DISABLED: "true"
+      FLYWAY_BASELINE_ON_MIGRATE: "false"
+      FLYWAY_CONNECT_RETRIES: "10"
+      JAVA_ARGS: -Xms32m -Xmx192m
+    command: ["migrate"]
+    volumes:
+      - ./backend/migrations:/flyway/sql:ro
+    networks: [game]
+    mem_limit: 512m
+    cpus: 0.75
+    pids_limit: 128
+    logging: *logging
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/deploy/docker/api.Dockerfile
+    image: jobless-game-api:local
+    restart: unless-stopped
+    init: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: mysql+pymysql://jobless_app:${MYSQL_PASSWORD:?请先配置 .env.docker 中的 MYSQL_PASSWORD}@mysql:3306/jobless_game_local?charset=utf8mb4
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DEV_QUICK_COMPLETE_ENABLED: "false"
+      DB_POOL_SIZE: "3"
+      DB_MAX_OVERFLOW: "0"
+      LOGIN_HASH_CONCURRENCY: "1"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [game]
+    mem_limit: 320m
+    cpus: 1.0
+    pids_limit: 64
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/rankings/total?page_size=1', timeout=4).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: backend/deploy/docker/web.Dockerfile
+    image: jobless-game-web:local
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    networks:
+      game:
+        ipv4_address: 172.30.28.10
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 64
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+networks:
+  # 固定独立网段使 API 只信任 Web 代理；若与现有网络冲突，需同步修改 API 启动参数。
+  game:
+    ipam:
+      config:
+        - subnet: 172.30.28.0/24
+
+volumes:
+  mysql_data:

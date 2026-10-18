@@ -6,6 +6,9 @@
 crawler-portal/                            # 项目根目录：前端、登录后端、素材及文档
 ├── .git/                                 # Git 仓库元数据：远程关联、分支与提交历史；内部不展开
 ├── .gitignore                            # 排除秘密、本地配置、依赖、缓存及验证生成物
+├── .dockerignore                         # Docker 构建上下文白名单，排除秘密与本机文件
+├── .env.docker.example                   # 本机容器环境模板；真实 .env.docker 不提交
+├── compose.yaml                          # 本机 Nginx/API/MySQL/Flyway 栈与资源限制
 ├── LICENSE                               # 远程初始提交已有的项目许可证，保留原文
 ├── README.md                             # 项目说明、本地预览、测试和部署入口
 ├── README-CONSTRAINTS.md                  # 项目硬约束：资源、技术、账号及验收要求
@@ -63,6 +66,13 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V1__create_auth_tables.sql     # 用户、会话与相关唯一/到期索引
 │   │   └── V2__create_ranking_tables.sql  # 当前轮次、成绩、最佳摘要及排序/去重索引
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
+│   │   ├── docker/                       # 本机完整容器部署、说明与真实 HTTP 验证
+│   │   │   ├── README.md                 # 启停、迁移、数据持久化及资源边界
+│   │   │   ├── api.Dockerfile            # 非 root、单 worker API 镜像
+│   │   │   ├── web.Dockerfile            # 单 worker Nginx 静态站点镜像
+│   │   │   ├── nginx.conf                # 本机 HTTP 站点、缓存和登录限流
+│   │   │   ├── proxy.inc                 # 容器 API 代理与可信客户端头
+│   │   │   └── verify_docker.py          # 本机真实 MySQL HTTP 与重建持久化验收
 │   │   ├── nginx-http.conf.example       # http 级登录限流区
 │   │   ├── nginx-site.conf.example       # HTTPS 站点静态资源与 API 路由
 │   │   ├── nginx-proxy.conf.example      # 两个 API 路由共用的本机反向代理参数

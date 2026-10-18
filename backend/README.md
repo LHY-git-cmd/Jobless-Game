@@ -2,6 +2,8 @@
 
 采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供逐关挑战、通关记录与四个排行榜，论坛仍为占位页面。
 
+需要在本机把 MySQL 一并容器化验证时，使用项目根目录 `compose.yaml`，参见 [Docker 部署与验收](./deploy/docker/README.md)。该方案使用独立数据库与数据卷，不读取下面的 `backend/.env`；服务器宝塔复用方案仍按本文执行。
+
 ## 五层架构
 
 请求调用方向为 `Controller → Service → Repository → MySQL`；模型层提供数据结构，公共层提供跨业务基础能力。`app/main.py` 只装配应用、路由、异常、中间件和本地静态页面。
