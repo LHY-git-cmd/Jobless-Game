@@ -147,6 +147,10 @@ def main():
                 click(".auth-submit")
                 wait("!document.querySelector('#rules-dialog').classList.contains('hidden')")
                 click("#rules-close")
+                wait("!document.querySelector('audio[data-music=background]').paused && document.querySelector('audio[data-music=background]').currentTime>0")
+                assert evaluate("document.querySelector('audio[data-music=background]').loop")
+                assert evaluate("document.querySelector('audio[data-music=background]').duration>0")
+                checks.append("指定背景MP3真实解码并循环播放")
                 command("Network.setBlockedURLs", {"urls": ["*api/challenges/*/complete*"]})
                 click("#mine-quick")
                 wait("!document.querySelector('#save-retry').classList.contains('hidden')")
@@ -171,14 +175,17 @@ def main():
                 wait("!document.querySelector('#settlement-dialog').classList.contains('hidden')")
                 wait("!document.querySelector('audio[data-music=victory]').paused && document.querySelector('audio[data-music=victory]').currentTime>0")
                 assert evaluate("document.querySelector('audio[data-music=victory]').duration>0")
+                assert evaluate("document.querySelector('audio[data-music=background]').paused")
                 command("Input.dispatchKeyEvent", {"type":"keyDown", "key":"Escape", "code":"Escape", "windowsVirtualKeyCode":27})
                 command("Input.dispatchKeyEvent", {"type":"keyUp", "key":"Escape", "code":"Escape", "windowsVirtualKeyCode":27})
                 wait("document.querySelector('#settlement-dialog').classList.contains('hidden')")
                 assert evaluate("document.querySelector('audio[data-music=victory]').paused")
+                wait("!document.querySelector('audio[data-music=background]').paused")
                 click("#settlement-open")
                 assert evaluate("document.querySelector('audio[data-music=victory]').paused")
                 click("#global-music")
                 assert evaluate("document.querySelector('#global-music').getAttribute('aria-pressed')==='false'")
+                assert evaluate("document.querySelector('audio[data-music=background]').paused")
                 checks.append("真实MP3结算播放、关闭停止、同轮不重播和全局音乐开关")
                 assert evaluate("document.querySelector('#settlement-ranking').disabled") is False
                 assert evaluate("document.querySelector('#settlement-note').textContent.includes('已保存')")
@@ -296,6 +303,16 @@ def main():
                     if width == 375:
                         shot("personal-records-mobile.png")
                 checks.append("个人窗口桌面位于介绍右侧，375/320px移动端位于介绍下方无溢出")
+                # 跨页恢复背景位置，不保证多文档跳转时音轨无间隙。
+                click("#global-music")
+                wait("!document.querySelector('audio[data-music=background]').paused")
+                evaluate("document.querySelector('audio[data-music=background]').currentTime=12")
+                wait("document.querySelector('audio[data-music=background]').currentTime>=12")
+                navigate("ranking-mine.html")
+                evaluate("document.querySelector('audio[data-music=background]').play()")
+                wait("!document.querySelector('audio[data-music=background]').paused && document.querySelector('audio[data-music=background]').currentTime>=12")
+                assert evaluate("document.querySelector('audio[data-music=background]').currentTime<20")
+                checks.append("全局背景开关、胜利期间暂停恢复及跨页位置续播")
                 assert not errors, "页面有未处理异常"
         finally:
             if connection:

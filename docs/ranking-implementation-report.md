@@ -100,6 +100,6 @@
 
 已完成：复制指定胜利 MP3 到 `frontend/assets/audio/victory.mp3`；结算事件触发一次播放、同轮不重播、离开结算停止、静音设置跨页保留、页面隐藏暂停、浏览器拒绝播放后通过手势重试。循环背景的控制逻辑和切页位置恢复已实现。
 
-待完成：用户指定背景曲为 `CTENFDAM` 文件头的加密 NCM，未解密或转为网页资源；已经请求同曲可播放 MP3/M4A/FLAC 路径。当前背景地址为 null，不能描述为背景音乐已经可听，背景音频实际播放验收待素材提供。
+素材补充：最初指定背景曲为 `CTENFDAM` 文件头的加密 NCM，未作为网页资源。用户后续提供同曲 MP3，现已复制为 `frontend/assets/audio/background.mp3` 并接入全局循环，背景音量 28%；胜利音期间暂停，结束或离开结算后恢复。跨独立 HTML 页面保留开关和播放位置，浏览器可能要求新页面再次取得交互授权，不承诺多文档跳转完全无间隙。
 
-验证：47 项前端测试通过（`artifacts/frontend/music-all-tests.log`）；真实 Chrome 验收 12 组通过、未处理异常 0（`artifacts/frontend/music-browser.log`）。浏览器确认胜利 MP3 实际解码、用时推进、关闭停止、同轮不重播和首页/分榜间静音保留。背景相关单元测试使用媒体替身验证状态，不代替指定背景曲实际播放。
+验证：47 项前端测试通过（`artifacts/frontend/music-all-tests.log`）。补充背景素材后音乐相关 7 项测试通过（`artifacts/frontend/background-music-tests.log`），真实 Chrome 14 组场景通过、未处理异常 0，包含指定背景 MP3 的解码、循环、播放时间推进、胜利期间暂停/恢复、静音和跨页续播（`artifacts/frontend/background-music-browser.log`）。静态背景文件与用户提供 MP3 的 SHA-256 一致，未修改原始素材。

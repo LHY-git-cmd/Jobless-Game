@@ -1,7 +1,7 @@
 /** 全站共享音乐：循环背景、结算一次性胜利音效、静音与切页播放位置。 */
 
-// 用户提供的背景素材为加密 NCM；收到可播放版本后填入静态资源地址。
-const BACKGROUND_URL = null;
+// 使用用户提供的同曲 MP3，不直接向浏览器发送原始 NCM。
+const BACKGROUND_URL = new URL("../assets/audio/background.mp3", import.meta.url).href;
 const VICTORY_URL = new URL("../assets/audio/victory.mp3", import.meta.url).href;
 let sharedMusic;
 
