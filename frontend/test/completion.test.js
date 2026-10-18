@@ -50,7 +50,7 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
   let now = 100000, current, fail = false, failRestart = false;
   const submissions = [];
   Date.now = () => now; Math.random = () => 0;
-  globalThis.document = { getElementById: $, createElement: () => new Element(), createDocumentFragment: () => new Element(), addEventListener: (k,v) => { keys[k]=v; } };
+  globalThis.document = { getElementById: $, createElement: () => new Element(), createDocumentFragment: () => new Element(), addEventListener: (k,v) => { keys[k]=v; }, dispatchEvent: event => keys[event.type]?.(event) };
   globalThis.window = { scrollTo() {}, setInterval() {}, location: { assign() {} } };
   globalThis.fetch = async (path, options={}) => {
     const b = options.body ? JSON.parse(options.body) : null;

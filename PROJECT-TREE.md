@@ -103,6 +103,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── mine-effects.js               # 扫雷连锁爆炸动画与音效控制
 │   │   ├── ranking-client.js             # 同源请求、挑战幂等负载、状态代数与失败重试
 │   │   ├── ranking-page.js               # 四榜共享分页、反馈与原轮次明细渲染
+│   │   ├── personal-records.js           # 首页我的通关记录：分类、最佳/最近三次、账号隔离与刷新
 │   │   └── dev-quick-complete.js          # 可移除的开发验收：只求解当前关合法终盘
 │   │
 │   ├── assets/                           # 网页直接加载的处理后静态素材
@@ -123,7 +124,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── mine-effects.test.js          # 爆炸顺序、动画与声音控制测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
 │       ├── completion.test.js            # 逐关解锁、冻结计时、保存重试与开发通关回归
-│       └── ranking-client.test.js        # 幂等负载、旧响应隔离及网络失败语义
+│       ├── ranking-client.test.js        # 幂等负载、旧响应隔离及网络失败语义
+│       └── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
 │
 ├── source/                               # 原始素材和将其转换为网页资源的处理脚本
 │   ├── audio/                            # 原始音频与裁剪处理脚本

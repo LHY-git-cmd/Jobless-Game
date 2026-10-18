@@ -172,6 +172,7 @@ def main():
                 assert evaluate("document.querySelector('#settlement-note').textContent.includes('已保存')")
                 shot("ranking-settlement.png")
                 checks.append("开发按钮只完成当前关及完整三关结算")
+                wait("document.querySelector('#records-best-time').textContent !== ''")
                 with sessions() as db:
                     for index in range(25):
                         user = User(username="测试玩家" + str(index), username_key="seed" + str(index), password_hash="not-a-login-account", created_at=utc_now())
@@ -219,6 +220,68 @@ def main():
                 wait("!document.querySelector('#rules-dialog').classList.contains('hidden')")
                 assert evaluate("document.querySelector('#mine-quick').classList.contains('hidden')")
                 checks.append("开发开关关闭后正常挑战可用且按钮隐藏")
+                # 首页个人记录沿用真实账号会话，退出必须立即清除私人成绩。
+                navigate("index.html")
+                wait("!!document.querySelector('#records-best-time').textContent")
+                click(".auth-logout")
+                wait("!document.querySelector('#records-login').classList.contains('hidden')")
+                assert evaluate("document.querySelector('#records-best-time').textContent") == ""
+                assert evaluate("document.querySelector('#records-list').children.length") == 0
+                click("#records-login")
+                wait("document.querySelector('#auth-dialog').open")
+                evaluate("document.querySelector('#auth-username').value='记录玩家'; document.querySelector('#auth-password').value='test-secret';")
+                click(".auth-submit")
+                wait("document.querySelector('#records-status').textContent.includes('还没有')")
+                assert evaluate("document.querySelector('#landing').classList.contains('hidden')") is False
+                checks.append("个人窗口退出清空、登录入口与新账号空记录")
+                # 通过真实写接口产生四轮记录，检查最佳在最近三次外也能同时展示。
+                evaluate("""(async () => {
+                  const post = async (path, body) => {
+                    const response = await fetch('/api/' + path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+                    if (!response.ok) throw new Error('记录验收写入失败');
+                    return response.json();
+                  };
+                  for (const times of [[15,30,50],[25,40,65],[30,45,70],[27,42,66]]) {
+                    let state = await post('challenges/start', {request_id:crypto.randomUUID()});
+                    for (let i=0;i<3;i++) state = await post('challenges/' + state.run_id + '/complete', {
+                      category:['mine','akari','sudoku'][i], revision:state.revision,
+                      attempt_id:state.levels[i].attempt_id, duration_seconds:times[i]
+                    });
+                  }
+                })()""")
+                click("#records-refresh")
+                wait("document.querySelector('#records-best-time').textContent==='01:35'")
+                assert evaluate("document.querySelector('#records-list').children.length") == 3
+                assert evaluate("document.querySelector('#records-list li strong').textContent") == "02:15"
+                assert evaluate("document.querySelector('#records-list .records-badge')===null")
+                assert evaluate("document.querySelector('#records-breakdown').textContent.includes('扫雷 00:15')")
+                for category, best in [("mine", "00:15"), ("akari", "00:30"), ("sudoku", "00:50")]:
+                    click("#records-" + category)
+                    wait("document.querySelector('#records-best-time').textContent==='" + best + "'")
+                    assert evaluate("document.querySelector('#records-list').children.length") == 3
+                click("#records-total")
+                wait("document.querySelector('#records-best-time').textContent==='01:35'")
+                checks.append("个人四类真实成绩、最佳与最近三次并集和原轮次明细")
+                command("Network.setBlockedURLs", {"urls": ["*api/records/me*"]})
+                click("#records-refresh")
+                wait("!document.querySelector('#records-retry').classList.contains('hidden')")
+                assert evaluate("document.querySelector('#records-best-time').textContent") == ""
+                command("Network.setBlockedURLs", {"urls": []})
+                click("#records-retry")
+                wait("document.querySelector('#records-best-time').textContent==='01:35'")
+                checks.append("个人记录加载失败清空旧值并可重新加载")
+                command("Emulation.setDeviceMetricsOverride", {"width": 1280, "height": 960, "deviceScaleFactor": 1, "mobile": False})
+                evaluate("window.scrollTo(0,0)")
+                assert evaluate("document.querySelector('#personal-records').getBoundingClientRect().left > document.querySelector('.landing-hero').getBoundingClientRect().right")
+                shot("personal-records-desktop.png")
+                for width in [375, 320]:
+                    command("Emulation.setDeviceMetricsOverride", {"width": width, "height": 900, "deviceScaleFactor": 1, "mobile": True})
+                    evaluate("document.documentElement.style.scrollBehavior='auto'; document.querySelector('#personal-records').scrollIntoView({block:'start'})")
+                    assert evaluate("document.documentElement.scrollWidth <= innerWidth")
+                    assert evaluate("document.querySelector('#personal-records').getBoundingClientRect().top >= document.querySelector('.landing-hero').getBoundingClientRect().bottom")
+                    if width == 375:
+                        shot("personal-records-mobile.png")
+                checks.append("个人窗口桌面位于介绍右侧，375/320px移动端位于介绍下方无溢出")
                 assert not errors, "页面有未处理异常"
         finally:
             if connection:

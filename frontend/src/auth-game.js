@@ -1,7 +1,9 @@
-/** 将三个首页关卡入口接到共享登录控制器，通过授权事件续接原游戏流程。 */
+/** 首页第一关的登录拦截，以及个人通关记录的账号状态接入。 */
 import { initAuth } from "./auth.js";
+import { initPersonalRecords } from "./personal-records.js";
 
 const auth = initAuth();
+initPersonalRecords({ onLogin: continuation => auth.requireLogin(() => continuation(auth.currentUser)) });
 for (const id of ["start-button"]) {
   const button = document.getElementById(id);
   let checking = false;

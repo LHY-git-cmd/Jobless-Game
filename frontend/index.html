@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#102b3c" />
     <title>无职游戏</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./styles.css?v=20261018-ranking" />
+    <link rel="stylesheet" href="./styles.css?v=20261018-records" />
   </head>
   <body>
     <div class="world-background" aria-hidden="true"></div>
@@ -22,11 +22,40 @@
           </nav>
           <div class="auth-controls" aria-label="账号"></div>
         </header>
-        <div class="landing-hero">
+        <div class="landing-intro">
+          <div class="landing-hero">
           <p class="eyebrow"><span aria-hidden="true"></span> 解谜之旅，从这里开始</p>
           <h1 id="landing-title">无职游戏<span>让好奇心，带你出发。</span></h1>
           <p class="hero-description">暂别忙碌，潜入这片蔚蓝。<br />在数字与光影之间，找到你的答案。</p>
           <a class="explore-link" href="#level-select">选择你的挑战 <span aria-hidden="true">↓</span></a>
+          </div>
+          <aside class="personal-records" id="personal-records" aria-labelledby="records-title">
+            <header class="records-header">
+              <div><p class="records-eyebrow">冒险档案 / MY JOURNEY</p><h2 id="records-title">我的通关记录</h2></div>
+              <button type="button" id="records-refresh" class="records-refresh hidden" aria-label="刷新我的通关记录">刷新</button>
+            </header>
+            <div class="records-tabs" role="tablist" aria-label="选择通关记录类型">
+              <button type="button" id="records-total" role="tab" aria-selected="true" aria-controls="records-panel">整轮</button>
+              <button type="button" id="records-mine" role="tab" aria-selected="false" aria-controls="records-panel" tabindex="-1">扫雷</button>
+              <button type="button" id="records-akari" role="tab" aria-selected="false" aria-controls="records-panel" tabindex="-1">照明</button>
+              <button type="button" id="records-sudoku" role="tab" aria-selected="false" aria-controls="records-panel" tabindex="-1">数独</button>
+            </div>
+            <div class="records-panel" id="records-panel" role="tabpanel" aria-labelledby="records-total" aria-busy="false" tabindex="0">
+              <p id="records-status" class="records-status" role="status">登录后查看你的最佳成绩和最近三次通关。</p>
+              <button type="button" id="records-login" class="records-login">登录查看记录</button>
+              <button type="button" id="records-retry" class="hidden">重新加载</button>
+              <div class="records-best hidden" id="records-best">
+                <div class="records-best-heading"><span id="records-best-label">整轮最佳</span><span class="records-best-mark" aria-hidden="true">◇</span></div>
+                <strong id="records-best-time"></strong><span id="records-best-date" class="records-best-date"></span>
+                <p id="records-breakdown" class="records-breakdown hidden"></p>
+              </div>
+              <section id="records-recent" class="records-recent hidden" aria-labelledby="records-recent-title">
+                <h3 id="records-recent-title">最近三次<span>由近到远</span></h3>
+                <ol id="records-list" class="records-list"></ol>
+              </section>
+            </div>
+            <p class="records-footer">保留最佳与最近三次，重合时为同一条记录。</p>
+          </aside>
         </div>
         <div class="level-select" id="level-select">
           <div class="section-heading"><h2>冒险启程</h2><span>从扫雷出发，通关后解锁下一关</span></div>
@@ -204,7 +233,7 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=20261018-ranking"></script>
-    <script type="module" src="./src/auth-game.js?v=20261018-ranking"></script>
+    <script type="module" src="./src/main.js?v=20261018-records"></script>
+    <script type="module" src="./src/auth-game.js?v=20261018-records"></script>
   </body>
 </html>

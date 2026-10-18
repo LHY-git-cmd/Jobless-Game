@@ -52,7 +52,9 @@ export function initAuth() {
   function renderUser(value) {
     const previousId = user?.id;
     user = value;
-    if (previousId !== user?.id) document.dispatchEvent(new CustomEvent("auth-changed"));
+    if (previousId !== user?.id) document.dispatchEvent(new CustomEvent("auth-changed", {
+      detail: { user: user ? { id: user.id, username: user.username } : null },
+    }));
     const label = host.querySelector(".auth-user");
     label.textContent = user?.username || "";
     label.classList.toggle("hidden", !user);
@@ -159,6 +161,8 @@ export function initAuth() {
 
   return {
     ready,
+    /** 向首页个人记录提供公开用户信息，不返回 Cookie 或凭据。 */
+    get currentUser() { return user ? { id: user.id, username: user.username } : null; },
     /** 仅在确认当前会话后续接原入口回调，错误时停在登录表单。 */
     async requireLogin(continuation) {
       await ready;

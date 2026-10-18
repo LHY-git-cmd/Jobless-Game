@@ -78,6 +78,7 @@ async function persistCompletion() {
   syncProgressActions();
   try {
     await challenge.complete(index, session.levels[index].seconds, development);
+    document.dispatchEvent(new CustomEvent("records-updated"));
     recordStatus(index === 2 ? "三关成绩已保存，可查看总榜。" : "通关记录已保存，下一关已解锁。");
   } catch (error) {
     if (generation === challenge.generation) recordStatus(error.message, persistCompletion);

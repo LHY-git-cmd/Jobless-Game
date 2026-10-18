@@ -53,9 +53,9 @@
 | 检查 | 结果 | 日志 |
 | --- | --- | --- |
 | Python unittest 全部后端回归 | 30 项，26 通过，4 跳过，0 失败 | artifacts/backend/all-tests.log |
-| Node.js 全部前端回归 | 34 项通过，0 失败 | artifacts/frontend/all-tests.log |
+| Node.js 全部前端回归（含首页个人记录窗口） | 40 项通过，0 失败 | artifacts/frontend/personal-records-all-tests.log |
 | 补充的重开失败期间禁止旧棋盘操作回归 | 6 项通过，0 失败 | artifacts/frontend/progression-tests.log |
-| 独立 Chrome 与真实 API/UI 验收 | 7 组通过，未处理页面异常 0 | artifacts/frontend/ranking-verification.log |
+| 独立 Chrome 与真实 API/UI 验收（含首页个人记录窗口） | 11 组通过，未处理页面异常 0 | artifacts/frontend/personal-records-browser.log |
 
 后端规则采用 TDD，从缺少排行榜模块的失败基线开始实现。业务测试使用临时 SQLite 执行真实 SQL，认证在业务测试中被替换；浏览器验收使用真实登录、密码计算、HTTP 路由和通关流程，全部写入临时 SQLite。SQLite 只验证本地业务与交互，不能替代 MySQL 的 JSON、外键、锁和 Flyway 验收。
 
@@ -68,10 +68,16 @@
 5. 三个独立单游戏页面、登录跨页恢复、375px 页面无横向溢出。
 6. 榜单读取失败后重新加载。
 7. 关闭开发开关后隐藏按钮，正常挑战仍可开始。
+8. 首页个人记录窗口在退出后立即清空，窗口登录不启动游戏，新账号展示空记录。
+9. 四类个人成绩的最佳与最近三次、最佳在最近三次之外时的独立展示、整轮三项明细。
+10. 个人记录读取失败清空旧值，重新加载成功后恢复；通关保存事件自动刷新窗口。
+11. 个人窗口桌面位于首页介绍右侧，375px 与 320px 手机布局位于介绍下方，无横向溢出。
 
 已查看桌面与手机截图。截图中的玩家和成绩仅来自临时验收库，脚本结束后临时数据和服务已清理。
 
 截图：`artifacts/frontend/ranking-desktop.png`、`ranking-mobile.png`、`ranking-single-mobile.png`、`ranking-dev-completion.png`、`ranking-settlement.png`，按项目规则不提交图片及日志。
+
+后续按用户圈定位置补充首页“我的通关记录”，无需新增后端接口或数据库表。组件复用 `/api/records/me`，使用四个支持方向键的分类项展示最佳与最近三次；重合的最近记录标记为“最佳”。登录/换号、保存、手动刷新和切换类别触发请求，无定时轮询。过期响应有独立编号隔离，退出时立即删除旧文字与记录节点。桌面和手机预览为 `artifacts/frontend/personal-records-desktop.png`、`personal-records-mobile.png`。
 
 ## 提交
 
