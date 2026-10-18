@@ -1,0 +1,13 @@
+# 作用：限制项目 Nginx 日志的磁盘占用；若宝塔已轮转相同日志，不要重复配置。
+/www/wwwlogs/jobless-game*.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    sharedscripts
+    postrotate
+        /www/server/nginx/sbin/nginx -s reopen
+    endscript
+}

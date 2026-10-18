@@ -1,0 +1,34 @@
+# 作用：合并到项目域名的 HTTPS server {}，先替换路径；保留宝塔原有证书配置。
+root /www/wwwroot/jobless-game/frontend;
+index index.html;
+
+location / {
+    try_files $uri $uri/ =404;
+}
+
+# 两个 API location 共用同一代理配置，Origin 和 Cookie 始终使用站点同源地址。
+location = /api/auth/login {
+    limit_req zone=jobless_login burst=5 nodelay;
+    limit_req_status 429;
+    client_max_body_size 4k;
+    client_body_timeout 10s;
+    error_page 429 = @jobless_login_busy;
+    include /www/wwwroot/jobless-game/backend/deploy/nginx-proxy.conf;
+}
+
+location /api/ {
+    client_max_body_size 4k;
+    include /www/wwwroot/jobless-game/backend/deploy/nginx-proxy.conf;
+}
+
+location @jobless_login_busy {
+    default_type application/json;
+    add_header Retry-After 60 always;
+    add_header Cache-Control no-store always;
+    return 429 '{"detail":"登录请求过于频繁，请稍后重试。"}';
+}
+
+# 拒绝读取源码和配置；root 只指向 frontend，后端与 .env 不在 Web 根目录。
+location ~ /\. {
+    deny all;
+}

@@ -426,9 +426,10 @@ function openSettlement() {
 }
 
 // 棋盘使用事件委托，重新绘制格子后仍能处理点击。
-$("start-button").addEventListener("click", enterGame);
-ui.sudokuEntry.addEventListener("click", enterSudoku);
-ui.akariEntry.addEventListener("click", enterAkari);
+// 登录模块确认会话后才发出入口事件；规则阅读与计时继续由游戏模块管理。
+$("start-button").addEventListener("authorized-start", enterGame);
+ui.sudokuEntry.addEventListener("authorized-start", enterSudoku);
+ui.akariEntry.addEventListener("authorized-start", enterAkari);
 $("back-button").addEventListener("click", returnHome);
 $("restart-button").addEventListener("click", restartGame);
 $("mine-sound").addEventListener("click", () => {

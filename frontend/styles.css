@@ -288,3 +288,52 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .cell.cell-blasting { animation: none; }
   .cell.cell-blasting::after { animation: none; display: none; }
 }
+
+/* 三页共享账号入口：用户名保持可读，窄屏将导航放到第二行。 */
+.auth-controls { justify-self: end; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; min-width: 0; position: relative; }
+.auth-open, .auth-logout { border-color: #eadab480; background: #102b3c99; color: var(--gold); font-size: 14px; white-space: nowrap; }
+.auth-open { min-width: 88px; }
+.auth-user { max-width: 180px; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
+.auth-header-status { position: absolute; right: 0; top: 100%; width: min(280px, 75vw); color: #ffdfb4; font-size: 12px; text-align: right; }
+/* 原生 dialog 隔离背景焦点，实色为模糊不可用时的可读回退。 */
+.auth-dialog { width: min(calc(100% - 32px), 448px); max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid #e8d6b570; border-radius: 24px; color: #f5f4ef; background: #17384df5; box-shadow: 0 32px 100px #020e2355, inset 0 1px 0 #fff5; overflow: auto; overscroll-behavior: contain; }
+.auth-dialog::backdrop { background: #04172866; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .auth-dialog { background: linear-gradient(145deg, #55778455, #102c42c9 55%, #183d50b8); backdrop-filter: blur(28px) saturate(125%); -webkit-backdrop-filter: blur(28px) saturate(125%); }
+}
+.auth-card { position: relative; padding: 38px 36px 26px; }
+.auth-close { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border-color: transparent; border-radius: 50%; background: transparent; font: 28px/1 system-ui, sans-serif; color: #e7e9e6; }
+.auth-card .eyebrow { margin: 0 32px 12px 0; color: var(--gold); font-size: 11px; letter-spacing: 2px; }
+.auth-card h2 { margin: 0; color: #fff9ec; font: 600 30px/1.4 "Songti SC", SimSun, serif; letter-spacing: 3px; }
+.auth-intro { margin: 14px 0 28px; color: #d8e5eb; font-size: 13px; line-height: 1.9; }
+.auth-field + .auth-field { margin-top: 16px; }
+.auth-field label { display: block; font-size: 14px; line-height: 1.5; color: #f7f5ee; }
+.auth-label-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#auth-count { color: #d0dfe4; font-size: 12px; font-variant-numeric: tabular-nums; }
+.auth-field input { display: block; width: 100%; min-height: 48px; margin-top: 8px; padding: 11px 14px; border: 1px solid #bdd2dc80; border-radius: 10px; background: #071c2c77; color: #fffaf0; font: 16px/1.5 "Microsoft YaHei", system-ui, sans-serif; caret-color: var(--gold); }
+.auth-field input:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-color: var(--gold); }
+.auth-field input[aria-invalid="true"] { border-color: #ffc1b5; }
+.auth-hint { margin: 8px 0 0; color: #cfdee5; font-size: 12px; line-height: 1.6; }
+.auth-error { margin: 6px 0 0; color: #ffcec3; font-size: 12px; line-height: 1.6; }
+.auth-error:empty { display: none; }
+.auth-status { min-height: 20px; margin: 16px 0 8px; color: #ffdfb4; font-size: 13px; line-height: 1.6; }
+.auth-submit { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 50px; padding-inline: 18px; border-color: #f0d49acc; border-radius: 10px; background: linear-gradient(110deg, #f2d8a3, #e6c485); color: #25333d; font-weight: 600; }
+.auth-submit:hover:not(:disabled) { background: #fff0ce; border-color: #fff0ce; }
+.auth-footnote { margin: 20px 0 0; color: #d0dfe4; font-size: 12px; line-height: 1.7; text-align: center; }
+@media (max-width: 850px) {
+  .auth-controls { grid-column: 2; grid-row: 1; }
+}
+@media (max-width: 600px) {
+  .auth-user { max-width: 100px; font-size: 12px; }
+  .auth-controls { gap: 6px; }
+  .auth-open, .auth-logout { padding-inline: 12px; font-size: 12px; }
+  .auth-card { padding: 36px 24px 24px; }
+  .auth-card h2 { font-size: 28px; }
+}
+@media (max-width: 360px) {
+  .landing-header { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .brand { font-size: 14px; letter-spacing: 0; }
+  .auth-user { max-width: 72px; }
+  .auth-logout { padding-inline: 8px; }
+  .auth-card { padding-inline: 20px; }
+}

@@ -1,0 +1,8 @@
+# FastAPI 登录 API 及 MySQL 持久化依赖。
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+SQLAlchemy>=2.0,<3
+PyMySQL[rsa]>=1.1,<2
+argon2-cffi>=23.1,<26
+pydantic-settings>=2.6,<3
+

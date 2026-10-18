@@ -71,6 +71,7 @@ test("通关可查看终盘并继续下一关，重开和返回会清理入口",
     else globalThis.window = originals.window;
   });
   await import("../src/main.js");
+  const authorize = (id) => $(id).listeners["authorized-start"]();
   const visible = (id) => !$(id).classList.contains("hidden");
   const solveMine = () => {
     $("board").click($("board").children[99]);
@@ -92,7 +93,7 @@ test("通关可查看终盘并继续下一关，重开和返回会清理入口",
   const sudokuBlanks = [...SUDOKU_PUZZLE].flatMap((value, index) => value === "0" ? [index] : []);
 
   await t.test("扫雷通关后查看结果保留终盘，右侧入口进入照明", () => {
-    $("start-button").click();
+    authorize("start-button");
     $("rules-close").click();
     assert.equal(visible("mine-next"), false);
     solveMine();
@@ -161,7 +162,7 @@ test("通关可查看终盘并继续下一关，重开和返回会清理入口",
 
   await t.test("通关弹窗可直接进入下一关，返回首页不保留旧入口", () => {
     $("sudoku-back").click();
-    $("start-button").click();
+    authorize("start-button");
     $("rules-close").click();
     solveMine();
     $("result-primary").click();
@@ -174,7 +175,7 @@ test("通关可查看终盘并继续下一关，重开和返回会清理入口",
   });
 
   await t.test("连续三关计时、祝贺、点击开始结算、逐关合计与返回首页", () => {
-    $("start-button").click();
+    authorize("start-button");
     now += 50000; // 规则阅读不计入游戏用时。
     $("rules-close").click();
     $("board").click($("board").children[0]);
@@ -221,7 +222,7 @@ test("通关可查看终盘并继续下一关，重开和返回会清理入口",
   });
 
   await t.test("从首页直进末关仅结算本关，未挑战关卡不伪造零秒；重开清空本关", () => {
-    $("sudoku-entry").click();
+    authorize("sudoku-entry");
     $("sudoku-rules-close").click();
     fillSudoku(sudokuBlanks.slice(0, 1));
     now += 20000;
@@ -243,7 +244,7 @@ test("通关可查看终盘并继续下一关，重开和返回会清理入口",
   });
 
   await t.test("照明游戏过程中定时刷新，下一次点击也同步时间，未操作和重开时保持零秒", () => {
-    $("akari-entry").click();
+    authorize("akari-entry");
     $("akari-rules-close").click();
     now += 5000;
     timerTick();

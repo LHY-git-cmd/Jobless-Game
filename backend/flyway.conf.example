@@ -1,0 +1,8 @@
+# Flyway 只在发布/维护窗口执行，示例不含真实密码。
+flyway.url=jdbc:mysql://127.0.0.1:3306/jobless_game?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+flyway.user=app_user
+flyway.password=change-me
+flyway.locations=filesystem:backend/migrations
+flyway.baselineOnMigrate=false
+flyway.cleanDisabled=true
+

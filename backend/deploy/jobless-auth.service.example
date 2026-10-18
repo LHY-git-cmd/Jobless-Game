@@ -1,0 +1,19 @@
+# 作用：可选 systemd 单进程启动模板；与宝塔进程管理器二选一，不重复启动。
+[Unit]
+Description=Jobless Game Authentication API
+After=network.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/www/wwwroot/jobless-game
+ExecStart=/www/wwwroot/jobless-game/.venv/bin/python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --workers 1 --limit-concurrency 32 --backlog 32 --timeout-keep-alive 5 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

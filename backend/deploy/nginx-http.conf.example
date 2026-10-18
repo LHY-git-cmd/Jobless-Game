@@ -1,0 +1,2 @@
+# 作用：在宝塔 Nginx 的 http {} 级别添加一次登录速率区；不能放进站点 server {}。
+limit_req_zone $binary_remote_addr zone=jobless_login:1m rate=5r/m;
