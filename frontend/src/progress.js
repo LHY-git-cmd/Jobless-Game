@@ -14,12 +14,14 @@ export function loadProgress(storage, userId) {
         session?.levels?.length !== 3 || !session.levels.every(level =>
           (level.startedAt === null || Number.isFinite(level.startedAt)) &&
           (level.seconds === null || (Number.isInteger(level.seconds) && level.seconds >= 0)))) return null;
-    if (index === 0 && (!game || game.cells?.length !== 100 ||
+    const completedWithoutBoard = challenge.state.levels[index]?.seconds != null && ![game, akari, sudoku][index];
+    if (!completedWithoutBoard && ![game, akari, sudoku][index]) return null;
+    if (game && (game.cells?.length !== 100 ||
         !["ready", "playing", "won", "lost"].includes(game.status) ||
         game.level?.rows !== 10 || game.level?.cols !== 10)) return null;
-    if (index === 1 && (!akari || !Array.isArray(akari.bulbs) ||
+    if (akari && (!Array.isArray(akari.bulbs) ||
         !akari.bulbs.every(cell => Number.isInteger(cell) && cell >= 0 && cell < 100))) return null;
-    if (index === 2 && (!sudoku || sudoku.values?.length !== 81 || sudoku.givens?.length !== 81 ||
+    if (sudoku && (sudoku.values?.length !== 81 || sudoku.givens?.length !== 81 ||
         !sudoku.values.every(digit => Number.isInteger(digit) && digit >= 0 && digit <= 9))) return null;
     if (!Array.isArray(value.dialogs)) return null;
     if (akari) akari.bulbs = new Set(akari.bulbs);

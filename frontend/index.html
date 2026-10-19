@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#102b3c" />
     <title>无职游戏</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20261018-island" />
-    <link rel="stylesheet" href="./styles.css?v=20261019-rules-timer" />
+    <link rel="stylesheet" href="./styles.css?v=20261019-home-entry" />
   </head>
   <body>
     <div class="world-background" aria-hidden="true"></div>
@@ -63,17 +63,17 @@
             <button type="button" id="start-button" class="level-card mine-card">
               <span class="level-art"><img src="./assets/minesweeper.webp" width="320" height="320" alt="" /></span>
               <span class="level-content"><span class="level-number">第一关 / 01</span><span class="level-title">扫雷</span><span class="level-description">步步推理，避开暗藏的危险。</span><span class="level-meta">10 × 10 棋盘<span>10 颗地雷</span></span></span>
-              <span class="level-arrow" aria-hidden="true">↗</span>
+              <span class="level-arrow" id="mine-entry-status" aria-hidden="true">开始游戏</span>
             </button>
             <button type="button" id="akari-entry" class="level-card light-card" disabled aria-label="第二关照明，通关本轮扫雷后解锁">
               <span class="level-art"><img src="./assets/bulb.webp" width="320" height="320" alt="" /></span>
               <span class="level-content"><span class="level-number">第二关 / 02</span><span class="level-title">照明</span><span class="level-description">点亮一盏灯，驱散每一处黑暗。</span><span class="level-meta">10 × 10 棋盘<span>光影推理</span></span></span>
-              <span class="level-arrow" aria-hidden="true">↗</span>
+              <span class="level-arrow" id="akari-entry-status" aria-hidden="true">待解锁</span>
             </button>
             <button type="button" id="sudoku-entry" class="level-card sudoku-card" disabled aria-label="第三关数独，通关本轮照明后解锁">
               <span class="level-art sudoku-art" aria-hidden="true"><span>1</span><span>2</span><span></span><span></span><span>5</span><span>6</span><span>7</span><span></span><span>9</span></span>
               <span class="level-content"><span class="level-number">第三关 / 03</span><span class="level-title">数独</span><span class="level-description">在九宫格里，发现秩序之美。</span><span class="level-meta">9 × 9 棋盘<span>中等难度</span></span></span>
-              <span class="level-arrow" aria-hidden="true">↗</span>
+              <span class="level-arrow" id="sudoku-entry-status" aria-hidden="true">待解锁</span>
             </button>
           </div>
         </div>
@@ -236,7 +236,7 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=20261019-rules-timer"></script>
-    <script type="module" src="./src/auth-game.js?v=20261018-records"></script>
+    <script type="module" src="./src/main.js?v=20261019-home-entry"></script>
+    <script type="module" src="./src/auth-game.js?v=20261019-home-entry"></script>
   </body>
 </html>

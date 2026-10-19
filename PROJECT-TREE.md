@@ -106,7 +106,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── package.json                      # 前端项目元信息与 Node.js 测试命令
 │   │
 │   ├── src/                              # 浏览器运行的 JavaScript 源码
-│   │   ├── main.js                       # 逐关解锁、棋局恢复、通关保存、规则确认起计时与反复查看、结算弹窗
+│   │   ├── main.js                       # 首页逐关入口、原局续玩与结果查看、通关保存、规则计时和结算
 │   │   ├── game.js                       # 扫雷棋盘与规则逻辑
 │   │   ├── akari.js                      # 照明题盘、灯光与通关判断
 │   │   ├── sudoku.js                     # 数独题盘、输入校验与通关判断
@@ -115,7 +115,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── auth.js                       # 三页共享登录弹窗、会话恢复及退出
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
-│   │   ├── auth-game.js                  # 第一关登录拦截与授权入口续接
+│   │   ├── auth-game.js                  # 首页三关登录拦截与授权入口续接
 │   │   ├── auth-page.js                  # 排行榜和论坛的登录初始化
 │   │   ├── mine-effects.js               # 扫雷连锁爆炸动画与音效控制
 │   │   ├── ranking-client.js             # 同源请求、HTTP 兼容 UUID、挑战幂等负载及失败重试
@@ -145,7 +145,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── progress.test.js              # 存档往返、灯泡集合恢复、离开计时与存储异常
 │       ├── mine-effects.test.js          # 爆炸顺序、动画与声音控制测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
-│       ├── completion.test.js            # 逐关解锁、规则确认起计时/重看不停、刷新/退出恢复与保存回归
+│       ├── completion.test.js            # 首页逐关入口、前关结果/后关续玩、规则计时、退出恢复与保存回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
 │       └── music.test.js                 # 音轨切换、同轮一次、静音、播放拒绝与切页状态
@@ -175,7 +175,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_akari_completion.py     # 照明通关及结果界面验证脚本
         ├── verify_settlement.py          # 三关完成、祝贺与结算流程验证脚本
         ├── verify_live_timers.py         # 游戏实时计时显示验证脚本
-        ├── verify_progress.py            # 规则计时、手机布局、三关刷新/退出恢复与离开计时验证
+        ├── verify_progress.py            # 首页解锁/续玩、规则计时、手机布局和三关刷新/退出恢复验证
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料

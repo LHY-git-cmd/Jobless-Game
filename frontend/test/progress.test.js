@@ -3,6 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { loadProgress, saveProgress, clearProgress } from "../src/progress.js";
 import { createAkari } from "../src/akari.js";
+import { createGame } from "../src/game.js";
 import { createSession, startLevel, levelSeconds } from "../src/session.js";
 
 test("照明灯泡和原始计时起点往返保存，离线时间仍累计", () => {
@@ -28,4 +29,22 @@ test("存档损坏、版本不匹配、存储禁用或写满时不抛异常", ()
   assert.equal(loadProgress(denied, 1), null);
   assert.equal(saveProgress(denied, 1, {}), false);
   assert.doesNotThrow(() => clearProgress(denied, 1));
+});
+
+test("查看前关时存档仍保留后关灯泡；旧存档缺少前关棋盘时可查看已保存结果", () => {
+  let raw;
+  const storage = { getItem: () => raw, setItem: (_key, value) => { raw = value; } };
+  const session = createSession(), akari = createAkari();
+  session.levels[0].seconds = 12;
+  akari.bulbs.add(0);
+  const value = { currentIndex: 0, game: createGame(), akari, session, dialogs: [],
+    challenge: { startId: "start", state: { run_id: "run", levels: [{ seconds: 12 }, { seconds: null }, { seconds: null }] }, pending: [] } };
+  saveProgress(storage, 1, value);
+  assert.deepEqual(loadProgress(storage, 1).akari.bulbs, new Set([0]));
+  value.game = null;
+  saveProgress(storage, 1, value);
+  assert.equal(loadProgress(storage, 1).session.levels[0].seconds, 12);
+  value.akari = { bulbs: [100], complete: false };
+  saveProgress(storage, 1, value);
+  assert.equal(loadProgress(storage, 1), null);
 });

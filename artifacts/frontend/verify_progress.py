@@ -214,20 +214,45 @@ def main():
                     wait_for(evaluate, f"!document.getElementById('{quick}').disabled")
                     evaluate(f"document.getElementById('{quick}').click()")
                     wait_for(evaluate, "!document.getElementById('result-dialog').classList.contains('hidden') && !document.getElementById('result-primary').disabled")
-                    evaluate("document.getElementById('result-primary').click()")
+                    evaluate("document.getElementById('result-secondary').click()")
+                    previous_back = "back-button" if quick == "mine-quick" else "akari-back"
+                    evaluate(f"document.getElementById('{previous_back}').click()")
+                    name = board.split("-")[0]
+                    wait_for(evaluate, f"!document.getElementById('{name}-entry').disabled")
+                    assert evaluate(f"document.getElementById('{name}-entry-status').textContent") == "已解锁"
+                    if name == "akari":
+                        for width, height, suffix in [(1280, 1000, "desktop"), (375, 812, "mobile")]:
+                            command("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": width == 375})
+                            evaluate("document.getElementById('level-select').scrollIntoView({block:'center',behavior:'instant'})")
+                            assert evaluate("[...document.querySelectorAll('.level-card')].every(c => {const b=c.getBoundingClientRect(), s=c.querySelector('.level-arrow').getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth && s.right <= b.right && s.top >= b.top})")
+                            png = command("Page.captureScreenshot", {"format": "png"})["data"]
+                            (ROOT / f"artifacts/frontend/home-entry-{suffix}.png").write_bytes(base64.b64decode(png))
+                        command("Emulation.setDeviceMetricsOverride", {"width": 1280, "height": 1000, "deviceScaleFactor": 1, "mobile": False})
+                    command("Page.reload")
+                    wait_for(evaluate, f"!document.getElementById('{name}-entry').disabled")
+                    evaluate(f"document.getElementById('{name}-entry').click()")
                     wait_for(evaluate, f"!document.getElementById('{screen}').classList.contains('hidden')")
                     evaluate("['rules-close','akari-rules-close','sudoku-rules-close'].forEach(id => document.getElementById(id).click())")
-                    name = board.split("-")[0]
                     verify_rules(command, evaluate, name, timer, f"{name}-rules-dialog", f"{name}-rules-close")
                     evaluate(action)
                     cells = evaluate(f"document.getElementById('{board}').innerHTML")
+                    evaluate(f"document.getElementById('{name}-back').click()")
+                    assert evaluate(f"document.getElementById('{name}-entry-status').textContent") == "继续游戏"
+                    if name == "akari":
+                        evaluate("document.getElementById('start-button').click()")
+                        wait_for(evaluate, "!document.getElementById('game-screen').classList.contains('hidden')")
+                        assert evaluate("document.getElementById('result-title').textContent") == "第一关通关成功"
+                        evaluate("document.getElementById('result-secondary').click(); document.getElementById('back-button').click()")
+                    evaluate(f"document.getElementById('{name}-entry').click()")
+                    wait_for(evaluate, f"!document.getElementById('{screen}').classList.contains('hidden')")
+                    assert evaluate(f"document.getElementById('{board}').innerHTML") == cells
                     time.sleep(1.1)
                     command("Page.reload")
                     wait_for(evaluate, f"document.querySelectorAll('#{board} button').length > 0")
                     assert evaluate(f"document.getElementById('{board}').innerHTML") == cells
                     assert evaluate(f"document.getElementById('{timer}').textContent") != "00:00"
                 assert STARTS == 1
-        print("浏览器验收：三关确认开始即计时、重看规则不中断、键盘焦点、手机布局及刷新退出恢复均通过。")
+        print("浏览器验收：首页逐关解锁、前关结果查看、后关原局续玩、规则计时和刷新退出恢复均通过。")
     finally:
         server.shutdown()
         server.server_close()

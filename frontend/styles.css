@@ -98,7 +98,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .level-description { color: #d3dfe5; font-size: 12px; line-height: 1.8; }
 .level-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 18px; color: var(--muted); font-size: 11px; }
 .level-meta > span { padding-left: 12px; border-left: 1px solid var(--line); }
-.level-arrow { position: absolute; right: 16px; top: 14px; color: var(--gold); font-size: 20px; }
+.level-arrow { position: absolute; right: 16px; top: 14px; color: var(--gold); font-size: 13px; white-space: nowrap; }
 .sudoku-art { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 1px; padding: 5px; border: 1px solid #d9bc83; border-radius: 10px; background: #dcc89e; color: #31475a; }
 .sudoku-art > span { display: grid; place-items: center; background: #fff5de; font: 600 17px Georgia, serif; }
 .landing-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 24px 0; color: #bdcdd8; font-size: 11px; letter-spacing: 1px; }
@@ -377,8 +377,6 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .challenge-status { position: fixed; z-index: 15; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; width: min(92%, 600px); padding: 12px 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 8px 30px #0006; font-size: 14px; line-height: 1.6; }
 #save-status { color: var(--gold); line-height: 1.7; }
 .level-card:disabled { opacity: .65; }
-.level-card:disabled .level-arrow { font-size: 0; }
-.level-card:disabled .level-arrow::after { content: '待解锁'; font-size: 13px; white-space: nowrap; }
 @media (max-width: 600px) {
   .ranking-content { margin-top: 0; }
   .ranking-heading { padding-bottom: 20px; }
