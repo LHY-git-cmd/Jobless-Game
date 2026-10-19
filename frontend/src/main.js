@@ -6,7 +6,8 @@
 import { createGame, revealSelected, selectCell, toggleFlag } from "./game.js";
 import { createSudoku, selectSudokuCell, setSudokuValue, sudokuConflicts, checkSudoku } from "./sudoku.js";
 import { AKARI_SIZE, akariCell, createAkari, inspectAkari, toggleBulb } from "./akari.js";
-import { createExplosionSequence, createExplosionSound, explosionOrder } from "./mine-effects.js";
+import { createExplosionSequence, createExplosionSound, explosionOrder } from "./mine-effects.js?v=20261019-audio-settings";
+import { getAudioSettings } from "./audio-settings.js";
 import { createSession, restartLevel, startLevel, completeLevel, levelSeconds, sessionSummary, formatTime } from "./session.js";
 import { ChallengeClient, rankingRequest } from "./ranking-client.js?v=20261019-progress";
 import { loadProgress, saveProgress, clearProgress } from "./progress.js";
@@ -36,7 +37,6 @@ let sudoku = null;
 let akari = null;
 let resultMode = "";
 let mineExplosion = null;
-let soundMuted = false;
 let session = createSession();
 const challenge = new ChallengeClient();
 let operationBusy = false;
@@ -288,6 +288,15 @@ async function requestRestart(index, restart) {
   }
 }
 const explosionSound = createExplosionSound(new URL("../assets/audio/explosion.wav", import.meta.url));
+const audioSettings = getAudioSettings();
+// 设置窗口与棋盘音效按钮共享同一偏好，修改开关或音量立即影响爆炸声音。
+audioSettings.subscribe(({ effectsEnabled, effectsVolume }) => {
+  explosionSound.setMuted(!effectsEnabled);
+  explosionSound.setVolume(effectsVolume);
+  $("mine-sound").textContent = effectsEnabled ? "音效：开" : "音效：关";
+  $("mine-sound").setAttribute("aria-label", effectsEnabled ? "关闭游戏音效" : "开启游戏音效");
+  $("mine-sound").setAttribute("aria-pressed", String(!effectsEnabled));
+});
 const explosionSequence = createExplosionSequence({
   reveal(index) {
     mineExplosion.revealed.add(index);
@@ -813,12 +822,8 @@ homeEntries.forEach((entry, index) => entry.button.addEventListener("authorized-
 $("back-button").addEventListener("click", returnHome);
 $("restart-button").addEventListener("click", () => requestRestart(0, restartGame));
 $("mine-sound").addEventListener("click", () => {
-  soundMuted = !soundMuted;
+  audioSettings.update({ effectsEnabled: !audioSettings.state.effectsEnabled });
   explosionSound.unlock();
-  explosionSound.setMuted(soundMuted);
-  $("mine-sound").textContent = soundMuted ? "音效：关" : "音效：开";
-  $("mine-sound").setAttribute("aria-label", soundMuted ? "开启爆炸音效" : "关闭爆炸音效");
-  $("mine-sound").setAttribute("aria-pressed", String(soundMuted));
 });
 $("sudoku-back").addEventListener("click", returnHome);
 $("sudoku-restart").addEventListener("click", () => requestRestart(2, restartSudoku));

@@ -1,5 +1,5 @@
 /** 四个排行榜页面共用的分页、空榜、失败重试和快照明细渲染。 */
-import { initAuth } from "./auth.js";
+import { initAuth } from "./auth.js?v=20261019-audio-settings";
 import { rankingRequest } from "./ranking-client.js";
 import { formatTime } from "./session.js";
 

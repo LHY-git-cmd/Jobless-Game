@@ -59,6 +59,7 @@ export function createExplosionSound(url) {
   let decoded;
   let epoch = 0;
   let muted = false;
+  let volume = 0.65;
   const active = new Set();
 
   function unlock() {
@@ -69,7 +70,7 @@ export function createExplosionSound(url) {
         compressor.threshold.value = -12;
         compressor.ratio.value = 6;
         output = context.createGain();
-        output.gain.value = muted ? 0 : 0.42;
+        output.gain.value = muted ? 0 : 0.65 * volume;
         output.connect(compressor).connect(context.destination);
         decoded = fetch(url).then((response) => {
           if (!response.ok) throw new Error("无法加载爆炸音效");
@@ -85,7 +86,7 @@ export function createExplosionSound(url) {
   async function play(step) {
     const current = epoch;
     const buffer = await decoded;
-    if (!buffer || muted || current !== epoch || context?.state !== "running") return;
+    if (!buffer || muted || volume === 0 || current !== epoch || context?.state !== "running") return;
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.playbackRate.value = step === 0 ? 1 : [0.96, 1.04, 1, 1.08][step % 4];
@@ -102,10 +103,18 @@ export function createExplosionSound(url) {
   }
 
   function setMuted(value) {
-    muted = value;
-    if (output) output.gain.value = muted ? 0 : 0.42;
+    muted = Boolean(value);
+    if (output) output.gain.value = muted ? 0 : 0.65 * volume;
     if (muted) stop();
   }
 
-  return { unlock, play, stop, setMuted };
+  /** 实时调整主增益，保留压缩器限制叠加峰值；零音量立即结束尾音。 */
+  function setVolume(value) {
+    if (typeof value !== "number" || !Number.isFinite(value)) return;
+    volume = Math.min(1, Math.max(0, value));
+    if (output) output.gain.value = muted ? 0 : 0.65 * volume;
+    if (volume === 0) stop();
+  }
+
+  return { unlock, play, stop, setMuted, setVolume };
 }

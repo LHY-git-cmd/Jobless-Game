@@ -112,7 +112,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── sudoku.js                     # 数独题盘、输入校验与通关判断
 │   │   ├── session.js                    # 确认开始后持续计时与结算记录；不是账号登录会话
 │   │   ├── progress.js                   # 按账号保存本地棋局、绝对计时起点与待确认请求
-│   │   ├── auth.js                       # 三页共享登录弹窗、会话恢复及退出
+│   │   ├── audio-settings.js             # 音乐/音效独立开关、音量偏好持久化与订阅同步
+│   │   ├── settings.js                   # 用户名打开的游戏设置弹窗：开关、滑块和键盘焦点
+│   │   ├── auth.js                       # 共享登录弹窗、会话恢复、用户名设置入口及退出
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
 │   │   ├── auth-game.js                  # 首页三关及重新挑战的登录拦截与授权续接
@@ -121,7 +123,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── ranking-client.js             # 同源请求、HTTP 兼容 UUID、挑战幂等负载及失败重试
 │   │   ├── ranking-page.js               # 四榜共享分页、反馈与原轮次明细渲染
 │   │   ├── personal-records.js           # 首页我的通关记录：分类、最佳/最近三次、账号隔离与刷新
-│   │   ├── music.js                      # 全站音乐开关、结算胜利音效、静音与播放位置管理
+│   │   ├── music.js                      # 背景/胜利音独立控制、实时音量、手势解锁与播放位置管理
 │   │   └── dev-quick-complete.js          # 可移除的开发验收：只求解当前关合法终盘
 │   │
 │   ├── assets/                           # 网页直接加载的处理后静态素材
@@ -143,12 +145,13 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── sudoku.test.js                # 数独规则测试
 │       ├── session.test.js               # 关卡计时与结算记录测试
 │       ├── progress.test.js              # 存档往返、灯泡集合恢复、离开计时与存储异常
-│       ├── mine-effects.test.js          # 爆炸顺序、动画与声音控制测试
+│       ├── audio-settings.test.js        # 默认开启、独立音量、偏好持久化与存储异常
+│       ├── mine-effects.test.js          # 爆炸顺序、动画、实时增益与静音停止测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
 │       ├── completion.test.js            # 首页逐关入口、前关结果/后关续玩、规则计时、退出恢复与保存回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
-│       └── music.test.js                 # 音轨切换、同轮一次、静音、播放拒绝与切页状态
+│       └── music.test.js                 # 音轨切换、独立音量/静音、同轮一次、播放拒绝与切页状态
 │
 ├── source/                               # 原始素材和将其转换为网页资源的处理脚本
 │   ├── audio/                            # 原始音频与裁剪处理脚本
@@ -176,6 +179,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_settlement.py          # 三关完成、祝贺与结算流程验证脚本
         ├── verify_live_timers.py         # 游戏实时计时显示验证脚本
         ├── verify_progress.py            # 首页解锁/续玩、规则计时、手机布局和三关刷新/退出恢复验证
+        ├── verify_audio_settings.py      # 用户名设置入口、真实音频音量、跨页偏好与手机/键盘验证
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料

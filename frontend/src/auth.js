@@ -1,7 +1,8 @@
 /** 三页复用的登录弹窗、会话恢复和关卡登录拦截；不改变关卡计时与规则。 */
 import { authRequest } from "./auth-client.js";
 import { usernameUnits, validateUsername, validatePassword } from "./auth-validation.js";
-import { initMusic } from "./music.js";
+import { initMusic } from "./music.js?v=20261019-audio-settings";
+import { initGameSettings } from "./settings.js";
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
 export function initAuth() {
@@ -9,7 +10,7 @@ export function initAuth() {
   if (!host) return null;
   initMusic();
   host.innerHTML = `<button type="button" class="auth-open" aria-haspopup="dialog">登录</button>
-    <span class="auth-user hidden"></span><button type="button" class="auth-logout hidden">退出登录</button>
+    <button type="button" class="auth-user hidden" aria-haspopup="dialog" aria-controls="game-settings" title="打开游戏设置"></button><button type="button" class="auth-logout hidden">退出登录</button>
     <span class="auth-header-status" role="status"></span>`;
   const modal = document.createElement("dialog");
   modal.id = "auth-dialog";
@@ -44,6 +45,9 @@ export function initAuth() {
   const openButton = host.querySelector(".auth-open");
   const logoutButton = host.querySelector(".auth-logout");
   const headerStatus = host.querySelector(".auth-header-status");
+  const gameSettings = initGameSettings();
+  const userButton = host.querySelector(".auth-user");
+  userButton.addEventListener("click", () => { if (user) gameSettings.open(userButton); });
   let user = null;
   let pending = null;
   let returnFocus = null;
@@ -54,11 +58,13 @@ export function initAuth() {
   function renderUser(value) {
     const previousId = user?.id;
     user = value;
+    if (previousId !== user?.id) gameSettings.close();
     if (previousId !== user?.id) document.dispatchEvent(new CustomEvent("auth-changed", {
       detail: { user: user ? { id: user.id, username: user.username } : null },
     }));
     const label = host.querySelector(".auth-user");
     label.textContent = user?.username || "";
+    label.setAttribute("aria-label", user ? `${user.username}，打开游戏设置` : "打开游戏设置");
     label.classList.toggle("hidden", !user);
     openButton.classList.toggle("hidden", Boolean(user));
     logoutButton.classList.toggle("hidden", !user);

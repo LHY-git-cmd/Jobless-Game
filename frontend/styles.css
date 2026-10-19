@@ -294,7 +294,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .auth-controls { justify-self: end; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; min-width: 0; position: relative; }
 .auth-open, .auth-logout { border-color: #eadab480; background: #102b3c99; color: var(--gold); font-size: 14px; white-space: nowrap; }
 .auth-open { min-width: 88px; }
-.auth-user { max-width: 180px; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
+.auth-user { max-width: 180px; padding: 8px 12px; border-color: #eadab480; background: #102b3c99; color: var(--gold); overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
 .auth-header-status { position: absolute; right: 0; top: 100%; width: min(280px, 75vw); color: #ffdfb4; font-size: 12px; text-align: right; }
 /* 原生 dialog 隔离背景焦点，实色为模糊不可用时的可读回退。 */
 .auth-dialog { width: min(calc(100% - 32px), 448px); max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid #e8d6b570; border-radius: 24px; color: #f5f4ef; background: #17384df5; box-shadow: 0 32px 100px #020e2355, inset 0 1px 0 #fff5; overflow: auto; overscroll-behavior: contain; }
@@ -426,7 +426,23 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .records-badge { display: inline-block; margin-left: 8px; padding: 1px 5px; border: 1px solid #f0d49a55; border-radius: 4px; color: var(--gold); font-size: 10px; line-height: 1.5; }
 .records-list strong { font-size: 16px; font-weight: 500; }
 .records-footer { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.7; }
-.global-music { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 60; min-height: 44px; padding: 8px 14px; border-color: #f0d49a77; background: #102b3cf2; color: var(--gold); font-size: 13px; box-shadow: 0 4px 16px #06162444; }
+/* 用户名的游戏设置：独立音频开关与原生音量滑块，沿用登录弹窗的材质。 */
+.settings-card .settings-intro { margin: 12px 0 24px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.settings-audio { padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: #071e3244; }
+.settings-audio + .settings-audio { margin-top: 16px; }
+.settings-audio-heading, .settings-volume-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.settings-audio h3 { margin: 0; font-size: 16px; font-weight: 500; }
+.settings-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 10px; font-size: 13px; }
+.settings-toggle[aria-checked="true"] { border-color: #f0d49a88; color: var(--gold); background: #f0d49a12; }
+.settings-switch-track { position: relative; width: 28px; height: 16px; border-radius: 20px; background: #b7c9d366; }
+.settings-switch-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--paper); }
+.settings-toggle[aria-checked="true"] .settings-switch-track { background: var(--gold); }
+.settings-toggle[aria-checked="true"] .settings-switch-track::after { transform: translateX(12px); background: var(--gold-ink); }
+.settings-volume-heading { margin-top: 18px; color: var(--muted); font-size: 13px; }
+.settings-volume-heading output { color: var(--gold); font-variant-numeric: tabular-nums; }
+.settings-audio input[type="range"] { display: block; width: 100%; height: 44px; margin: 4px 0 0; padding: 0; accent-color: var(--gold); cursor: pointer; }
+.settings-audio input[type="range"]:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 6px; }
+.settings-card .settings-note { margin: 22px 0 0; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.7; }
 @media (max-width: 850px) {
   .landing-intro { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-block: 28px 36px; }
   .personal-records { width: 100%; min-height: 320px; }

@@ -40,17 +40,49 @@ test("全局背景循环，结算暂停背景并只播放一次胜利音效，�
   assert.equal(victory.plays, 1);
 });
 
-test("关闭音乐立即暂停两条音轨，后续点击或结算不自动取消静音", async () => {
+test("背景音乐与音效独立开关，关闭音效时不补放已跳过的结算音", async () => {
   const { controller, media: [background, victory], storage } = fixture();
   await controller.resume();
   await controller.setEnabled(false);
   assert.equal(background.paused, true);
+  await controller.celebrate("effects-only");
+  assert.equal(victory.paused, false);
+  await controller.setEffectsEnabled(false);
   await controller.resume(); await controller.celebrate("muted-round");
-  assert.equal(victory.plays, 0);
-  assert.equal(storage.get("jobless-music-enabled"), "false");
+  assert.equal(victory.plays, 1);
+  assert.equal(victory.paused, true);
+  assert.equal(JSON.parse(storage.get("jobless-audio-settings-v1")).musicEnabled, false);
   await controller.setEnabled(true);
   assert.equal(background.paused, false);
-  assert.equal(victory.plays, 0);
+  assert.equal(victory.plays, 1);
+  await controller.setEffectsEnabled(true);
+  assert.equal(victory.plays, 1);
+});
+
+test("背景和胜利音实时调节独立音量，关闭胜利音立即恢复已开启的背景", async () => {
+  const { controller, media: [background, victory] } = fixture();
+  controller.setMusicVolume(0.2); controller.setEffectsVolume(0.8);
+  assert.equal(background.volume, 0.2);
+  assert.equal(victory.volume, 0.8);
+  await controller.celebrate("round");
+  await controller.setEffectsEnabled(false);
+  assert.equal(victory.paused, true);
+  assert.equal(background.paused, false);
+  controller.setMusicVolume(0);
+  assert.equal(controller.enabled, true);
+  assert.equal(background.volume, 0);
+});
+
+test("音效音量降为零立即结束胜利音并恢复背景，调高后不补放", async () => {
+  const { controller, media: [background, victory], storage } = fixture();
+  await controller.celebrate("zero-volume");
+  controller.setEffectsVolume(0);
+  assert.equal(victory.paused, true);
+  assert.equal(background.paused, false);
+  assert.equal(JSON.parse(storage.get("jobless-audio-settings-v1")).effectsEnabled, true);
+  controller.setEffectsVolume(0.8);
+  await controller.celebrate("zero-volume");
+  assert.equal(victory.plays, 1);
 });
 
 test("离开结算停止胜利音效、恢复背景，新轮次可以重新庆祝", async () => {

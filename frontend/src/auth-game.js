@@ -1,5 +1,5 @@
 /** 首页三关与重新挑战的登录拦截，以及个人通关记录的账号状态接入。 */
-import { initAuth } from "./auth.js";
+import { initAuth } from "./auth.js?v=20261019-audio-settings";
 import { initPersonalRecords } from "./personal-records.js";
 
 const auth = initAuth();
