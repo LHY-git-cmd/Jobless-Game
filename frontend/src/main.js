@@ -4,13 +4,13 @@
  */
 
 import { createGame, revealSelected, selectCell, toggleFlag } from "./game.js";
-import { createSudoku, selectSudokuCell, setSudokuValue, sudokuConflicts, checkSudoku } from "./sudoku.js";
+import { createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote, sudokuConflicts, checkSudoku } from "./sudoku.js?v=20261019-sudoku-notes";
 import { AKARI_SIZE, akariCell, createAkari, inspectAkari, toggleBulb } from "./akari.js";
 import { createExplosionSequence, createExplosionSound, explosionOrder } from "./mine-effects.js?v=20261019-audio-settings";
 import { getAudioSettings } from "./audio-settings.js";
 import { createSession, restartLevel, startLevel, completeLevel, levelSeconds, sessionSummary, formatTime } from "./session.js";
 import { ChallengeClient, rankingRequest } from "./ranking-client.js?v=20261019-progress";
-import { loadProgress, saveProgress, clearProgress } from "./progress.js";
+import { loadProgress, saveProgress, clearProgress } from "./progress.js?v=20261019-sudoku-notes";
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -23,6 +23,7 @@ const ui = {
   sudokuBoard: $("sudoku-board"), sudokuKeypad: $("sudoku-keypad"),
   sudokuSelection: $("sudoku-selection"), sudokuMessage: $("sudoku-message"),
   sudokuClear: $("sudoku-clear"), sudokuCheck: $("sudoku-check"),
+  sudokuNotes: $("sudoku-notes-toggle"), sudokuInputHint: $("sudoku-input-hint"),
   sudokuRules: $("sudoku-rules-dialog"),
   akariEntry: $("akari-entry"), akariScreen: $("akari-screen"),
   akariBoard: $("akari-board"), akariStatus: $("akari-status"),
@@ -236,6 +237,7 @@ function syncProgressActions() {
   $("settlement-open").disabled = !challenge.saved(2) || operationBusy;
   if (resultMode.endsWith("won")) ui.resultPrimary.disabled = !challenge.saved(currentIndex) || operationBusy;
   $("settlement-ranking").disabled = !challenge.state?.total_recorded;
+  ui.sudokuNotes.disabled = !sudoku || !canPlay(2);
   for (const [index, id] of ["mine-quick", "akari-quick", "sudoku-quick"].entries()) {
     $(id).classList[quickEnabled ? "remove" : "add"]("hidden");
     $(id).disabled = saveBusy || !canPlay(index);
@@ -591,7 +593,21 @@ function renderSudoku() {
     button.className = "sudoku-cell";
     button.dataset.index = String(index);
     button.textContent = value === 0 ? "" : String(value);
-    button.setAttribute("aria-label", `第 ${row + 1} 行第 ${col + 1} 列，${value === 0 ? "空格" : value}${sudoku.givens[index] ? "，题目数字" : ""}`);
+    const mask = value === 0 ? sudoku.notes[index] : 0;
+    const digits = Array.from({ length: 9 }, (_, offset) => offset + 1).filter(digit => mask & (1 << (digit - 1)));
+    if (mask) {
+      const notes = document.createElement("span");
+      notes.className = "sudoku-notes";
+      notes.setAttribute("aria-hidden", "true");
+      // 每个候选数使用固定九宫位置，空位仍占格，方便快速扫视与比较。
+      for (let digit = 1; digit <= 9; digit++) {
+        const slot = document.createElement("span");
+        slot.textContent = digits.includes(digit) ? String(digit) : "";
+        notes.append(slot);
+      }
+      button.append(notes);
+    }
+    button.setAttribute("aria-label", `第 ${row + 1} 行第 ${col + 1} 列，${value === 0 ? digits.length ? `候选数 ${digits.join("、")}` : "空格" : value}${sudoku.givens[index] ? "，题目数字" : ""}`);
     button.setAttribute("aria-pressed", selected === index ? "true" : "false");
     if (sudoku.givens[index] !== 0) button.classList.add("given");
     if (selected !== null && (row === Math.floor(selected / 9) || col === selected % 9 ||
@@ -612,8 +628,20 @@ function renderSudoku() {
   const editable = selected !== null && sudoku.givens[selected] === 0 && !sudoku.complete;
   ui.sudokuSelection.textContent = selected === null ? "请选择一个空格。"
     : `已选第 ${Math.floor(selected / 9) + 1} 行，第 ${selected % 9 + 1} 列${editable ? "" : sudoku.givens[selected] ? "（题目数字不可修改）" : ""}`;
-  ui.sudokuKeypad.querySelectorAll("button").forEach((button) => { button.disabled = !editable; });
+  const noteEditable = editable && sudoku.values[selected] === 0;
+  ui.sudokuKeypad.querySelectorAll("button").forEach((button) => {
+    button.disabled = !editable || (sudoku.notesMode && !noteEditable);
+    if (sudoku.notesMode) button.setAttribute("aria-pressed", String(noteEditable && Boolean(sudoku.notes[selected] & (1 << (Number(button.dataset.digit) - 1)))));
+    else button.removeAttribute("aria-pressed");
+  });
   ui.sudokuClear.disabled = !editable;
+  ui.sudokuClear.textContent = sudoku.notesMode && noteEditable ? "清除本格笔记" : "清除选中格";
+  ui.sudokuNotes.textContent = sudoku.notesMode ? "笔记：开" : "笔记：关";
+  ui.sudokuNotes.setAttribute("aria-pressed", String(sudoku.notesMode));
+  ui.sudokuKeypad.setAttribute("aria-label", sudoku.notesMode ? "记录候选数" : "填写数字");
+  ui.sudokuInputHint.textContent = sudoku.notesMode
+    ? editable && !noteEditable ? "笔记模式：先清除本格答案，再记录候选数。" : "笔记模式：点击数字添加或取消候选数。"
+    : "填数模式：点击数字填写答案，开启笔记可记录候选数。";
   // 操作时也同步用时，页面后台节流后无需等下一次定时刷新。
   updateTimer();
   persistProgress();
@@ -727,8 +755,11 @@ function showAkariResult() {
 /** 数独确认开始后允许输入，查看规则或异步重开期间不可修改棋盘。 */
 function inputSudoku(value) {
   if (!canPlay(2)) return;
-  if (!sudoku || !setSudokuValue(sudoku, value)) return;
-  ui.sudokuMessage.textContent = sudoku.complete ? "" : sudokuConflicts(sudoku).size > 0 ? "存在重复数字，请检查。" : "";
+  if (!sudoku) return;
+  // 清除操作始终擦除本格内容；1–9 则按当前模式写入笔记或正式答案。
+  const noting = sudoku.notesMode && value !== 0;
+  if (!(noting ? toggleSudokuNote(sudoku, value) : setSudokuValue(sudoku, value))) return;
+  ui.sudokuMessage.textContent = noting ? "候选数已更新。" : sudoku.complete ? "" : sudokuConflicts(sudoku).size > 0 ? "存在重复数字，请检查。" : "";
   renderSudoku();
   if (sudoku.complete) showSudokuResult();
 }
@@ -881,6 +912,11 @@ ui.sudokuKeypad.addEventListener("click", (event) => {
   if (button) inputSudoku(Number(button.dataset.digit));
 });
 ui.sudokuClear.addEventListener("click", () => inputSudoku(0));
+ui.sudokuNotes.addEventListener("click", () => {
+  if (!sudoku || !canPlay(2)) return;
+  sudoku.notesMode = !sudoku.notesMode;
+  renderSudoku();
+});
 ui.sudokuCheck.addEventListener("click", () => {
   if (!sudoku) return;
   const result = checkSudoku(sudoku);

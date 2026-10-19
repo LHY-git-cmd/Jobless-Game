@@ -1,5 +1,5 @@
 /**
- * 第二关数独规则：固定题盘、填写数字、清除数字、检查重复和完成状态。
+ * 数独规则：固定题盘、正式答案、候选数笔记、检查重复和完成状态。
  * 题盘有唯一解；数字 0 表示待填写的空格。
  */
 
@@ -12,6 +12,9 @@ export function createSudoku() {
   return {
     givens,
     values: [...givens],
+    // 每格用九位整数记录 1–9 的候选数，便于同步保存到现有 JSON 存档。
+    notes: Array(81).fill(0),
+    notesMode: false,
     selected: null,
     complete: false,
   };
@@ -30,8 +33,31 @@ export function setSudokuValue(state, value) {
   if (index === null || state.complete || state.givens[index] !== 0) return false;
   if (!Number.isInteger(value) || value < 0 || value > 9) return false;
   state.values[index] = value;
+  if (state.notes) state.notes[index] = 0;
   state.complete = state.values.every((entry, position) => entry === Number(SUDOKU_SOLUTION[position]));
   return true;
+}
+
+/** 添加或取消空格的手动候选数；笔记不写入正式答案，不参与通关或冲突判断。 */
+export function toggleSudokuNote(state, digit) {
+  const index = state.selected;
+  if (!Number.isInteger(index) || index < 0 || index >= 81 || state.complete ||
+      state.givens[index] !== 0 || state.values[index] !== 0) return false;
+  if (!Number.isInteger(digit) || digit < 1 || digit > 9) return false;
+  if (!Array.isArray(state.notes)) normalizeSudokuNotes(state);
+  state.notes[index] ^= 1 << (digit - 1);
+  return true;
+}
+
+/** 兼容旧存档并清理损坏的笔记，保留正式答案及其余游戏进度。 */
+export function normalizeSudokuNotes(state) {
+  const previous = Array.isArray(state.notes) && state.notes.length === 81 ? state.notes : [];
+  state.notes = Array.from({ length: 81 }, (_, index) => {
+    const mask = previous[index];
+    return state.givens[index] === 0 && state.values[index] === 0 &&
+      Number.isInteger(mask) && mask >= 0 && mask <= 511 ? mask : 0;
+  });
+  state.notesMode = state.notesMode === true && !state.complete;
 }
 
 /** 找出行、列或九宫格中出现重复数字的格子。 */

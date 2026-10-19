@@ -203,6 +203,16 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
   });
   await t.test("数独245秒，完整结算440秒并启用排行，重复打开不重复提交", async () => {
     await verifyRules(2); const blanks=[...SUDOKU_PUZZLE].flatMap((v,i)=>v==="0"?[i]:[]);
+    $("sudoku-notes-toggle").click();
+    $("sudoku-board").click($("sudoku-board").children[blanks[0]]);
+    keys.keydown({ key: "2" }); keys.keydown({ key: "5" }); keys.keydown({ key: "9" });
+    assert.match($("sudoku-board").children[blanks[0]].attributes["aria-label"], /候选数 2、5、9/);
+    await reload();
+    assert.equal($("sudoku-notes-toggle").attributes["aria-pressed"], "true");
+    assert.equal($("sudoku-board").children[blanks[0]].children[0].children.length, 9);
+    $("sudoku-clear").click();
+    assert.equal($("sudoku-board").children[blanks[0]].children.length, 0);
+    $("sudoku-notes-toggle").click();
     for(const [n,i] of blanks.entries()) {
       if(n===1) {
         await reload(230000);

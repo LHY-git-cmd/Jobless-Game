@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#102b3c" />
     <title>无职游戏</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20261018-island" />
-    <link rel="stylesheet" href="./styles.css?v=20261019-audio-settings" />
+    <link rel="stylesheet" href="./styles.css?v=20261019-sudoku-notes" />
   </head>
   <body>
     <div class="world-background" aria-hidden="true"></div>
@@ -118,9 +118,10 @@
         </div>
         <div class="game-heading"><div><p class="eyebrow">第三关 / SUDOKU</p><h1 id="sudoku-title">数独</h1><p>中等难度 · 固定题盘 · 34 个已给数字</p></div></div>
         <p class="level-timer">本关用时 <strong id="sudoku-timer">00:00</strong></p>
-        <div class="game-tools"><button type="button" id="sudoku-rules" aria-haspopup="dialog" aria-controls="sudoku-rules-dialog">规则</button><button type="button" id="sudoku-quick" class="dev-quick hidden">开发验收：一键通关</button></div>
+        <div class="game-tools"><button type="button" id="sudoku-notes-toggle" aria-pressed="false" aria-describedby="sudoku-input-hint">笔记：关</button><button type="button" id="sudoku-rules" aria-haspopup="dialog" aria-controls="sudoku-rules-dialog">规则</button><button type="button" id="sudoku-quick" class="dev-quick hidden">开发验收：一键通关</button></div>
         <div class="sudoku-board" id="sudoku-board" role="group" aria-label="数独棋盘"></div>
         <p id="sudoku-selection">请选择一个空格。</p>
+        <p id="sudoku-input-hint" class="sudoku-input-hint">填数模式：点击数字填写答案，开启笔记可记录候选数。</p>
         <div class="sudoku-keypad" id="sudoku-keypad" role="group" aria-label="填写数字">
           <button type="button" data-digit="1">1</button>
           <button type="button" data-digit="2">2</button>
@@ -185,6 +186,7 @@
           <li>每一行、每一列、每个 3 × 3 宫格都要包含 1 到 9，不能重复。</li>
           <li>题目给出的数字不能修改。点选空格后，用下方数字按钮填写；“清除选中格”可擦除填写的数字。</li>
           <li>填对全部空格即可通关。“检查进度”会提示重复数字或剩余空格，不会给出答案。</li>
+          <li>开启“笔记”后，点击数字可添加或取消空格内的候选数；关闭笔记后正常填数。填写答案会清除本格笔记。</li>
         </ol>
         <p id="sudoku-rules-timing">点击“开始游戏”后开始计时。</p>
         <button type="button" id="sudoku-rules-close">开始游戏</button>
@@ -236,7 +238,7 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=20261019-audio-settings"></script>
+    <script type="module" src="./src/main.js?v=20261019-sudoku-notes"></script>
     <script type="module" src="./src/auth-game.js?v=20261019-audio-settings"></script>
   </body>
 </html>

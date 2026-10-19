@@ -109,9 +109,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── main.js                       # 首页逐关入口/重新挑战、原局续玩与结果查看、规则计时和结算
 │   │   ├── game.js                       # 扫雷棋盘与规则逻辑
 │   │   ├── akari.js                      # 照明题盘、灯光与通关判断
-│   │   ├── sudoku.js                     # 数独题盘、输入校验与通关判断
+│   │   ├── sudoku.js                     # 数独题盘、正式答案/候选笔记、旧存档兼容与通关判断
 │   │   ├── session.js                    # 确认开始后持续计时与结算记录；不是账号登录会话
-│   │   ├── progress.js                   # 按账号保存本地棋局、绝对计时起点与待确认请求
+│   │   ├── progress.js                   # 按账号保存棋局/候选笔记、绝对计时起点及待确认请求
 │   │   ├── audio-settings.js             # 音乐/音效独立开关、音量偏好持久化与订阅同步
 │   │   ├── settings.js                   # 用户名打开的游戏设置弹窗：开关、滑块和键盘焦点
 │   │   ├── auth.js                       # 共享登录弹窗、会话恢复、用户名设置入口及退出
@@ -142,9 +142,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   └── test/                             # Node.js 自动化测试，验证规则与页面流程
 │       ├── game.test.js                  # 扫雷规则测试
 │       ├── akari.test.js                 # 照明规则测试
-│       ├── sudoku.test.js                # 数独规则测试
+│       ├── sudoku.test.js                # 数独规则、候选笔记独立性、编辑保护与旧存档兼容
 │       ├── session.test.js               # 关卡计时与结算记录测试
-│       ├── progress.test.js              # 存档往返、灯泡集合恢复、离开计时与存储异常
+│       ├── progress.test.js              # 存档往返、灯泡/候选笔记恢复、旧存档、计时与存储异常
 │       ├── audio-settings.test.js        # 默认开启、独立音量、偏好持久化与存储异常
 │       ├── mine-effects.test.js          # 爆炸顺序、动画、实时增益与静音停止测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
@@ -178,7 +178,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_akari_completion.py     # 照明通关及结果界面验证脚本
         ├── verify_settlement.py          # 三关完成、祝贺与结算流程验证脚本
         ├── verify_live_timers.py         # 游戏实时计时显示验证脚本
-        ├── verify_progress.py            # 首页解锁/续玩、规则计时、手机布局和三关刷新/退出恢复验证
+        ├── verify_progress.py            # 数独笔记、首页续玩、规则计时、手机布局与刷新/退出恢复验证
         ├── verify_audio_settings.py      # 用户名设置入口、真实音频音量、跨页偏好与手机/键盘验证
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志

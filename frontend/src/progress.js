@@ -1,4 +1,5 @@
 /** 本地棋局存档：按账号保存三关状态与绝对计时起点，关闭浏览器后仍可续玩。 */
+import { normalizeSudokuNotes } from "./sudoku.js?v=20261019-sudoku-notes";
 
 const PREFIX = "jobless-progress-v1:";
 
@@ -25,6 +26,7 @@ export function loadProgress(storage, userId) {
         !sudoku.values.every(digit => Number.isInteger(digit) && digit >= 0 && digit <= 9))) return null;
     if (!Array.isArray(value.dialogs)) return null;
     if (akari) akari.bulbs = new Set(akari.bulbs);
+    if (sudoku) normalizeSudokuNotes(sudoku);
     return value;
   } catch { return null; }
 }

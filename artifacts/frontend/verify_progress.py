@@ -172,6 +172,40 @@ def verify_rules(command, evaluate, name, timer, dialog, close):
         (ROOT / "artifacts/frontend/rules-timer-desktop.png").write_bytes(base64.b64decode(png))
 
 
+def verify_sudoku_notes(command, evaluate):
+    """验证手动候选数、键盘、固定九宫排布和刷新续玩，不读取或注入正确答案。"""
+    evaluate("document.getElementById('sudoku-notes-toggle').click(); document.querySelector('#sudoku-board [data-index=\"0\"]').click()")
+    for digit in [2, 5, 9]:
+        command("Input.dispatchKeyEvent", {"type": "keyDown", "key": str(digit), "code": f"Digit{digit}", "windowsVirtualKeyCode": 48 + digit})
+        command("Input.dispatchKeyEvent", {"type": "keyUp", "key": str(digit), "code": f"Digit{digit}", "windowsVirtualKeyCode": 48 + digit})
+    assert evaluate("document.querySelector('#sudoku-board [data-index=\"0\"]').getAttribute('aria-label')").endswith("候选数 2、5、9")
+    assert evaluate("!document.getElementById('sudoku-notes-toggle').disabled")
+    assert evaluate("[...document.querySelectorAll('#sudoku-keypad [aria-pressed=\"true\"]')].map(b=>b.dataset.digit)") == ["2", "5", "9"]
+    assert evaluate("[...document.querySelectorAll('#sudoku-board [data-index=\"0\"] .sudoku-notes > span')].map(s=>s.textContent)") == ["", "2", "", "", "5", "", "", "", "9"]
+    evaluate("document.getElementById('sudoku-check').click()")
+    assert "47" in evaluate("document.getElementById('sudoku-message').textContent")
+    for width, height, suffix in [(1280, 1150, "desktop"), (375, 812, "mobile")]:
+        command("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": width == 375})
+        evaluate("document.getElementById('sudoku-notes-toggle').scrollIntoView({block:'start',behavior:'instant'})")
+        assert evaluate("(() => {const cell=document.querySelector('#sudoku-board [data-index=\"0\"]'), r=cell.getBoundingClientRect(); return [...cell.querySelectorAll('.sudoku-notes > span')].every(n=>{const b=n.getBoundingClientRect(); return b.left>=r.left && b.right<=r.right && b.top>=r.top && b.bottom<=r.bottom})})()")
+        png = command("Page.captureScreenshot", {"format": "png"})["data"]
+        (ROOT / f"artifacts/frontend/sudoku-notes-{suffix}.png").write_bytes(base64.b64decode(png))
+    command("Page.reload")
+    wait_for(evaluate, "document.getElementById('sudoku-notes-toggle')?.getAttribute('aria-pressed') === 'true'")
+    assert "候选数 2、5、9" in evaluate("document.querySelector('#sudoku-board [data-index=\"0\"]').getAttribute('aria-label')")
+    evaluate("document.querySelector('#sudoku-keypad [data-digit=\"5\"]').click()")
+    assert "候选数 2、9" in evaluate("document.querySelector('#sudoku-board [data-index=\"0\"]').getAttribute('aria-label')")
+    evaluate("document.getElementById('sudoku-clear').click()")
+    assert evaluate("document.querySelectorAll('#sudoku-board [data-index=\"0\"] .sudoku-notes').length") == 0
+    evaluate("document.querySelector('#sudoku-keypad [data-digit=\"5\"]').click(); document.getElementById('sudoku-notes-toggle').click(); document.querySelector('#sudoku-keypad [data-digit=\"2\"]').click()")
+    assert evaluate("document.querySelector('#sudoku-board [data-index=\"0\"]').textContent") == "2"
+    assert evaluate("document.querySelectorAll('#sudoku-board [data-index=\"0\"] .sudoku-notes').length") == 0
+    evaluate("document.getElementById('sudoku-notes-toggle').click()")
+    assert evaluate("document.querySelector('#sudoku-keypad [data-digit=\"9\"]').disabled")
+    # 清除已填写答案，回到正常填数，后续原有回归继续使用相同界面流程。
+    evaluate("document.getElementById('sudoku-clear').click(); document.getElementById('sudoku-notes-toggle').click()")
+
+
 def main():
     """验收真实刷新、返回首页、进程退出重启及三关计时恢复。"""
     server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Handler, directory=str(ROOT)))
@@ -234,6 +268,8 @@ def main():
                     wait_for(evaluate, f"!document.getElementById('{screen}').classList.contains('hidden')")
                     evaluate("['rules-close','akari-rules-close','sudoku-rules-close'].forEach(id => document.getElementById(id).click())")
                     verify_rules(command, evaluate, name, timer, f"{name}-rules-dialog", f"{name}-rules-close")
+                    if name == "sudoku":
+                        verify_sudoku_notes(command, evaluate)
                     evaluate(action)
                     cells = evaluate(f"document.getElementById('{board}').innerHTML")
                     evaluate(f"document.getElementById('{name}-back').click()")
@@ -266,7 +302,7 @@ def main():
                 assert STARTS == 2 and STATE["run_id"] != previous_run
                 assert evaluate("document.getElementById('timer').textContent") == "00:00"
                 assert evaluate("document.getElementById('akari-entry').disabled && document.getElementById('sudoku-entry').disabled")
-        print("浏览器验收：首页动态重新挑战、从第一关新建轮次、手机布局及原有续玩/计时流程均通过。")
+        print("浏览器验收：数独候选笔记/键盘/刷新恢复/手机布局，以及原有续玩、规则计时和重新挑战均通过。")
     finally:
         server.shutdown()
         server.server_close()

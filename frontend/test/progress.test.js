@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { loadProgress, saveProgress, clearProgress } from "../src/progress.js";
 import { createAkari } from "../src/akari.js";
 import { createGame } from "../src/game.js";
+import { createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote } from "../src/sudoku.js";
 import { createSession, startLevel, levelSeconds } from "../src/session.js";
 
 test("照明灯泡和原始计时起点往返保存，离线时间仍累计", () => {
@@ -47,4 +48,27 @@ test("查看前关时存档仍保留后关灯泡；旧存档缺少前关棋盘�
   value.akari = { bulbs: [100], complete: false };
   saveProgress(storage, 1, value);
   assert.equal(loadProgress(storage, 1), null);
+});
+
+test("数独笔记与模式随进度恢复，旧存档仍保留玩家答案和计时起点", () => {
+  let raw;
+  const storage = { getItem: () => raw, setItem: (_key, value) => { raw = value; } };
+  const session = createSession(), sudoku = createSudoku();
+  startLevel(session, 2, 1000);
+  selectSudokuCell(sudoku, 0); setSudokuValue(sudoku, 5);
+  selectSudokuCell(sudoku, 2); toggleSudokuNote(sudoku, 4); toggleSudokuNote(sudoku, 9);
+  sudoku.notesMode = true;
+  const snapshot = { currentIndex: 2, sudoku, session, dialogs: [],
+    challenge: { startId: "start", state: { run_id: "run", levels: [{ seconds: 1 }, { seconds: 1 }, { seconds: null }] }, pending: [] } };
+  saveProgress(storage, 1, snapshot);
+  const restored = loadProgress(storage, 1);
+  assert.equal(restored.sudoku.notes[2], 264);
+  assert.equal(restored.sudoku.notesMode, true);
+  assert.equal(restored.sudoku.values[0], 5);
+  delete sudoku.notes; delete sudoku.notesMode;
+  saveProgress(storage, 1, snapshot);
+  const legacy = loadProgress(storage, 1);
+  assert.equal(legacy.sudoku.values[0], 5);
+  assert.deepEqual(legacy.sudoku.notes, Array(81).fill(0));
+  assert.equal(legacy.session.levels[2].startedAt, 1000);
 });

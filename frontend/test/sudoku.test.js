@@ -1,10 +1,10 @@
 /**
- * 数独第二关测试：独立验证题盘合法且唯一解，并检查固定数字与填写规则。
+ * 数独测试：验证题盘唯一解、正式答案、候选笔记与旧存档兼容。
  */
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SUDOKU_PUZZLE, SUDOKU_SOLUTION, createSudoku, selectSudokuCell, setSudokuValue, sudokuConflicts, checkSudoku } from "../src/sudoku.js";
+import { SUDOKU_PUZZLE, SUDOKU_SOLUTION, createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote, normalizeSudokuNotes, sudokuConflicts, checkSudoku } from "../src/sudoku.js";
 
 const units = [
   ...Array.from({ length: 9 }, (_, row) => Array.from({ length: 9 }, (_, col) => row * 9 + col)),
@@ -97,4 +97,47 @@ test("重复数字会被标记；正确填满后显示完成", () => {
   }
   assert.equal(state.complete, true);
   assert.deepEqual(checkSudoku(state), { status: "complete", blanks: 0 });
+});
+
+test("候选数可独立添加与取消，不写入答案也不影响检查和通关", () => {
+  const state = createSudoku();
+  selectSudokuCell(state, 0);
+  for (const digit of [1, 5, 9]) assert.equal(toggleSudokuNote(state, digit), true);
+  assert.equal(state.notes[0], 273);
+  toggleSudokuNote(state, 5);
+  assert.equal(state.notes[0], 257);
+  assert.equal(state.values[0], 0);
+  assert.equal(state.complete, false);
+  assert.deepEqual(checkSudoku(state), { status: "incomplete", blanks: 47 });
+  assert.equal(sudokuConflicts(state).size, 0);
+});
+
+test("题目数字、已填答案与终盘不能写笔记，输入或清除只清空本格笔记", () => {
+  const state = createSudoku();
+  selectSudokuCell(state, 1); assert.equal(toggleSudokuNote(state, 1), false);
+  selectSudokuCell(state, 2); toggleSudokuNote(state, 7);
+  selectSudokuCell(state, 0); toggleSudokuNote(state, 5);
+  assert.equal(toggleSudokuNote(state, 0), false);
+  assert.equal(toggleSudokuNote(state, 10), false);
+  setSudokuValue(state, 5);
+  assert.equal(state.notes[0], 0);
+  assert.equal(state.notes[2], 64);
+  assert.equal(toggleSudokuNote(state, 1), false);
+  setSudokuValue(state, 0); toggleSudokuNote(state, 8); setSudokuValue(state, 0);
+  assert.equal(state.notes[0], 0);
+  state.complete = true;
+  assert.equal(toggleSudokuNote(state, 1), false);
+});
+
+test("旧数独存档补空白笔记，损坏笔记不破坏已有答案", () => {
+  const state = createSudoku();
+  selectSudokuCell(state, 0); setSudokuValue(state, 5);
+  delete state.notes; delete state.notesMode;
+  normalizeSudokuNotes(state);
+  assert.equal(state.values[0], 5);
+  assert.deepEqual(state.notes, Array(81).fill(0));
+  assert.equal(state.notesMode, false);
+  state.notes[0] = 511; state.notes[1] = 1; state.notes[2] = 512; state.notes[3] = 257;
+  normalizeSudokuNotes(state);
+  assert.deepEqual(state.notes.slice(0, 4), [0, 0, 0, 257]);
 });
