@@ -1,8 +1,9 @@
-"""用独立 Chrome 配置和本机模拟接口验证三关刷新、浏览器重启与离开期间计时。
+"""用独立 Chrome 和本机模拟接口验证规则确认计时、三关刷新、浏览器重启及离开计时。
 
 只访问临时本机服务器，不连接真实账号或数据库；游戏脚本与浏览器存储使用真实实现。
 """
 
+import base64
 from contextlib import contextmanager
 import functools
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -145,6 +146,32 @@ def wait_for(evaluate, expression):
     raise AssertionError((expression, evaluate("({status: document.getElementById('challenge-message')?.textContent, user: document.querySelector('.auth-user')?.textContent, storage: Object.keys(localStorage).map(k => [k, JSON.parse(localStorage.getItem(k)).atHome])})")))
 
 
+def verify_rules(command, evaluate, name, timer, dialog, close):
+    """不操作棋盘也应计时；规则重看不中断计时，并检查键盘焦点及手机按钮布局。"""
+    wait_for(evaluate, f"document.getElementById('{timer}').textContent !== '00:00'")
+    evaluate(f"document.getElementById('{name}-rules').click()")
+    assert evaluate(f"!document.getElementById('{dialog}').classList.contains('hidden')")
+    assert evaluate(f"document.getElementById('{close}').textContent") == "继续游戏"
+    command("Input.dispatchKeyEvent", {"type": "keyDown", "key": "Tab", "code": "Tab", "windowsVirtualKeyCode": 9})
+    command("Input.dispatchKeyEvent", {"type": "keyUp", "key": "Tab", "code": "Tab", "windowsVirtualKeyCode": 9})
+    assert evaluate("document.activeElement.id") == close
+    before = evaluate(f"document.getElementById('{timer}').textContent")
+    wait_for(evaluate, f"document.getElementById('{timer}').textContent > {json.dumps(before)}")
+    if name == "mine":
+        command("Emulation.setDeviceMetricsOverride", {"width": 375, "height": 812, "deviceScaleFactor": 1, "mobile": True})
+        png = command("Page.captureScreenshot", {"format": "png"})["data"]
+        (ROOT / "artifacts/frontend/rules-timer-mobile.png").write_bytes(base64.b64decode(png))
+    command("Input.dispatchKeyEvent", {"type": "keyDown", "key": "Escape", "code": "Escape", "windowsVirtualKeyCode": 27})
+    command("Input.dispatchKeyEvent", {"type": "keyUp", "key": "Escape", "code": "Escape", "windowsVirtualKeyCode": 27})
+    assert evaluate(f"document.getElementById('{dialog}').classList.contains('hidden')")
+    assert evaluate("document.activeElement.id") == f"{name}-rules"
+    assert evaluate(f"(() => {{const b=document.getElementById('{name}-rules').getBoundingClientRect(); return b.width >= 44 && b.height >= 44 && b.left >= 0 && b.right <= innerWidth}})()")
+    if name == "mine":
+        command("Emulation.setDeviceMetricsOverride", {"width": 1280, "height": 1000, "deviceScaleFactor": 1, "mobile": False})
+        png = command("Page.captureScreenshot", {"format": "png"})["data"]
+        (ROOT / "artifacts/frontend/rules-timer-desktop.png").write_bytes(base64.b64decode(png))
+
+
 def main():
     """验收真实刷新、返回首页、进程退出重启及三关计时恢复。"""
     server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Handler, directory=str(ROOT)))
@@ -157,7 +184,11 @@ def main():
                 wait_for(evaluate, "document.querySelector('.auth-user')?.textContent === '恢复测试'")
                 evaluate("document.getElementById('start-button').click()")
                 wait_for(evaluate, "document.querySelectorAll('#board button').length === 100")
-                evaluate("document.getElementById('rules-close').click(); document.querySelector('#board button').click(); document.getElementById('flag-button').click()")
+                time.sleep(1.1)
+                assert evaluate("document.getElementById('timer').textContent") == "00:00"
+                evaluate("document.getElementById('rules-close').click()")
+                verify_rules(command, evaluate, "mine", "timer", "rules-dialog", "rules-close")
+                evaluate("document.querySelector('#board button').click(); document.getElementById('flag-button').click()")
                 before = evaluate("[...document.querySelectorAll('#board button')].map(c => c.getAttribute('aria-label'))")
                 time.sleep(1.1)
                 command("Page.reload")
@@ -186,6 +217,8 @@ def main():
                     evaluate("document.getElementById('result-primary').click()")
                     wait_for(evaluate, f"!document.getElementById('{screen}').classList.contains('hidden')")
                     evaluate("['rules-close','akari-rules-close','sudoku-rules-close'].forEach(id => document.getElementById(id).click())")
+                    name = board.split("-")[0]
+                    verify_rules(command, evaluate, name, timer, f"{name}-rules-dialog", f"{name}-rules-close")
                     evaluate(action)
                     cells = evaluate(f"document.getElementById('{board}').innerHTML")
                     time.sleep(1.1)
@@ -194,7 +227,7 @@ def main():
                     assert evaluate(f"document.getElementById('{board}').innerHTML") == cells
                     assert evaluate(f"document.getElementById('{timer}').textContent") != "00:00"
                 assert STARTS == 1
-        print("浏览器验收：三关刷新、返回首页续玩、浏览器重启及离开计时均通过。")
+        print("浏览器验收：三关确认开始即计时、重看规则不中断、键盘焦点、手机布局及刷新退出恢复均通过。")
     finally:
         server.shutdown()
         server.server_close()

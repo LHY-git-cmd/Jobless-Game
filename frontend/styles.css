@@ -142,8 +142,9 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   0% { transform: scale(.65); opacity: .9; }
   100% { transform: scale(2.1); opacity: 0; }
 }
-.game-tools { display: flex; justify-content: flex-end; margin: -12px 0 12px; }
+.game-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 0 0 12px; }
 .game-tools button { padding: 8px 12px; font-size: 12px; }
+.game-tools .dev-quick { margin: 0; }
 .cell.cell-selected { position: relative; z-index: 1; box-shadow: inset 0 0 0 3px var(--gold), inset 0 0 0 4px #805c20; }
 .cell[data-adjacent="1"] { --cell-art: url("./assets/minesweeper/number-1.webp"); box-shadow: none; }
 .cell[data-adjacent="2"] { --cell-art: url("./assets/minesweeper/number-2.webp"); box-shadow: none; }

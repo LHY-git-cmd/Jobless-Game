@@ -57,7 +57,7 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
   Date.now = () => now; Math.random = () => 0;
   globalThis.document = { getElementById: $, createElement: () => new Element(), createDocumentFragment: () => new Element(), addEventListener: (k,v) => { keys[k]=v; }, dispatchEvent: event => keys[event.type]?.(event) };
   const stored = new Map(), pageEvents = {};
-  globalThis.window = { scrollTo() {}, setInterval() {}, location: { assign() {} },
+  globalThis.window = { scrollTo() {}, setInterval: callback => { pageEvents.tick = callback; }, location: { assign() {} },
     addEventListener: (key, callback) => { pageEvents[key] = callback; },
     localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) } };
   globalThis.fetch = async (path, options={}) => {
@@ -85,6 +85,32 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
   await import("../src/main.js"); await settle();
   keys["auth-changed"]({ detail: { user: { id: 1 } } }); await settle();
   const visible=id=>!$(id).classList.contains("hidden"), enter=id=>$(id).listeners["authorized-start"]();
+  /** 三关统一验证：点击开始后无操作也计时，重看规则和刷新都不重置起点。 */
+  async function verifyRules(index) {
+    const [opener, dialog, closer, timer] = [
+      ["mine-rules", "rules-dialog", "rules-close", "timer"],
+      ["akari-rules", "akari-rules-dialog", "akari-rules-close", "akari-timer"],
+      ["sudoku-rules", "sudoku-rules-dialog", "sudoku-rules-close", "sudoku-timer"],
+    ][index];
+    assert.equal($(closer).textContent, "开始游戏");
+    now += 7000; pageEvents.tick();
+    assert.equal($(timer).textContent, "00:00");
+    $(closer).click();
+    now += 5000; pageEvents.tick();
+    assert.equal($(timer).textContent, "00:05");
+    $(opener).click();
+    assert.equal(visible(dialog), true);
+    assert.equal($(closer).textContent, "继续游戏");
+    now += 5000; pageEvents.tick();
+    assert.equal($(timer).textContent, "00:10");
+    await reload(5000);
+    assert.equal(visible(dialog), true);
+    assert.equal($(timer).textContent, "00:15");
+    keys.keydown({ key: "Escape" });
+    assert.equal(visible(dialog), false);
+    $(opener).click(); $(closer).click(); pageEvents.tick();
+    assert.equal($(timer).textContent, "00:15");
+  }
   let reloads = 0;
   /** 不触发退出事件直接丢弃页面，验证保存不依赖 beforeunload/pagehide。 */
   async function reload(away = 0, userId = 1) {
@@ -106,12 +132,16 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     await reload(15000);
     assert.equal(visible("rules-dialog"), true);
     assert.equal($("timer").textContent, "00:00");
-    $("rules-close").click();
+    $("board").click($("board").children[0]); $("flag-button").click();
+    assert.equal($("mines-left").textContent, "10");
+    keys.keydown({ key: "Escape", preventDefault() {} });
+    assert.equal(visible("rules-dialog"), true);
+    await verifyRules(0);
   });
   await t.test("扫雷失败重试负载相同，保存成功才解锁且冻结65秒", async () => {
     $("board").click($("board").children[0]); $("flag-button").click();
     const before = $("board").children.map(cell => cell.attributes["aria-label"]);
-    await reload(30000);
+    await reload(15000);
     assert.equal(visible("game-screen"), true, $("challenge-message").textContent);
     assert.deepEqual($("board").children.map(cell => cell.attributes["aria-label"]), before);
     assert.equal($("timer").textContent, "00:30");
@@ -124,11 +154,14 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     await reload(60000); assert.equal($("timer").textContent,"01:05");
     assert.deepEqual(submissions[0],submissions[1]);
     const board=$("board").children; $("result-secondary").click(); assert.equal($("board").children,board);
-    now+=60000; $("mine-next").click(); assert.equal(visible("akari-rules-dialog"),true);
+    $("mine-rules").click(); assert.equal(visible("rules-dialog"), true);
+    assert.equal($("rules-close").textContent, "返回游戏");
+    now+=60000; pageEvents.tick(); assert.equal($("timer").textContent, "01:05");
+    $("rules-close").click(); $("mine-next").click(); assert.equal(visible("akari-rules-dialog"),true);
   });
   await t.test("照明用时130秒，停留时间不计时", async () => {
-    $("akari-rules-close").click(); const bulbs=[0,2,11,19,28,30,36,41,45,48,54,61,66,73,80,89,92,97];
-    $("akari-board").click($("akari-board").children[0]); await reload(130000);
+    await verifyRules(1); const bulbs=[0,2,11,19,28,30,36,41,45,48,54,61,66,73,80,89,92,97];
+    $("akari-board").click($("akari-board").children[0]); await reload(115000);
     assert.equal($("akari-timer").textContent, "02:10");
     assert.equal($("akari-board").children[0].classList.contains("bulb"), true);
     for(const i of bulbs.slice(1)) $("akari-board").click($("akari-board").children[i]);
@@ -136,10 +169,10 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     assert.equal(visible("sudoku-rules-dialog"),true);
   });
   await t.test("数独245秒，完整结算440秒并启用排行，重复打开不重复提交", async () => {
-    $("sudoku-rules-close").click(); const blanks=[...SUDOKU_PUZZLE].flatMap((v,i)=>v==="0"?[i]:[]);
+    await verifyRules(2); const blanks=[...SUDOKU_PUZZLE].flatMap((v,i)=>v==="0"?[i]:[]);
     for(const [n,i] of blanks.entries()) {
       if(n===1) {
-        await reload(245000);
+        await reload(230000);
         assert.equal($("sudoku-timer").textContent, "04:05");
         assert.equal($("sudoku-board").children[blanks[0]].textContent, SUDOKU_SOLUTION[blanks[0]]);
       }
@@ -159,6 +192,7 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     await reload(30000);
     assert.equal(visible("game-screen"), true, $("challenge-message").textContent);
     assert.equal($("timer").textContent, "00:00");
+    $("rules-close").click();
     await $("mine-quick").click(); await settle(); assert.equal(current.levels[1].seconds,null); assert.equal(visible("akari-screen"),false);
     assert.equal(submissions.at(-1).development,true); const count=submissions.length; await $("mine-quick").click(); assert.equal(submissions.length,count);
     $("result-primary").click(); $("akari-rules-close").click(); await $("akari-quick").click(); await settle(); assert.equal(current.levels[2].seconds,null);
@@ -190,10 +224,14 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     assert.equal($("result-title").textContent,"游戏失败");
     assert.equal($("timer").textContent,"00:30");
     assert.equal($("board").children.filter(cell => cell.classList.contains("cell-mine")).length, 10);
-    await $("result-primary").click(); await settle();
+    $("result-secondary").click(); $("mine-rules").click();
+    now += 5000; pageEvents.tick();
+    assert.equal($("timer").textContent, "00:30");
+    $("rules-close").click();
+    await $("restart-button").click(); await settle();
     assert.equal($("timer").textContent,"00:00");
   });
-  await t.test("尚未操作的棋局返回首页再刷新不会提前开始计时", async () => {
+  await t.test("重开后尚未确认开始的棋局返回首页再刷新不会提前开始计时", async () => {
     $("back-button").click();
     await reload(10000);
     assert.equal(visible("landing"), true);

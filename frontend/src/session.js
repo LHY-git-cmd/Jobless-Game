@@ -1,4 +1,4 @@
-/** 三关挑战计时：记录本轮各关结果，结算合计不包含规则、关卡间和结算停留时间。 */
+/** 三关挑战计时：首次确认开始后持续累计，通关冻结；首次读规则、关卡间和结算停留不计时。 */
 
 export const LEVELS = Object.freeze([
   { id: "mine", name: "扫雷" },
@@ -17,7 +17,7 @@ export function restartLevel(session, index) {
     ...LEVELS.slice(index).map(() => ({ startedAt: null, seconds: null })));
 }
 
-/** 首次有效操作启动计时；后续操作不会改变起点。 */
+/** 首次确认开始时启动计时；重看规则或重复确认不会改变起点。 */
 export function startLevel(session, index, now = Date.now()) {
   const level = session.levels[index];
   if (level.startedAt === null && level.seconds === null) level.startedAt = now;

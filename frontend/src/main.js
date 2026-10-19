@@ -50,6 +50,50 @@ let restoring = false;
 let progressStorage;
 try { progressStorage = window.localStorage; } catch { /* 存储不可用时保留正常游戏操作。 */ }
 const dialogIds = ["rules-dialog", "akari-rules-dialog", "sudoku-rules-dialog", "result-dialog", "settlement-dialog"];
+const ruleControls = [
+  { dialog: ui.mineRules, open: $("mine-rules"), close: $("rules-close"), timing: $("mine-rules-timing") },
+  { dialog: ui.akariRules, open: $("akari-rules"), close: $("akari-rules-close"), timing: $("akari-rules-timing") },
+  { dialog: ui.sudokuRules, open: $("sudoku-rules"), close: $("sudoku-rules-close"), timing: $("sudoku-rules-timing") },
+];
+
+/** 只有确认开始且规则窗口已关闭时才能操作棋盘，不能绕过开始按钮起计时。 */
+function canPlay(index) {
+  return currentIndex === index && Boolean(challenge.state) && !operationBusy && !challenge.restartPayload &&
+    session.levels[index].startedAt !== null && session.levels[index].seconds === null &&
+    ruleControls[index].dialog.classList.contains("hidden") && ui.result.classList.contains("hidden");
+}
+
+/** 规则窗口按未开始、进行中和已结束显示操作文字，不修改已有计时起点。 */
+function refreshRuleText(index) {
+  const controls = ruleControls[index];
+  const ended = session.levels[index].seconds !== null || (index === 0 && game?.status === "lost");
+  const started = session.levels[index].startedAt !== null;
+  controls.close.textContent = ended ? "返回游戏" : started ? "继续游戏" : "开始游戏";
+  controls.timing.textContent = ended ? "本局已结束，用时已固定。" : started
+    ? "查看规则期间计时继续。" : "点击“开始游戏”后开始计时。";
+}
+
+/** 复用各关规则窗口；打开窗口本身不启动、暂停或重置计时。 */
+function showRules(index) {
+  refreshRuleText(index);
+  ruleControls[index].dialog.classList.remove("hidden");
+  ruleControls[index].close.focus();
+  syncProgressActions();
+}
+
+/** 首次点击开始立即计时；重看规则后关闭只返回棋盘，保留原始起点。 */
+function closeRules(index) {
+  if (operationBusy || challenge.restartPayload || currentIndex !== index || !challenge.state ||
+      ruleControls[index].dialog.classList.contains("hidden")) return;
+  const started = session.levels[index].startedAt !== null;
+  if (!(index === 0 && game?.status === "lost")) startLevel(session, index);
+  if (index === 0 && game && game.startedAt === null) game.startedAt = session.levels[0].startedAt;
+  ruleControls[index].dialog.classList.add("hidden");
+  if (started) ruleControls[index].open.focus();
+  else [ui.viewport, ui.akariBoard.querySelector("button:not(:disabled)"), ui.sudokuBoard.querySelector("button")][index]?.focus();
+  updateTimer();
+  syncProgressActions();
+}
 
 /** 每次棋局变化同步落盘，不依赖可能不会触发的页面退出事件。 */
 function persistProgress(atHome = false) {
@@ -108,6 +152,10 @@ async function restoreProgress(snapshot) {
       for (const id of snapshot.dialogs) {
         if (dialogIds.includes(id) && id !== "settlement-dialog") $(id).classList.remove("hidden");
       }
+      // 兼容旧版本未操作且已关闭规则的存档，仍须明确点击开始后才起计时。
+      if (!completed && game?.status !== "lost" && session.levels[currentIndex].startedAt === null) showRules(currentIndex);
+      refreshRuleText(currentIndex);
+      if (!ruleControls[currentIndex].dialog.classList.contains("hidden")) ruleControls[currentIndex].close.focus();
       if (snapshot.dialogs.includes("settlement-dialog")) openSettlement();
       [ui.message, ui.akariMessage, ui.sudokuMessage].forEach((node, index) => {
         node.textContent = snapshot.messages?.[index] ?? "";
@@ -154,7 +202,9 @@ function syncProgressActions() {
   $("settlement-ranking").disabled = !challenge.state?.total_recorded;
   for (const [index, id] of ["mine-quick", "akari-quick", "sudoku-quick"].entries()) {
     $(id).classList[quickEnabled ? "remove" : "add"]("hidden");
-    $(id).disabled = operationBusy || saveBusy || currentIndex !== index || session.levels[index].seconds !== null;
+    $(id).disabled = saveBusy || !canPlay(index);
+    ruleControls[index].open.disabled = operationBusy || currentIndex !== index || ![game, akari, sudoku][index] ||
+      !ui.result.classList.contains("hidden") || Boolean(mineExplosion?.running);
   }
   persistProgress();
 }
@@ -259,10 +309,10 @@ function viewResult() {
   } else {
     ui.viewport.focus();
   }
-  persistProgress();
+  syncProgressActions();
 }
 
-/** 从入口进入扫雷时显示规则，重新开始扫雷时不重复弹出。 */
+/** 从入口进入扫雷先显示规则，确认开始后才计时。 */
 function enterGame() {
   if (!ui.landing.classList.contains("hidden")) session = createSession();
   explosionSound.unlock();
@@ -274,8 +324,6 @@ function enterGame() {
   ui.sudokuScreen.classList.add("hidden");
   ui.akariScreen.classList.add("hidden");
   ui.mineScreen.classList.remove("hidden");
-  ui.mineRules.classList.remove("hidden");
-  $("rules-close").focus();
   window.scrollTo(0, 0);
   syncProgressActions();
 }
@@ -290,6 +338,7 @@ function restartGame() {
   ui.message.textContent = "";
   ui.viewport.scrollTo(0, 0);
   renderMine();
+  showRules(0);
 }
 
 /** 进入固定数独题盘；每次进入或重新开始都从原题开始。 */
@@ -306,8 +355,6 @@ function enterSudoku() {
   ui.mineScreen.classList.add("hidden");
   ui.akariScreen.classList.add("hidden");
   ui.sudokuScreen.classList.remove("hidden");
-  ui.sudokuRules.classList.remove("hidden");
-  $("sudoku-rules-close").focus();
   window.scrollTo(0, 0);
   syncProgressActions();
 }
@@ -320,9 +367,10 @@ function restartSudoku() {
   ui.result.classList.add("hidden");
   ui.sudokuMessage.textContent = "";
   renderSudoku();
+  showRules(2);
 }
 
-/** 进入照明关时显示规则；重新开始只重置灯泡，不再弹规则。 */
+/** 进入或重开照明关先显示规则，确认开始前保持零秒。 */
 function enterAkari() {
   if (operationBusy || saveBusy || challenge.restartPayload || !challenge.canEnter(1)) return;
   currentIndex = 1;
@@ -336,8 +384,6 @@ function enterAkari() {
   ui.mineScreen.classList.add("hidden");
   ui.sudokuScreen.classList.add("hidden");
   ui.akariScreen.classList.remove("hidden");
-  ui.akariRules.classList.remove("hidden");
-  $("akari-rules-close").focus();
   window.scrollTo(0, 0);
   syncProgressActions();
 }
@@ -350,6 +396,7 @@ function restartAkari() {
   ui.result.classList.add("hidden");
   ui.akariMessage.textContent = "";
   renderAkari();
+  showRules(1);
 }
 
 /** 返回首页保存未完成棋局，完整结算后清理存档；旧异步响应始终失效。 */
@@ -602,11 +649,10 @@ function showAkariResult() {
   syncProgressActions();
 }
 
-/** 数独有效输入起计时，异步重开期间不可继续操作旧局。 */
+/** 数独确认开始后允许输入，查看规则或异步重开期间不可修改棋盘。 */
 function inputSudoku(value) {
-  if (operationBusy || challenge.restartPayload) return;
+  if (!canPlay(2)) return;
   if (!sudoku || !setSudokuValue(sudoku, value)) return;
-  startLevel(session, 2);
   ui.sudokuMessage.textContent = sudoku.complete ? "" : sudokuConflicts(sudoku).size > 0 ? "存在重复数字，请检查。" : "";
   renderSudoku();
   if (sudoku.complete) showSudokuResult();
@@ -672,36 +718,37 @@ $("akari-back").addEventListener("click", returnHome);
 $("akari-restart").addEventListener("click", () => requestRestart(1, restartAkari));
 $("mine-next").addEventListener("click", enterAkari);
 $("akari-next").addEventListener("click", enterSudoku);
-$("rules-close").addEventListener("click", () => { ui.mineRules.classList.add("hidden"); ui.viewport.focus(); });
-$("sudoku-rules-close").addEventListener("click", () => { ui.sudokuRules.classList.add("hidden"); ui.sudokuBoard.querySelector("button")?.focus(); });
-$("akari-rules-close").addEventListener("click", () => { ui.akariRules.classList.add("hidden"); ui.akariBoard.querySelector("button:not(:disabled)")?.focus(); });
+for (const [index, controls] of ruleControls.entries()) {
+  controls.open.addEventListener("click", () => {
+    if (!controls.open.disabled) showRules(index);
+  });
+  controls.close.addEventListener("click", () => closeRules(index));
+}
 ui.board.addEventListener("click", (event) => {
-  if (operationBusy || challenge.restartPayload) return;
+  if (!canPlay(0)) return;
   const button = event.target.closest("button[data-index]");
   if (!button || !game || !selectCell(game, Number(button.dataset.index))) return;
   ui.message.textContent = "格子已选中。";
   renderMine();
 });
 ui.flag.addEventListener("click", () => {
-  if (operationBusy || challenge.restartPayload) return;
+  if (!canPlay(0)) return;
   if (!game || !toggleFlag(game)) return;
-  startLevel(session, 0);
-  if (game.startedAt === null) game.startedAt = Date.now();
   ui.message.textContent = game.cells[game.selected].flagged ? "已标记。" : "已取消标记。";
   renderMine();
 });
 ui.reveal.addEventListener("click", () => {
-  if (operationBusy || challenge.restartPayload) return;
+  if (!canPlay(0)) return;
   if (!game) return;
   // 在用户手势内恢复音频，后续连锁由同一个已解锁的音频上下文播放。
   explosionSound.unlock();
   const outcome = revealSelected(game);
   if (outcome === "ignored") return;
-  startLevel(session, 0);
   ui.message.textContent = outcome === "revealed" ? "继续选择格子。" : "";
   if (outcome === "lost") {
     mineExplosion = { revealed: new Set(), exploded: new Set(), settled: new Set(), running: true };
     renderMine();
+    syncProgressActions();
     ui.caption.textContent = "踩到地雷！连锁爆炸正在蔓延……";
     ui.message.textContent = "地雷正在依次引爆。";
     explosionSequence.start(explosionOrder(game));
@@ -711,6 +758,7 @@ ui.reveal.addEventListener("click", () => {
   if (outcome === "won") showMineResult(outcome);
 });
 ui.sudokuBoard.addEventListener("click", (event) => {
+  if (!canPlay(2)) return;
   const button = event.target.closest("button[data-index]");
   if (!button || !sudoku || !selectSudokuCell(sudoku, Number(button.dataset.index))) return;
   renderSudoku();
@@ -727,10 +775,9 @@ ui.sudokuCheck.addEventListener("click", () => {
     : result.status === "complete" ? "已完成。" : result.blanks > 0 ? `没有重复数字，还剩 ${result.blanks} 个空格。` : "已填满，但仍有错误。";
 });
 ui.akariBoard.addEventListener("click", (event) => {
-  if (operationBusy || challenge.restartPayload) return;
+  if (!canPlay(1)) return;
   const button = event.target.closest("button[data-index]");
   if (!button || !akari || !toggleBulb(akari, Number(button.dataset.index))) return;
-  startLevel(session, 1);
   renderAkari();
   if (akari.complete) showAkariResult();
 });
@@ -758,7 +805,7 @@ document.addEventListener("auth-changed", (event) => {
 
 /** 临时开发入口只完成当前关，动态加载便于后续删除，不更改正常解锁链路。 */
 async function quickComplete() {
-  if (!quickEnabled || operationBusy || saveBusy || challenge.restartPayload || !challenge.canEnter(currentIndex) || session.levels[currentIndex].seconds !== null) return;
+  if (!quickEnabled || !canPlay(currentIndex) || saveBusy || !challenge.canEnter(currentIndex)) return;
   const index = currentIndex;
   const generation = challenge.generation;
   operationBusy = true;
@@ -766,7 +813,6 @@ async function quickComplete() {
   try {
     const { solveCurrentLevel } = await import("./dev-quick-complete.js");
     if (generation !== challenge.generation) return;
-    startLevel(session, index);
     development = true;
     solveCurrentLevel(index, [game, akari, sudoku][index]);
     [renderMine, renderAkari, renderSudoku][index]();
@@ -784,8 +830,8 @@ void rankingRequest("challenges/config").then((config) => {
   syncProgressActions();
 }).catch(() => {});
 document.addEventListener("keydown", (event) => {
-  // 结算弹窗内循环键盘焦点，防止 Tab 落到后面的棋盘。
-  const activeDialog = [$("settlement-dialog")]
+  // 规则和结算弹窗内循环键盘焦点，防止 Tab 落到背后的棋盘。
+  const activeDialog = [$("settlement-dialog"), ...ruleControls.map(controls => controls.dialog)]
     .find((dialog) => !dialog.classList.contains("hidden"));
   if (activeDialog && event.key === "Tab") {
     const controls = [...activeDialog.querySelectorAll("button:not(:disabled)")];
@@ -796,16 +842,20 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   if (event.key === "Escape") {
+    const ruleIndex = ruleControls.findIndex(controls => !controls.dialog.classList.contains("hidden"));
+    if (ruleIndex !== -1) {
+      // 首次规则不能用 Esc 绕过开始确认；已开始后 Esc 只关闭规则，计时继续。
+      if (session.levels[ruleIndex].startedAt !== null || session.levels[ruleIndex].seconds !== null) closeRules(ruleIndex);
+      else event.preventDefault();
+      return;
+    }
     if (!$("settlement-dialog").classList.contains("hidden")) {
       $("settlement-dialog").classList.add("hidden");
       document.dispatchEvent(new CustomEvent("settlement-closed"));
       viewResult();
       return;
     }
-    if (!ui.mineRules.classList.contains("hidden")) { ui.mineRules.classList.add("hidden"); ui.viewport.focus(); }
-    else if (!ui.sudokuRules.classList.contains("hidden")) { ui.sudokuRules.classList.add("hidden"); ui.sudokuBoard.querySelector("button")?.focus(); }
-    else if (!ui.akariRules.classList.contains("hidden")) { ui.akariRules.classList.add("hidden"); ui.akariBoard.querySelector("button:not(:disabled)")?.focus(); }
-    else if (!ui.result.classList.contains("hidden")) {
+    if (!ui.result.classList.contains("hidden")) {
       viewResult();
     }
   } else if (sudoku && !ui.sudokuScreen.classList.contains("hidden") && ui.sudokuRules.classList.contains("hidden") && ui.result.classList.contains("hidden")) {

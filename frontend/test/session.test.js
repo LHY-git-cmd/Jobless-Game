@@ -1,9 +1,9 @@
-/** 挑战计时测试：首次操作计时、通关冻结、重开、跳关和合计一致性。 */
+/** 挑战计时测试：确认开始计时、通关冻结、重开、跳关和合计一致性。 */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createSession, restartLevel, startLevel, completeLevel, sessionSummary, formatTime } from "../src/session.js";
 
-test("首次操作开始计时，通关后查看结果和结算不再增加用时", () => {
+test("首次确认开始计时，重复确认不重置，通关后用时冻结", () => {
   const session = createSession();
   startLevel(session, 0, 1000);
   startLevel(session, 0, 9000);
