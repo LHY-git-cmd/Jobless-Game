@@ -46,13 +46,33 @@ export class ChallengeClient {
     this.reset();
   }
 
-  /** 不在浏览器存储账号凭据或待提交成绩；离开后旧响应只能被丢弃。 */
+  /** 清理内存状态；旧响应只能被丢弃，账号凭据始终只由 Cookie 管理。 */
   reset() {
     this.generation = (this.generation || 0) + 1;
     this.state = null;
     this.startId = null;
     this.restartPayload = null;
     this.pending = new Map();
+  }
+
+  /** 导出本轮幂等标识和未确认请求，刷新后仍使用相同负载重试。 */
+  snapshot() {
+    return { state: this.state, startId: this.startId, restartPayload: this.restartPayload, pending: [...this.pending] };
+  }
+
+  /** 恢复本地请求状态并换代，使恢复前的异步回包失效。 */
+  restore(snapshot) {
+    this.reset();
+    this.state = snapshot.state;
+    this.startId = snapshot.startId;
+    this.restartPayload = snapshot.restartPayload;
+    this.pending = new Map(snapshot.pending);
+  }
+
+  /** 只读取当前轮次，不通过创建接口覆盖服务器上的其他轮次。 */
+  async resume() {
+    const generation = this.generation;
+    return this.accept(await this.request(`challenges/${this.state.run_id}`), generation);
   }
 
   /** 对同一创建请求复用幂等 ID，解决服务端成功但响应丢失的情况。 */

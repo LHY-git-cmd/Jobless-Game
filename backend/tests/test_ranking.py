@@ -187,6 +187,22 @@ class RankingAPITests(TestCase):
         self.assertEqual(first, second)
         self.assertEqual(self.client.get("/api/challenges/config").json(), {"quick_complete_enabled": False})
 
+    def test_resume_only_reads_own_current_run(self):
+        """恢复不建新轮次；未登录、其他账号和已失效轮次均不可读取。"""
+        state = service.start_transaction("test-token", StartRequest(request_id=uuid4()), self.db)
+        path = f"/api/challenges/{state['run_id']}"
+        self.assertEqual(self.client.get(path).status_code, 401)
+        self.client.cookies.set(self.config.session_cookie_name, "test-token")
+        self.assertEqual(self.client.get(path).json(), state)
+        other = User(id=2, username="其他", username_key="其他", password_hash="test-only", created_at=utc_now())
+        self.db.add(other)
+        self.db.commit()
+        with patch.object(service.auth_service, "current_session", return_value=(None, other)):
+            self.assertEqual(self.client.get(path).status_code, 409)
+        self.assertEqual(self.client.get(path).json(), state)
+        service.start_transaction("test-token", StartRequest(request_id=uuid4()), self.db)
+        self.assertEqual(self.client.get(path).status_code, 409)
+
     def test_payload_bounds_and_body_limit(self):
         """限制类别、页大小和实际请求字节，错误响应不回显任意输入。"""
         self.assertEqual(self.client.get("/api/rankings/unknown").status_code, 422)

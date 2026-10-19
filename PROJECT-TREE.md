@@ -1,6 +1,6 @@
 # 项目目录树
 
-更新日期：2026-10-18。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
+更新日期：2026-10-19。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
 
 ```text
 crawler-portal/                            # 项目根目录：前端、登录后端、素材及文档
@@ -106,11 +106,12 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── package.json                      # 前端项目元信息与 Node.js 测试命令
 │   │
 │   ├── src/                              # 浏览器运行的 JavaScript 源码
-│   │   ├── main.js                       # 逐关解锁、通关保存、失败重试、规则与结算弹窗
+│   │   ├── main.js                       # 逐关解锁、棋局恢复、通关保存、失败重试、规则与结算弹窗
 │   │   ├── game.js                       # 扫雷棋盘与规则逻辑
 │   │   ├── akari.js                      # 照明题盘、灯光与通关判断
 │   │   ├── sudoku.js                     # 数独题盘、输入校验与通关判断
 │   │   ├── session.js                    # 本轮关卡计时与结算记录；不是账号登录会话
+│   │   ├── progress.js                   # 按账号保存本地棋局、绝对计时起点与待确认请求
 │   │   ├── auth.js                       # 三页共享登录弹窗、会话恢复及退出
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
@@ -141,9 +142,10 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── akari.test.js                 # 照明规则测试
 │       ├── sudoku.test.js                # 数独规则测试
 │       ├── session.test.js               # 关卡计时与结算记录测试
+│       ├── progress.test.js              # 存档往返、灯泡集合恢复、离开计时与存储异常
 │       ├── mine-effects.test.js          # 爆炸顺序、动画与声音控制测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
-│       ├── completion.test.js            # 逐关解锁、冻结计时、保存重试与开发通关回归
+│       ├── completion.test.js            # 逐关解锁、刷新/退出恢复、计时、保存重试与开发通关回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
 │       └── music.test.js                 # 音轨切换、同轮一次、静音、播放拒绝与切页状态
@@ -173,6 +175,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_akari_completion.py     # 照明通关及结果界面验证脚本
         ├── verify_settlement.py          # 三关完成、祝贺与结算流程验证脚本
         ├── verify_live_timers.py         # 游戏实时计时显示验证脚本
+        ├── verify_progress.py            # 三关刷新、返回首页续玩、浏览器重启与离开计时验证
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料

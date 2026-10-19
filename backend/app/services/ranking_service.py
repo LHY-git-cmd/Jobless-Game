@@ -72,6 +72,17 @@ def require_previous(levels, index):
         raise AppError(409, "请先通关并保存前一关。")
 
 
+def progress_transaction(token, run_id, db):
+    """恢复棋局前核对账号与当前轮次，只返回已有进度，不创建或重置挑战。"""
+    try:
+        result = state_response(require_progress(token, run_id, db))
+        db.commit()
+        return result
+    except Exception:
+        db.rollback()
+        raise
+
+
 def restart_transaction(token, run_id, payload, db):
     """重开先校验解锁，幂等请求不会重复递增版本或换新尝试。"""
     try:

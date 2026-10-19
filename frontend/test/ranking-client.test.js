@@ -80,6 +80,27 @@ test("离开后的旧请求不能覆盖新轮次", async () => {
   assert.equal(client.state, null);
 });
 
+test("刷新恢复只读取原轮次，待提交成绩保留原始幂等负载", async () => {
+  const original = new ChallengeClient(async () => state(), () => "start-id");
+  await original.start();
+  original.request = async () => { throw new Error("offline"); };
+  await assert.rejects(original.complete(0, 12, true));
+  const snapshot = JSON.parse(JSON.stringify(original.snapshot()));
+  const calls = [];
+  const resumed = new ChallengeClient(async (path, options) => {
+    calls.push({ path, options });
+    const result = state();
+    if (options) result.levels[0].seconds = options.body.duration_seconds;
+    return result;
+  });
+  resumed.restore(snapshot);
+  await resumed.resume();
+  assert.deepEqual(calls[0], { path: "challenges/run", options: undefined });
+  await resumed.complete(0, 999, false);
+  assert.deepEqual(calls[1].options.body, snapshot.pending[0][1]);
+  assert.equal(resumed.state.levels[0].seconds, 12);
+});
+
 test("网络错误与无效响应不能被视为保存成功", async (t) => {
   const original = globalThis.fetch;
   t.after(() => { globalThis.fetch = original; });

@@ -40,22 +40,34 @@ async function settle() { for (let i=0;i<5;i++) await new Promise(resolve => set
 test("逐关通关、冻结计时、保存重试与当前关开发验收", async (t) => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   const nodes = new Map();
-  for (const m of html.matchAll(/<[\w-]+\b([^>]*\bid="([^"]+)"[^>]*)>/g)) {
+  /** 重建页面节点，模拟刷新时旧 DOM 与页面内存全部丢失。 */
+  function resetNodes() {
+    nodes.clear();
+    for (const m of html.matchAll(/<[\w-]+\b([^>]*\bid="([^"]+)"[^>]*)>/g)) {
     const el = new Element(); const cls = m[1].match(/\bclass="([^"]+)"/)?.[1];
     if (cls) el.className = cls;
     if (/\bdisabled\b/.test(m[1])) el.disabled = true;
     nodes.set(m[2], el);
+    }
   }
+  resetNodes();
   const $ = id => nodes.get(id), keys = {}, original = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch, random: Math.random, now: Date.now };
-  let now = 100000, current, fail = false, failRestart = false;
+  let now = 100000, current, fail = false, failRestart = false, failResume = false;
   const submissions = [];
   Date.now = () => now; Math.random = () => 0;
   globalThis.document = { getElementById: $, createElement: () => new Element(), createDocumentFragment: () => new Element(), addEventListener: (k,v) => { keys[k]=v; }, dispatchEvent: event => keys[event.type]?.(event) };
-  globalThis.window = { scrollTo() {}, setInterval() {}, location: { assign() {} } };
+  const stored = new Map(), pageEvents = {};
+  globalThis.window = { scrollTo() {}, setInterval() {}, location: { assign() {} },
+    addEventListener: (key, callback) => { pageEvents[key] = callback; },
+    localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) } };
   globalThis.fetch = async (path, options={}) => {
     const b = options.body ? JSON.parse(options.body) : null;
     if (path.endsWith("config")) return { ok: true, json: async () => ({ quick_complete_enabled: true }) };
-    if (path.endsWith("start")) current = { run_id: crypto.randomUUID(), revision: 0, levels: [0,1,2].map(() => ({ attempt_id: crypto.randomUUID(), seconds: null })), total_recorded: false };
+    if ((!options.method || options.method === "GET") && path.startsWith("/api/challenges/")) {
+      if (failResume) { failResume = false; throw new TypeError("offline"); }
+      if (!path.endsWith(current?.run_id)) return { ok: false, status: 409, json: async () => ({ detail: "本轮已失效" }) };
+    }
+    if (path.endsWith("/start")) current = { run_id: crypto.randomUUID(), revision: 0, levels: [0,1,2].map(() => ({ attempt_id: crypto.randomUUID(), seconds: null })), total_recorded: false };
     if (path.endsWith("complete")) {
       submissions.push(b);
       if (fail) { fail=false; throw new TypeError("offline"); }
@@ -71,32 +83,68 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
   };
   t.after(() => { Date.now=original.now; Math.random=original.random; for (const k of ["document","window","fetch"]) { if(original[k]===undefined) delete globalThis[k]; else globalThis[k]=original[k]; } });
   await import("../src/main.js"); await settle();
+  keys["auth-changed"]({ detail: { user: { id: 1 } } }); await settle();
   const visible=id=>!$(id).classList.contains("hidden"), enter=id=>$(id).listeners["authorized-start"]();
+  let reloads = 0;
+  /** 不触发退出事件直接丢弃页面，验证保存不依赖 beforeunload/pagehide。 */
+  async function reload(away = 0, userId = 1) {
+    // 清理旧页面动画定时器，但丢弃清理操作写入的数据，只保留刷新前已落盘的存档。
+    const committed = [...stored];
+    keys["auth-changed"]();
+    stored.clear();
+    for (const [key, value] of committed) stored.set(key, value);
+    now += away;
+    resetNodes();
+    await import(`../src/main.js?reload=${++reloads}`);
+    keys["auth-changed"]({ detail: { user: { id: userId } } });
+    await settle();
+  }
   await t.test("首页及手工事件都不能直接进入第二、第三关", async () => {
     assert.equal($("akari-entry").disabled,true); assert.equal($("sudoku-entry").disabled,true);
     enter("akari-entry"); enter("sudoku-entry"); assert.equal(visible("landing"),true);
     await enter("start-button"); enter("sudoku-entry"); assert.equal(visible("sudoku-screen"),false);
+    await reload(15000);
+    assert.equal(visible("rules-dialog"), true);
+    assert.equal($("timer").textContent, "00:00");
     $("rules-close").click();
   });
   await t.test("扫雷失败重试负载相同，保存成功才解锁且冻结65秒", async () => {
-    $("board").click($("board").children[0]); $("flag-button").click(); now+=65000; fail=true;
+    $("board").click($("board").children[0]); $("flag-button").click();
+    const before = $("board").children.map(cell => cell.attributes["aria-label"]);
+    await reload(30000);
+    assert.equal(visible("game-screen"), true, $("challenge-message").textContent);
+    assert.deepEqual($("board").children.map(cell => cell.attributes["aria-label"]), before);
+    assert.equal($("timer").textContent, "00:30");
+    $("back-button").click(); now += 20000; await enter("start-button");
+    assert.equal($("timer").textContent, "00:50");
+    now+=15000; fail=true;
     $("board").click($("board").children[99]); $("reveal-button").click(); await settle();
     assert.equal($("timer").textContent,"01:05"); assert.equal($("result-primary").disabled,true);
     $("result-primary").click(); assert.equal(visible("akari-screen"),false);
-    $("save-retry").click(); await settle(); assert.deepEqual(submissions[0],submissions[1]);
+    await reload(60000); assert.equal($("timer").textContent,"01:05");
+    assert.deepEqual(submissions[0],submissions[1]);
     const board=$("board").children; $("result-secondary").click(); assert.equal($("board").children,board);
     now+=60000; $("mine-next").click(); assert.equal(visible("akari-rules-dialog"),true);
   });
   await t.test("照明用时130秒，停留时间不计时", async () => {
     $("akari-rules-close").click(); const bulbs=[0,2,11,19,28,30,36,41,45,48,54,61,66,73,80,89,92,97];
-    $("akari-board").click($("akari-board").children[0]); now+=130000;
+    $("akari-board").click($("akari-board").children[0]); await reload(130000);
+    assert.equal($("akari-timer").textContent, "02:10");
+    assert.equal($("akari-board").children[0].classList.contains("bulb"), true);
     for(const i of bulbs.slice(1)) $("akari-board").click($("akari-board").children[i]);
     await settle(); assert.equal($("akari-timer").textContent,"02:10"); now+=60000; $("result-primary").click();
     assert.equal(visible("sudoku-rules-dialog"),true);
   });
   await t.test("数独245秒，完整结算440秒并启用排行，重复打开不重复提交", async () => {
     $("sudoku-rules-close").click(); const blanks=[...SUDOKU_PUZZLE].flatMap((v,i)=>v==="0"?[i]:[]);
-    for(const [n,i] of blanks.entries()) { if(n===1) now+=245000; $("sudoku-board").click($("sudoku-board").children[i]); const key=new Element(); key.dataset.digit=SUDOKU_SOLUTION[i]; $("sudoku-keypad").click(key); }
+    for(const [n,i] of blanks.entries()) {
+      if(n===1) {
+        await reload(245000);
+        assert.equal($("sudoku-timer").textContent, "04:05");
+        assert.equal($("sudoku-board").children[blanks[0]].textContent, SUDOKU_SOLUTION[blanks[0]]);
+      }
+      $("sudoku-board").click($("sudoku-board").children[i]); const key=new Element(); key.dataset.digit=SUDOKU_SOLUTION[i]; $("sudoku-keypad").click(key);
+    }
     await settle(); assert.match($("result-title").textContent,/恭喜/); now+=90000; $("result-primary").click();
     assert.equal($("settlement-total").textContent,"07:20"); assert.equal($("settlement-ranking").disabled,false);
     const count=submissions.length; keys.keydown({key:"Escape"}); $("settlement-open").click(); assert.equal(submissions.length,count);
@@ -108,11 +156,55 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     const beforeRestartRetry=submissions.length;
     $("board").click($("board").children[99]); $("reveal-button").click(); await settle();
     assert.equal(submissions.length,beforeRestartRetry);
-    $("challenge-retry").click(); await settle();
+    await reload(30000);
+    assert.equal(visible("game-screen"), true, $("challenge-message").textContent);
+    assert.equal($("timer").textContent, "00:00");
     await $("mine-quick").click(); await settle(); assert.equal(current.levels[1].seconds,null); assert.equal(visible("akari-screen"),false);
     assert.equal(submissions.at(-1).development,true); const count=submissions.length; await $("mine-quick").click(); assert.equal(submissions.length,count);
     $("result-primary").click(); $("akari-rules-close").click(); await $("akari-quick").click(); await settle(); assert.equal(current.levels[2].seconds,null);
     $("result-primary").click(); $("sudoku-rules-close").click(); await $("sudoku-quick").click(); await settle(); assert.equal(current.total_recorded,true);
     keys["auth-changed"](); assert.equal(visible("landing"),true);
+  });
+  await t.test("换号不恢复其他账号棋局，原账号重新进入仍可续玩", async () => {
+    keys["auth-changed"]({ detail: { user: { id: 1 } } }); await settle();
+    await enter("start-button"); $("rules-close").click();
+    $("board").click($("board").children[0]); $("flag-button").click();
+    await reload(10000, 2);
+    assert.equal(visible("landing"), true);
+    await reload(10000, 1);
+    assert.equal(visible("game-screen"), true);
+    assert.equal($("timer").textContent,"00:20");
+  });
+  await t.test("恢复网络失败保留存档，重试继续原局且累计离开时间", async () => {
+    failResume = true;
+    await reload(10000);
+    assert.equal(visible("landing"), true);
+    assert.equal(visible("challenge-retry"), true);
+    $("challenge-retry").click(); await settle();
+    assert.equal(visible("game-screen"), true);
+    assert.equal($("timer").textContent,"00:30");
+  });
+  await t.test("爆炸过程中关闭页面恢复失败终盘，主动重开才清零", async () => {
+    $("board").click($("board").children[1]); $("reveal-button").click();
+    await reload(30000);
+    assert.equal($("result-title").textContent,"游戏失败");
+    assert.equal($("timer").textContent,"00:30");
+    assert.equal($("board").children.filter(cell => cell.classList.contains("cell-mine")).length, 10);
+    await $("result-primary").click(); await settle();
+    assert.equal($("timer").textContent,"00:00");
+  });
+  await t.test("尚未操作的棋局返回首页再刷新不会提前开始计时", async () => {
+    $("back-button").click();
+    await reload(10000);
+    assert.equal(visible("landing"), true);
+    await enter("start-button");
+    assert.equal($("timer").textContent,"00:00");
+  });
+  await t.test("服务端轮次失效时不恢复旧棋盘或覆盖新轮次", async () => {
+    current.run_id = crypto.randomUUID();
+    await reload();
+    assert.equal(visible("landing"), true);
+    assert.match($("challenge-message").textContent, /失效/);
+    assert.equal(stored.size, 0);
   });
 });

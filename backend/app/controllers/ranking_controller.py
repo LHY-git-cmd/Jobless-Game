@@ -30,6 +30,12 @@ async def start(payload: StartRequest, request: Request, db: Session = Depends(g
     return await service.execute(service.start_transaction, token(request), payload, db)
 
 
+@router.get("/challenges/{run_id}", response_model=ProgressResponse)
+async def progress(run_id: UUID, request: Request, db: Session = Depends(get_db)):
+    """登录后读取本人当前轮次，供本地棋局恢复时核对。"""
+    return await service.execute(service.progress_transaction, token(request), str(run_id), db)
+
+
 @router.post("/challenges/{run_id}/restart", response_model=ProgressResponse)
 async def restart(run_id: UUID, payload: RestartRequest, request: Request, db: Session = Depends(get_db)):
     """重开操作由后端校验本轮的前序进度。"""
