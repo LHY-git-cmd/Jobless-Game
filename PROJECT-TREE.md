@@ -106,7 +106,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── package.json                      # 前端项目元信息与 Node.js 测试命令
 │   │
 │   ├── src/                              # 浏览器运行的 JavaScript 源码
-│   │   ├── main.js                       # 首页逐关入口、原局续玩与结果查看、通关保存、规则计时和结算
+│   │   ├── main.js                       # 首页逐关入口/重新挑战、原局续玩与结果查看、规则计时和结算
 │   │   ├── game.js                       # 扫雷棋盘与规则逻辑
 │   │   ├── akari.js                      # 照明题盘、灯光与通关判断
 │   │   ├── sudoku.js                     # 数独题盘、输入校验与通关判断
@@ -115,7 +115,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── auth.js                       # 三页共享登录弹窗、会话恢复及退出
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
-│   │   ├── auth-game.js                  # 首页三关登录拦截与授权入口续接
+│   │   ├── auth-game.js                  # 首页三关及重新挑战的登录拦截与授权续接
 │   │   ├── auth-page.js                  # 排行榜和论坛的登录初始化
 │   │   ├── mine-effects.js               # 扫雷连锁爆炸动画与音效控制
 │   │   ├── ranking-client.js             # 同源请求、HTTP 兼容 UUID、挑战幂等负载及失败重试

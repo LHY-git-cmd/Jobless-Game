@@ -47,6 +47,7 @@ let quickEnabled = false;
 let development = false;
 let currentUserId = null;
 let restoring = false;
+let pendingNewRound = null;
 let progressStorage;
 try { progressStorage = window.localStorage; } catch { /* 存储不可用时保留正常游戏操作。 */ }
 const dialogIds = ["rules-dialog", "akari-rules-dialog", "sudoku-rules-dialog", "result-dialog", "settlement-dialog"];
@@ -75,6 +76,13 @@ function syncHomeEntries() {
     entry.button.disabled = operationBusy || !unlocked;
     entry.button.setAttribute("aria-label", `${entry.name}，${completed ? "查看通关结果" : label}`);
   });
+  const inProgress = Boolean(state && !state.total_recorded &&
+    levels?.some(level => level.startedAt !== null || level.seconds !== null));
+  $("challenge-action").dataset.action = inProgress ? "restart" : "select";
+  $("challenge-action-label").textContent = inProgress ? "重新挑战：从第一关开始" : "选择你的挑战";
+  $("challenge-action-icon").textContent = inProgress ? "→" : "↓";
+  $("challenge-action").disabled = operationBusy;
+  $("challenge-action").setAttribute("aria-busy", String(operationBusy));
 }
 
 /** 只有确认开始且规则窗口已关闭时才能操作棋盘，不能绕过开始按钮起计时。 */
@@ -461,6 +469,7 @@ function returnHome() {
   else persistProgress(true);
   document.dispatchEvent(new CustomEvent("settlement-closed"));
   challenge.reset();
+  pendingNewRound = null;
   operationBusy = saveBusy = false;
   development = false;
   recordStatus();
@@ -767,6 +776,38 @@ async function enterFromHome(index) {
     $("start-button").disabled = false;
   }
 }
+
+/** 重新挑战新建完整轮次；创建成功后才替换旧存档，网络失败复用同一个请求编号。 */
+async function restartChallenge() {
+  if (operationBusy || saveBusy || ui.landing.classList.contains("hidden") ||
+      $("challenge-action").dataset.action !== "restart") return;
+  const nextRound = pendingNewRound ||= new ChallengeClient();
+  let generation = challenge.generation;
+  operationBusy = true;
+  syncHomeEntries();
+  recordStatus("正在从第一关重新挑战…");
+  try {
+    await nextRound.start();
+    if (generation !== challenge.generation) return;
+    challenge.restore(nextRound.snapshot());
+    generation = challenge.generation;
+    pendingNewRound = null;
+    clearProgress(progressStorage, currentUserId);
+    recordStatus();
+    development = false;
+    enterGame();
+  } catch (error) {
+    if (generation === challenge.generation) recordStatus(error.message, restartChallenge);
+  } finally {
+    if (generation === challenge.generation) { operationBusy = false; syncProgressActions(); }
+  }
+}
+
+// 普通状态保留选择关卡的滚动操作；重新挑战必须先由登录模块确认账号。
+$("challenge-action").addEventListener("click", () => {
+  if ($("challenge-action").dataset.action === "select") $("level-select").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("challenge-action").addEventListener("authorized-start", restartChallenge);
 // 首页三关共用登录后的续接；手工派发事件也不能绕过本轮解锁检查。
 homeEntries.forEach((entry, index) => entry.button.addEventListener("authorized-start", () => enterFromHome(index)));
 $("back-button").addEventListener("click", returnHome);

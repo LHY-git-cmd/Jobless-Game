@@ -31,6 +31,8 @@ class Element {
   focus() { this.focused = true; }
   /** 不模拟布局滚动。 */
   scrollTo() {}
+  /** 记录首页选择入口的滚动目标，不触发创建挑战。 */
+  scrollIntoView() { this.scrolled = true; }
   /** 触发真实页面事件并返回异步结果。 */
   click(target = this) { if (!this.disabled) return this.listeners.click?.({ target }); }
 }
@@ -52,7 +54,8 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
   }
   resetNodes();
   const $ = id => nodes.get(id), keys = {}, original = { document: globalThis.document, window: globalThis.window, fetch: globalThis.fetch, random: Math.random, now: Date.now };
-  let now = 100000, current, fail = false, failRestart = false, failResume = false;
+  let now = 100000, current, fail = false, failRestart = false, failResume = false, failStart = false;
+  const startRequests = [];
   const submissions = [];
   Date.now = () => now; Math.random = () => 0;
   globalThis.document = { getElementById: $, createElement: () => new Element(), createDocumentFragment: () => new Element(), addEventListener: (k,v) => { keys[k]=v; }, dispatchEvent: event => keys[event.type]?.(event) };
@@ -67,7 +70,11 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
       if (failResume) { failResume = false; throw new TypeError("offline"); }
       if (!path.endsWith(current?.run_id)) return { ok: false, status: 409, json: async () => ({ detail: "本轮已失效" }) };
     }
-    if (path.endsWith("/start")) current = { run_id: crypto.randomUUID(), revision: 0, levels: [0,1,2].map(() => ({ attempt_id: crypto.randomUUID(), seconds: null })), total_recorded: false };
+    if (path.endsWith("/start")) {
+      startRequests.push(b.request_id);
+      if (failStart) { failStart = false; throw new TypeError("offline"); }
+      current = { run_id: crypto.randomUUID(), revision: 0, levels: [0,1,2].map(() => ({ attempt_id: crypto.randomUUID(), seconds: null })), total_recorded: false };
+    }
     if (path.endsWith("complete")) {
       submissions.push(b);
       if (fail) { fail=false; throw new TypeError("offline"); }
@@ -126,6 +133,10 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     await settle();
   }
   await t.test("首页及手工事件都不能直接进入第二、第三关", async () => {
+    assert.equal($("challenge-action-label").textContent, "选择你的挑战");
+    $("challenge-action").click();
+    assert.equal($("level-select").scrolled, true);
+    assert.equal(startRequests.length, 0);
     assert.equal($("akari-entry").disabled,true); assert.equal($("sudoku-entry").disabled,true);
     enter("akari-entry"); enter("sudoku-entry"); assert.equal(visible("landing"),true);
     await enter("start-button"); enter("sudoku-entry"); assert.equal(visible("sudoku-screen"),false);
@@ -170,6 +181,7 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     await verifyRules(1); const bulbs=[0,2,11,19,28,30,36,41,45,48,54,61,66,73,80,89,92,97];
     $("akari-board").click($("akari-board").children[0]);
     $("akari-back").click();
+    assert.equal($("challenge-action-label").textContent, "重新挑战：从第一关开始");
     assert.equal($("akari-entry-status").textContent, "继续游戏");
     const count = submissions.length;
     await enter("start-button");
@@ -203,6 +215,7 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     assert.equal($("settlement-total").textContent,"07:20"); assert.equal($("settlement-ranking").disabled,false);
     const count=submissions.length; keys.keydown({key:"Escape"}); $("settlement-open").click(); assert.equal(submissions.length,count);
     $("settlement-home").click(); enter("sudoku-entry"); assert.equal(visible("sudoku-screen"),false);
+    assert.equal($("challenge-action-label").textContent, "选择你的挑战");
   });
   await t.test("开发按钮只完成当前关，重开失败可重试，换号清空本轮", async () => {
     await enter("start-button"); $("rules-close").click(); failRestart=true; await $("restart-button").click();
@@ -284,5 +297,28 @@ test("逐关通关、冻结计时、保存重试与当前关开发验收", async
     $("result-primary").click();
     assert.equal($("akari-board").children[0].classList.contains("bulb"), false);
     assert.equal($("akari-timer").textContent, "00:00");
+  });
+  await t.test("首页重新挑战从第一关新开一轮，失败保留原局，重试复用同一请求", async () => {
+    $("akari-rules-close").click(); $("akari-board").click($("akari-board").children[0]);
+    $("akari-back").click(); await reload();
+    assert.equal($("challenge-action-label").textContent, "重新挑战：从第一关开始");
+    const originalRun = current.run_id, originalSave = [...stored.values()][0];
+    failStart = true;
+    await enter("challenge-action");
+    assert.equal(visible("landing"), true);
+    assert.equal(current.run_id, originalRun);
+    assert.equal([...stored.values()][0], originalSave);
+    $("challenge-retry").click(); await settle();
+    assert.equal(startRequests.at(-1), startRequests.at(-2));
+    assert.notEqual(current.run_id, originalRun);
+    assert.equal(visible("game-screen"), true);
+    assert.equal(visible("rules-dialog"), true);
+    assert.equal($("timer").textContent, "00:00");
+    assert.equal($("cleared-count").textContent, "0");
+    assert.equal($("akari-entry").disabled, true);
+    assert.equal($("sudoku-entry").disabled, true);
+    await reload();
+    assert.equal($("timer").textContent, "00:00");
+    assert.equal(current.run_id === originalRun, false);
   });
 });

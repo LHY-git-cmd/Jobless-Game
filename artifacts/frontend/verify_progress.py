@@ -252,7 +252,21 @@ def main():
                     assert evaluate(f"document.getElementById('{board}').innerHTML") == cells
                     assert evaluate(f"document.getElementById('{timer}').textContent") != "00:00"
                 assert STARTS == 1
-        print("浏览器验收：首页逐关解锁、前关结果查看、后关原局续玩、规则计时和刷新退出恢复均通过。")
+                evaluate("document.getElementById('sudoku-back').click()")
+                assert evaluate("document.getElementById('challenge-action-label').textContent") == "重新挑战：从第一关开始"
+                for width, height, suffix in [(1280, 1000, "desktop"), (375, 812, "mobile")]:
+                    command("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": width == 375})
+                    evaluate("document.getElementById('challenge-action').scrollIntoView({block:'center',behavior:'instant'})")
+                    assert evaluate("(() => {const r=document.getElementById('challenge-action').getBoundingClientRect(); return r.height >= 44 && r.left >= 0 && r.right <= innerWidth})()")
+                    png = command("Page.captureScreenshot", {"format": "png"})["data"]
+                    (ROOT / f"artifacts/frontend/rechallenge-{suffix}.png").write_bytes(base64.b64decode(png))
+                previous_run = STATE["run_id"]
+                evaluate("document.getElementById('challenge-action').click()")
+                wait_for(evaluate, "!document.getElementById('game-screen').classList.contains('hidden') && !document.getElementById('rules-dialog').classList.contains('hidden')")
+                assert STARTS == 2 and STATE["run_id"] != previous_run
+                assert evaluate("document.getElementById('timer').textContent") == "00:00"
+                assert evaluate("document.getElementById('akari-entry').disabled && document.getElementById('sudoku-entry').disabled")
+        print("浏览器验收：首页动态重新挑战、从第一关新建轮次、手机布局及原有续玩/计时流程均通过。")
     finally:
         server.shutdown()
         server.server_close()

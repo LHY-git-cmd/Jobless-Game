@@ -67,8 +67,8 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .landing-hero h1 { margin: 0; font: 600 clamp(52px, 6.5vw, 84px)/1.2 "Songti SC", SimSun, serif; letter-spacing: 8px; }
 .landing-hero h1 > span { display: block; margin-top: 22px; font: 400 clamp(20px, 2.2vw, 28px)/1.6 "Microsoft YaHei", sans-serif; letter-spacing: 4px; }
 .hero-description { margin: 24px 0; color: #f1f5f6; font-size: 15px; line-height: 1.9; letter-spacing: 1px; }
-.explore-link { display: inline-flex; gap: 30px; align-items: center; min-height: 44px; color: var(--gold); font-size: 14px; text-decoration: none; border-bottom: 1px solid #f0d49a88; }
-.explore-link:hover { color: #fff6de; border-color: currentColor; }
+.explore-link { display: inline-flex; gap: 30px; align-items: center; min-height: 44px; padding: 0; color: var(--gold); background: transparent; font-size: 14px; text-decoration: none; border: 0; border-bottom: 1px solid #f0d49a88; border-radius: 0; }
+.explore-link:hover:not(:disabled) { color: #fff6de; background: transparent; border-color: currentColor; }
 .level-select { margin-top: auto; scroll-margin-top: 24px; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .section-heading h2 { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: 3px; }
