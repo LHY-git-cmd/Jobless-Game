@@ -209,8 +209,11 @@ def main():
                     navigate('forum.html');wait(f"!!document.querySelector('{selector} .forum-count')")
                     click(selector+' .forum-count');wait(f"document.querySelector('{selector} .forum-inline-status').textContent.includes('还没有')")
                     assert evaluate(f"document.querySelector('{selector} .forum-count').getAttribute('aria-expanded')==='true'")
+                    wait(f"getComputedStyle(document.querySelector('{selector} .forum-inline-discussion')).opacity==='1'")
+                    assert evaluate(f"(()=>{{const t=document.querySelector('{selector}'),p=t.querySelector(':scope > .forum-card').getBoundingClientRect(),c=t.querySelector('.forum-inline-discussion').getBoundingClientRect();return Math.abs(p.bottom-c.top)<1;}})()"), '同帖正文和评论之间不应露出背景间隔'
                     click(selector+' > .forum-card .forum-reply');wait(f"!document.querySelector('{selector} .forum-inline-form').hidden")
                     assert evaluate(f"document.activeElement===document.querySelector('{selector} textarea')")
+                    assert evaluate(f"(()=>{{const f=document.querySelector('{selector} .forum-inline-form'),b=f.querySelector('textarea'),s=f.querySelector('.forum-inline-submit'),r=b.getBoundingClientRect(),q=s.getBoundingClientRect();return b.rows===2&&!f.querySelector('output,.forum-form-footer,.forum-inline-cancel,.forum-compose-target')&&!!s.querySelector('svg')&&s.getAttribute('aria-label')==='发送回复'&&r.height<=2*parseFloat(getComputedStyle(b).lineHeight)+20&&q.left>=r.left&&q.right<=r.right&&q.top>=r.top&&q.bottom<=r.bottom;}})()"), '回复框应只保留两行输入和框内纸飞机'
                     evaluate(f"document.querySelector('{selector} textarea').value='不进入详情直接评论';")
                     command('Network.setBlockedURLs',{'urls':[f'*api/forum/posts/{inline_id}/comments']})
                     click(selector+' .forum-inline-submit');wait(f"document.querySelector('{selector} .forum-inline-form-status').textContent.includes('连接失败')")
@@ -218,6 +221,12 @@ def main():
                     evaluate(f"window.inlineDraft=document.querySelector('{selector} textarea');document.dispatchEvent(new CustomEvent('user-profile-updated'))")
                     wait("document.querySelector('#forum-status').textContent===''")
                     assert evaluate(f"window.inlineDraft===document.querySelector('{selector} textarea') && window.inlineDraft.value==='不进入详情直接评论'")
+                    other='.forum-thread:not([data-post-id="'+str(inline_id)+'"])'
+                    click(other+' > .forum-card .forum-reply');wait(f"!document.querySelector('{other} .forum-inline-form').hidden")
+                    assert evaluate("[...document.querySelectorAll('.forum-inline-form')].filter(f=>!f.hidden&&f.getClientRects().length).length===1"), '列表只允许一个可见回复框'
+                    click(selector+' > .forum-card .forum-reply');wait(f"!document.querySelector('{selector} .forum-inline-form').hidden")
+                    assert evaluate(f"document.querySelector('{selector} textarea').value==='不进入详情直接评论'")
+                    assert evaluate("[...document.querySelectorAll('.forum-inline-form')].filter(f=>!f.hidden&&f.getClientRects().length).length===1")
                     command('Network.setBlockedURLs',{'urls':[]});click(selector+' .forum-inline-submit')
                     wait(f"document.querySelector('{selector} .forum-count').textContent==='1 条评论' && !document.querySelector('{selector} .forum-inline-submit').disabled")
                     assert evaluate("location.pathname.endsWith('/forum.html')")
@@ -231,7 +240,6 @@ def main():
                     wait(f"[...document.querySelectorAll('{selector} .forum-replies .forum-body')].some(n=>n.textContent==='在列表回复他人评论')")
                     click(selector+' > .forum-card .forum-like');wait(f"document.querySelector('{selector} > .forum-card .forum-like').getAttribute('aria-pressed')==='true'")
                     assert evaluate(f"getComputedStyle(document.querySelector('{selector} > .forum-card .forum-like')).color==='rgb(255, 107, 107)'")
-                    click(selector+' .forum-inline-cancel')
                     evaluate("scrollTo({top:0,behavior:'instant'})");shot('forum-inline-liked-desktop.png')
                     click(selector+' > .forum-card .forum-like');wait(f"document.querySelector('{selector} > .forum-card .forum-like').getAttribute('aria-pressed')==='false'")
                     checks.append('换号可展开他人评论并回复，拇指点赞变红且可取消')
@@ -261,6 +269,13 @@ def main():
                     evaluate("document.querySelector('#auth-username').value='论坛乙';document.querySelector('#auth-password').value='forum-secret';")
                     click('.auth-submit');wait(f"!document.querySelector('{selector} .forum-inline-form').hidden && document.activeElement===document.querySelector('{selector} textarea')")
                     checks.append('游客点击列表回复，登录后续接新卡片的正文输入')
+                    for width in (1280,375,320):
+                        command('Emulation.setDeviceMetricsOverride',{'width':width,'height':844,'deviceScaleFactor':1,'mobile':False})
+                        evaluate(f"document.querySelector('{selector} .forum-inline-form').scrollIntoView({{block:'center',behavior:'instant'}})")
+                        assert evaluate('document.documentElement.scrollWidth<=innerWidth')
+                        assert evaluate(f"(()=>{{const t=document.querySelector('{selector} textarea'),s=document.querySelector('{selector} .forum-inline-submit'),r=t.getBoundingClientRect(),q=s.getBoundingClientRect();return q.right<=r.right&&q.left>=r.left&&q.bottom<=r.bottom&&q.top>=r.top&&r.height<=2*parseFloat(getComputedStyle(t).lineHeight)+20;}})()")
+                        shot(f'forum-compact-reply-{width}.png')
+                    checks.append('同帖无间隔、单一回复框保留重试内容、两行输入及框内纸飞机')
             print(f'论坛浏览器验收：{len(checks)} 项通过，0 失败。')
         finally:
             config.cookie_secure,config.forum_post_interval_seconds,config.forum_comment_interval_seconds=previous

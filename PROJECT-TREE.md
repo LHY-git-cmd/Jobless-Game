@@ -141,7 +141,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── forum-client.js               # 同源请求、码点校验、固定重试负载和账号响应隔离
 │   │   ├── forum-view.js                 # 紧凑纯文本卡片、左评论数/右图标、红色拇指点赞及输入计数
 │   │   ├── forum-page.js                 # 正文游标页、评论输入保留、发布模态和返回位置恢复
-│   │   ├── forum-discussion.js           # 列表原地展开评论/回复分页、直接发送、重试及登录续接
+│   │   ├── forum-discussion.js           # 同帖连续评论区、单一两行回复框、框内纸飞机、草稿/重试续接
 │   │   ├── forum-post-page.js            # 主题详情、评论/回复分页、上下文定位及账号切换
 │   │   ├── notifications.js              # 全站/游戏铃铛、已读边界、可见性轮询及失败退避
 │   │   ├── mine-effects.js               # 扫雷连锁爆炸动画与音效控制

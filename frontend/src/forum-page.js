@@ -1,8 +1,8 @@
 /** 论坛正文列表：有限游标、登录续接发帖、固定负载重试和返回位置恢复。 */
 import { initAuth } from './auth.js?v=20261020-body-only';
 import { ForumClient, validateText } from './forum-client.js';
-import { bindCount, showError } from './forum-view.js?v=20261021-inline';
-import { createPostThread } from './forum-discussion.js?v=20261021-inline';
+import { bindCount, showError } from './forum-view.js?v=20261021-compact-reply';
+import { createPostThread } from './forum-discussion.js?v=20261021-compact-reply';
 
 const auth=initAuth(),client=new ForumClient();
 const $=selector=>document.querySelector(selector),list=$('#forum-list'),status=$('#forum-status'),more=$('#forum-more'),retry=$('#forum-retry');
@@ -17,6 +17,7 @@ function clearThreads(){for(const view of threads.values())view.dispose();thread
 /** 同帖独立管理评论与输入，评论编号不参与帖子列表的去重。 */
 function addThread(item){
   const view=createPostThread(item,{client,onLike:like,onError:error=>{if(error.status===401)showError(error,status);},
+    onEditorOpen:id=>{for(const [otherId,thread] of threads)if(otherId!==id)thread.closeEditor();},
     onLogin:(id,target)=>void auth.requireLogin(async()=>{
       // 登录会重新读取个人点赞状态，续接时找到新卡片，避免聚焦已移除的输入框。
       try{await load();if(!threads.has(id))addThread(await client.read(`posts/${id}`));threads.get(id)?.reply(target);}

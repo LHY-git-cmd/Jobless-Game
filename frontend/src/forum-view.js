@@ -12,12 +12,13 @@ export function timeLabel(value) {
   time.dateTime=value+'Z';return time;
 }
 
-/** 两个固定描边图标：拇指比赞与对话气泡；按钮自身提供可访问名称。 */
-function actionIcon(name) {
+/** 固定描边图标：拇指、对话气泡及纸飞机；按钮自身提供可访问名称。 */
+export function actionIcon(name) {
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   for(const [key,value] of Object.entries({viewBox:'0 0 24 24',width:'20',height:'20',fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))svg.setAttribute(key,value);
   const path=document.createElementNS('http://www.w3.org/2000/svg','path');
-  path.setAttribute('d',name==='like'?'M7 10v11H3V10h4Zm0 0 4-8a3 3 0 0 1 3 3v4h5a2 2 0 0 1 2 2.4l-1.4 7a3 3 0 0 1-3 2.6H7':'M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5Z');
+  const paths={like:'M7 10v11H3V10h4Zm0 0 4-8a3 3 0 0 1 3 3v4h5a2 2 0 0 1 2 2.4l-1.4 7a3 3 0 0 1-3 2.6H7',reply:'M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5Z',send:'m22 2-7 20-6-7-7-6L22 2ZM22 2 9 15'};
+  path.setAttribute('d',paths[name]||paths.reply);
   svg.append(path);return svg;
 }
 
