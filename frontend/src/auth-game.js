@@ -1,5 +1,5 @@
 /** 首页三关的登录拦截，以及个人通关记录的账号状态接入。 */
-import { initAuth } from "./auth.js?v=20261020-avatars";
+import { initAuth } from "./auth.js?v=20261020-forum";
 import { initPersonalRecords } from "./personal-records.js?v=20261020-independent";
 
 const auth = initAuth();

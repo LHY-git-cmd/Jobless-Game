@@ -116,7 +116,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── ranking-mine.html                 # 扫雷历史最佳通关排行
 │   ├── ranking-akari.html                # 照明历史最佳通关排行
 │   ├── ranking-sudoku.html               # 数独历史最佳通关排行
-│   ├── forum.html                        # 论坛占位页面
+│   ├── forum.html                        # 主题摘要游标列表、登录续接发布和失败重试
+│   ├── forum-post.html                   # 可收藏主题全文、评论/两层回复及通知定位
 │   ├── styles.css                        # 页面布局、海岛风格、棋盘及弹窗样式
 │   ├── package.json                      # 前端项目元信息与 Node.js 测试命令
 │   │
@@ -135,7 +136,12 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
 │   │   ├── auth-game.js                  # 首页三个独立关卡的登录拦截与授权续接
-│   │   ├── auth-page.js                  # 排行榜和论坛的登录初始化
+│   │   ├── auth-page.js                  # 排行榜共享登录及站内消息初始化
+│   │   ├── forum-client.js               # 同源请求、码点校验、固定重试负载和账号响应隔离
+│   │   ├── forum-view.js                 # 纯文本卡片、头像/点赞/回复展示及输入计数
+│   │   ├── forum-page.js                 # 主题游标页、发布模态、重试和返回位置恢复
+│   │   ├── forum-post-page.js            # 主题详情、评论/回复分页、上下文定位及账号切换
+│   │   ├── notifications.js              # 全站/游戏铃铛、已读边界、可见性轮询及失败退避
 │   │   ├── mine-effects.js               # 扫雷连锁爆炸动画与音效控制
 │   │   ├── ranking-client.js             # 同源请求、HTTP 兼容 UUID、挑战幂等负载及失败重试
 │   │   ├── ranking-page.js               # 三个单项榜共享分页、反馈与玩家头像渲染
@@ -169,6 +175,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── audio-settings.test.js        # 默认开启、独立音量、偏好持久化与存储异常
 │       ├── mine-effects.test.js          # 爆炸顺序、动画、实时增益与静音停止测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
+│       ├── forum.test.js                 # 码点长度、冻结重试、点赞串行及旧账号成功/失败隔离
+│       ├── notifications.test.js         # 浏览器计时器、登录/可见性、账号隔离及已读边界
 │       ├── avatar.test.js                # 头像路径、清单错误、保存重试和退出/换号晚到响应隔离
 │       ├── completion.test.js            # 自由选关、单关重开/结算、规则计时、退出恢复与保存回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
@@ -206,6 +214,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_progress.py            # 数独笔记、首页续玩、规则计时、手机布局与刷新/退出恢复验证
         ├── verify_audio_settings.py      # 用户名设置入口、真实音频音量、跨页偏好与手机/键盘验证
         ├── verify_avatars.py             # 真实临时API/Chrome：25图、保存/失败、棋局保持、四榜及窄屏
+        ├── verify_forum.py               # 双账号真实论坛/消息、键盘/手机、跨浏览器及游戏续玩
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料

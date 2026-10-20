@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="小岛论坛：讨论、回复与解谜心得。" />
+    <meta name="theme-color" content="#102b3c" />
+    <title>主题详情 · 无职游戏</title>
+    <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20261018-island" />
+    <link rel="stylesheet" href="./styles.css?v=20261020-forum" />
+  </head>
+  <body>
+    <div class="world-background" aria-hidden="true"></div>
+    <div class="page destination-page">
+      <header class="landing-header">
+        <span class="brand"><span class="brand-mark" aria-hidden="true">◇</span> 无职游戏</span>
+        <nav class="site-nav" aria-label="主导航"><a href="./ranking.html">排行榜</a><a href="./index.html">无职游戏</a><a href="./forum.html" aria-current="page">论坛</a></nav>
+        <div class="auth-controls" aria-label="账号"></div>
+      </header>
+      <main class="forum-content">
+        <a class="forum-back" href="./forum.html">← 返回论坛</a>
+        <p id="forum-status" class="forum-status" role="status">正在读取主题…</p>
+        <button type="button" id="forum-retry" hidden>重新加载</button>
+        <div id="forum-post"></div>
+        <section id="forum-discussion" hidden aria-labelledby="discussion-title">
+          <h2 id="discussion-title">一起讨论</h2>
+          <form id="comment-form" class="forum-card" novalidate>
+            <div class="forum-compose-target"><label for="comment-body" id="comment-target">发表评论</label><button type="button" id="comment-cancel" hidden>取消回复</button></div>
+            <textarea id="comment-body" name="body" rows="4" required aria-describedby="comment-count"></textarea>
+            <div class="forum-form-footer"><output id="comment-count" for="comment-body"></output><button type="submit" id="comment-submit" class="forum-primary">发表评论</button></div>
+            <p id="comment-status" class="forum-status" role="status"></p>
+          </form>
+          <div id="forum-context" aria-label="定位讨论"></div>
+          <div id="forum-comments" aria-label="评论列表"></div>
+          <p id="comments-status" class="forum-status" role="status"></p>
+          <button type="button" id="comments-retry" hidden>重新加载评论</button>
+          <button type="button" id="comments-more" class="forum-load" hidden>加载更多评论</button>
+        </section>
+      </main>
+      <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span><span>扫雷 / 照明 / 数独</span></footer>
+    </div>
+    <script type="module" src="./src/forum-post-page.js?v=20261020-forum"></script>
+  </body>
+</html>

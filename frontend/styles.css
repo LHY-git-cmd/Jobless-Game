@@ -504,3 +504,63 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .auth-user { max-width: 112px; }
   .avatar-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+/* 论坛延续海岛深蓝与暖金；正文纯文本、长串断行，所有操作保留键盘焦点。 */
+.forum-content { width: min(100%, 880px); margin: 32px auto 72px; flex: 1; min-width: 0; }
+.forum-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 28px; }
+.forum-heading h1 { font: 600 clamp(32px, 5vw, 44px)/1.3 "Songti SC", SimSun, serif; margin: 0; letter-spacing: 4px; }
+.forum-heading p:not(.eyebrow) { color: #d3e0e8; line-height: 1.7; margin-bottom: 0; }
+.forum-content button, .forum-dialog button, .notification-dialog button { min-height: 44px; }
+.forum-primary { color: #253029; background: #f0d49a; border: 1px solid #f0d49a; white-space: nowrap; }
+.forum-primary:hover:not(:disabled) { background: #fff0ce; }
+.forum-card { padding: clamp(18px, 3vw, 28px); margin-block: 16px; border: 1px solid #94b8ca40; border-radius: 16px; background: #102b3cf5; box-shadow: 0 12px 40px #06162435; overflow-wrap: anywhere; min-width: 0; }
+.forum-author { display: flex; align-items: center; gap: 10px; color: #e0eaf0; font-size: 14px; flex-wrap: wrap; }
+.forum-time { color: #bacdd9; font-size: 12px; margin-left: auto; }
+.forum-post-title { margin-block: 20px 14px; font-size: clamp(21px, 3vw, 28px); line-height: 1.5; letter-spacing: 1px; }
+.forum-post-link { color: #f7e7c4; text-decoration: none; }
+.forum-post-link:hover { text-decoration: underline; }
+.forum-body, .forum-excerpt { white-space: pre-wrap; line-height: 1.85; color: #edf2f5; font-size: 16px; overflow-wrap: anywhere; }
+.forum-excerpt { color: #cadbe4; }
+.forum-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.forum-actions button { padding: 8px 14px; background: #183b50; border-color: #7398ae60; }
+.forum-actions .forum-like[aria-pressed="true"] { color: #ffe1a0; border-color: #dfbb6e; background: #60503955; }
+.forum-count, .forum-hint, .forum-reply-label { color: #bdcfda; font-size: 14px; line-height: 1.7; }
+.forum-load { display: block; margin: 20px auto; }
+.forum-content [hidden], .forum-dialog [hidden], .notification-dialog [hidden] { display: none; }
+.forum-status { color: #f3d6a5; line-height: 1.7; overflow-wrap: anywhere; }
+.forum-status:empty { margin: 0; }
+.forum-back { color: #f0d49a; display: inline-flex; align-items: center; min-height: 44px; }
+.forum-replies { border-left: 2px solid #92b4c545; padding-left: 16px; margin-top: 16px; }
+.forum-replies .forum-card { padding: 16px; background: #163449; box-shadow: none; }
+.forum-target { border-color: #f0d49a; outline: 2px solid #f0d49a55; scroll-margin-block: 24px; }
+.forum-form-footer, .forum-compose-target { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block: 12px; }
+.forum-dialog, .notification-dialog { width: min(620px, calc(100vw - 32px)); max-height: calc(100svh - 40px); border: 1px solid #94b8ca60; border-radius: 18px; padding: clamp(18px, 4vw, 28px); background: #102b3c; color: #eef3f7; box-shadow: 0 24px 100px #020d18aa; overflow-y: auto; overflow-wrap: anywhere; }
+.forum-dialog::backdrop, .notification-dialog::backdrop { background: #031422b8; backdrop-filter: blur(6px); }
+.forum-dialog label { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-block: 20px 10px; }
+.forum-dialog output, .forum-form-footer output { color: #bdcfda; font-size: 13px; }
+.forum-dialog input, .forum-dialog textarea, .forum-content textarea { display: block; width: 100%; max-width: 100%; border: 1px solid #91b0c077; border-radius: 8px; background: #091f2f; color: #f0f5f8; padding: 12px; font: inherit; line-height: 1.7; resize: vertical; }
+.forum-dialog input[readonly], .forum-dialog textarea[readonly], .forum-content textarea[readonly] { opacity: .8; }
+.forum-dialog :focus-visible, .forum-content :focus-visible, .notification-dialog :focus-visible, .notification-bell:focus-visible { outline: 3px solid #f0d49a; outline-offset: 3px; }
+.notification-bell { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; min-width: 44px; padding: 8px; border-color: #96b5c377; color: #f4d79e; }
+.notification-count { font-size: 12px; font-variant-numeric: tabular-nums; }
+.notification-count:empty { display: none; }
+.notification-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.notification-heading h2 { margin: 0; font-size: 24px; }
+.notification-heading button { min-width: 44px; font-size: 24px; padding: 4px; }
+.notification-toolbar { display: flex; flex-wrap: wrap; gap: 10px; }
+.notification-item { display: flex; gap: 12px; padding: 16px 12px; margin-block: 10px; border: 1px solid #809eae40; border-radius: 10px; color: #ebf3f7; text-decoration: none; background: #18374b; }
+.notification-item > span { min-width: 0; display: grid; gap: 8px; }
+.notification-item strong { line-height: 1.6; font-size: 15px; }
+.notification-item span > span { font-size: 14px; line-height: 1.7; color: #c5d6df; white-space: pre-wrap; }
+.notification-item time { font-size: 12px; color: #bacdd9; }
+.notification-item.is-unread { border-left: 3px solid #f0d49a; }
+.notification-game { margin-left: auto; }
+@media (max-width: 600px) {
+  .forum-content { margin-top: 20px; }
+  .forum-heading { align-items: flex-start; flex-direction: column; gap: 20px; }
+  .forum-time { flex-basis: 100%; margin-left: 42px; }
+  .forum-replies { padding-left: 10px; }
+  .forum-replies .forum-card { padding: 12px; }
+  .notification-bell { min-width: 44px; }
+  .auth-controls { max-width: 100%; }
+  .game-panel .top-row { flex-wrap: wrap; gap: 8px; }
+}
