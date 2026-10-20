@@ -1,4 +1,5 @@
 /** 论坛同源客户端：固定失败重试负载，代数隔离账号，明确设置点赞状态。 */
+import { requestJson } from './lib/http.js';
 import { createRequestId } from './ranking-client.js';
 
 /** 与 Python strip 一致，补充 JS trim 未覆盖的控制空白并保留 BOM 字面内容。 */
@@ -10,28 +11,10 @@ export function validateText(value, max) {
 }
 
 /** 请求独立超时，保留状态码和重试间隔供界面及轮询退避。 */
-export async function forumRequest(path, { method = 'GET', body } = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
-  try {
-    const response = await fetch(`/api/forum/${path}`, {
-      method, credentials:'same-origin', cache:'no-store', signal:controller.signal,
-      headers:body ? {'Content-Type':'application/json'} : {},
-      ...(body ? {body:JSON.stringify(body)} : {}),
-    });
-    const data = await response.json().catch(()=>null);
-    if (!response.ok) {
-      const error = new Error(typeof data?.detail === 'string' ? data.detail : data?.detail?.message || '请求失败，请稍后重试。');
-      error.status = response.status;
-      error.retryAfter = Number(response.headers?.get('Retry-After')) || 0;
-      throw error;
-    }
-    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('服务返回异常，请重试。');
-    return data;
-  } catch (error) {
-    if (error.name === 'AbortError' || error instanceof TypeError) throw new Error('连接失败，请检查网络后重试。');
-    throw error;
-  } finally { clearTimeout(timer); }
+export async function forumRequest(path, options = {}) {
+  const data = await requestJson(`/api/forum/${path}`, options);
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('服务返回异常，请重试。');
+  return data;
 }
 
 export class ForumClient {

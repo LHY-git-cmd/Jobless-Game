@@ -129,6 +129,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── lib/                          # 无业务状态的DOM查询、事件与传输基础工具
 │   │   │   ├── dom.js                    # 语义名称映射固定节点及局部选择器查询
 │   │   │   ├── events.js                 # 跨模块事件名、分发与可取消订阅
+│   │   │   ├── http.js                   # 同源Cookie、独立超时、JSON/204及HTTP错误元数据
 │   │   │   └── lifecycle.js              # 实例监听/订阅/定时器清理与异步回调保护
 │   │   ├── pages/                        # 页面展示入口，业务流程通过回调连接
 │   │   │   └── home.js                   # 首页选关事件与开始/继续/已通关状态展示
@@ -188,6 +189,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   └── test/                             # Node.js 自动化测试，验证规则与页面流程
 │       ├── dom-events.test.js            # 固定节点语义映射、局部查询及事件取消订阅契约
 │       ├── controller-contracts.test.js  # 无副作用导入、独立棋盘、存档协调及实例资源清理
+│       ├── http.test.js                  # 共享传输超时隔离、清理、204与业务错误兼容契约
 │       ├── game.test.js                  # 扫雷规则测试
 │       ├── akari.test.js                 # 照明规则测试
 │       ├── sudoku.test.js                # 数独规则、候选笔记独立性、编辑保护与旧存档兼容

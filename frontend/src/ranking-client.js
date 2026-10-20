@@ -1,5 +1,7 @@
 /** 同源排行榜和挑战客户端：超时保持失败语义，Cookie 决定账号归属。 */
 
+import { requestJson, HttpError } from './lib/http.js';
+
 /** 生成 UUID v4；公网 HTTP 不提供 randomUUID 时仍使用安全随机数生成幂等编号。 */
 export function createRequestId(cryptoApi = globalThis.crypto) {
   if (typeof cryptoApi?.randomUUID === "function") return cryptoApi.randomUUID();
@@ -14,27 +16,18 @@ export function createRequestId(cryptoApi = globalThis.crypto) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export async function rankingRequest(path, { method = "GET", body } = {}) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+/** 排行接口保留原有对象校验和非字符串 detail 的通用错误文案。 */
+export async function rankingRequest(path, options = {}) {
   try {
-    const response = await fetch(`/api/${path}`, {
-      method, credentials: "same-origin", cache: "no-store", signal: controller.signal,
-      headers: body ? { "Content-Type": "application/json" } : {},
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      const error = new Error(typeof data?.detail === "string" ? data.detail : "请求失败，请稍后重试。");
-      error.status = response.status;
-      throw error;
-    }
-    if (!data || typeof data !== "object") throw new Error("服务返回异常，请重试。");
+    const data = await requestJson(`/api/${path}`, options);
+    if (!data || typeof data !== 'object') throw new Error('服务返回异常，请重试。');
     return data;
   } catch (error) {
-    if (error.name === "AbortError" || error instanceof TypeError) throw new Error("连接失败，请检查网络后重试。");
+    if (error instanceof HttpError) {
+      throw Object.assign(new Error(typeof error.detail === 'string' ? error.detail : '请求失败，请稍后重试。'), { status: error.status });
+    }
     throw error;
-  } finally { clearTimeout(timeout); }
+  }
 }
 
 /** 保存当前账号本轮状态；代数隔离防止离开或换号后的旧响应覆盖新局。 */
