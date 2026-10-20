@@ -17,10 +17,10 @@ test('失败重试冻结编号及负载，成功后下一次生成新编号', as
     return {id:1};
   }, () => String(++id));
   client.setUser({id:1});
-  await assert.rejects(client.publish('posts',{title:'原题',body:'原文'}),/offline/);
-  await client.publish('posts',{title:'改题',body:'改文'});
+  await assert.rejects(client.publish('posts',{body:'原文'}),/offline/);
+  await client.publish('posts',{body:'改文'});
   assert.deepEqual(calls[0], calls[1]);
-  await client.publish('posts',{title:'新题',body:'新文'});
+  await client.publish('posts',{body:'新文'});
   assert.notEqual(calls[1].request_id,calls[2].request_id);
 });
 
@@ -28,7 +28,7 @@ test('换号后晚到发布和读取响应失效，清空待提交内容', async
   let finish;
   const client = new ForumClient(() => new Promise(resolve => { finish=resolve; }), ()=>'id');
   client.setUser({id:1});
-  const old = client.publish('posts',{title:'a',body:'b'});
+  const old = client.publish('posts',{body:'b'});
   client.setUser({id:2}); finish({id:99});
   await assert.rejects(old,/账号/);
   assert.equal(client.pending.size,0);
@@ -54,7 +54,7 @@ test('换号后的旧失败同样标记失效，不把旧错误展示给新账�
   let fail;
   const client=new ForumClient(()=>new Promise((_,reject)=>{fail=reject;}),()=> 'id');
   client.setUser({id:1});
-  for(const operation of [()=>client.read('posts'),()=>client.publish('posts',{title:'a',body:'b'}),()=>client.like('posts',1,false)]){
+  for(const operation of [()=>client.read('posts'),()=>client.publish('posts',{body:'b'}),()=>client.like('posts',1,false)]){
     const result=operation();client.setUser({id:(client.user.id===1?2:1)});fail(new Error('旧账号错误'));
     await assert.rejects(result,error=>error.stale===true);
   }

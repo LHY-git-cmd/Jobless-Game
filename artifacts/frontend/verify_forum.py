@@ -93,7 +93,8 @@ def main():
                     click('#forum-compose');wait("document.querySelector('#auth-dialog').open")
                     evaluate("document.querySelector('#auth-username').value='论坛甲';document.querySelector('#auth-password').value='forum-secret';")
                     click('.auth-submit');wait("document.querySelector('#forum-compose-dialog')?.open")
-                    evaluate("document.querySelector('#forum-title-input').value='小岛上的扫雷心得';document.querySelector('#forum-body-input').value='中文与换行\\n<script>window.forumXss=1</script>'; ")
+                    assert evaluate("!document.querySelector('#forum-title-input') && document.activeElement.id==='forum-body-input'")
+                    evaluate("document.querySelector('#forum-body-input').value='中文与换行\\n<script>window.forumXss=1</script>'; ")
                     command('Network.setBlockedURLs',{'urls':['*api/forum/posts']})
                     click('#forum-submit');wait("document.querySelector('#forum-form-status').textContent.includes('连接失败')")
                     assert evaluate("document.querySelector('#forum-body-input').value.includes('<script>')")
@@ -187,7 +188,7 @@ def main():
                         click('#forum-compose');wait("document.querySelector('#forum-compose-dialog').open")
                         assert evaluate("(()=>{const d=document.querySelector('#forum-compose-dialog');return d.scrollWidth<=d.clientWidth&&d.getBoundingClientRect().right<=innerWidth;})()")
                         shot(f'forum-compose-mobile-{width}.png');click('#forum-compose-close')
-                    checks.append('375px/320px 列表及发表主题弹窗无横向溢出')
+                    checks.append('375px/320px 列表及正文发布弹窗无横向溢出')
                 with browser(str(Path(temporary)/'second-browser'),log) as (command,_):
                     navigate('forum.html');login('论坛甲')
                     wait("document.querySelector('.notification-bell').getAttribute('aria-label').includes('0 条未读')")

@@ -1,7 +1,7 @@
-/** 独立主题详情：评论分页、两层回复、通知直接定位与失败保留输入。 */
-import { initAuth } from './auth.js?v=20261020-forum';
+/** 独立帖子详情：评论分页、两层回复、通知直接定位与失败保留输入。 */
+import { initAuth } from './auth.js?v=20261020-body-only';
 import { ForumClient, validateText } from './forum-client.js';
-import { contentCard, node, bindCount, showError } from './forum-view.js';
+import { contentCard, node, bindCount, showError } from './forum-view.js?v=20261020-body-only';
 
 const auth=initAuth(),client=new ForumClient(),$=selector=>document.querySelector(selector);
 const params=new URLSearchParams(location.search),raw=params.get('id'),postId=/^[1-9]\d*$/.test(raw||'')?Number(raw):0;
@@ -92,10 +92,10 @@ async function load(){
   const currentRevision=++revision;commentBusy=false;replyPages.clear();cursor=null;comments.replaceChildren();context.replaceChildren();$('#forum-post').replaceChildren();
   $('#forum-discussion').hidden=true;$('#forum-retry').hidden=true;
   if(!postId||!Number.isSafeInteger(postId)){status.textContent='帖子编号无效，请返回论坛。';return;}
-  status.textContent='正在读取主题…';
+  status.textContent='正在读取帖子…';
   try{
     const item=await client.read(`posts/${postId}`);if(currentRevision!==revision)return;
-    $('#forum-post').append(contentCard(item,{onLike:like}));document.title=`${item.title} · 无职游戏`;status.textContent='';$('#forum-discussion').hidden=false;
+    $('#forum-post').append(contentCard(item,{onLike:like}));document.title='帖子详情 · 无职游戏';status.textContent='';$('#forum-discussion').hidden=false;
     await loadComments();if(params.get('comment')&&/^[1-9]\d*$/.test(params.get('comment')))await locate(params.get('comment'));
   }catch(error){if(!error.stale&&currentRevision===revision){showError(error,status);$('#forum-retry').hidden=false;}}
 }

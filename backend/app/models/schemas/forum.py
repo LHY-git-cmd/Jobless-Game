@@ -5,13 +5,12 @@ from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 
 
 class PostRequest(BaseModel):
-    """标题正文只接受严格字符串并移除首尾空白。"""
+    """直接发布正文，只接受严格字符串并移除首尾空白。"""
     model_config = ConfigDict(extra='forbid')
     request_id: UUID
-    title: StrictStr = Field(min_length=1, max_length=80)
     body: StrictStr = Field(min_length=1, max_length=2000)
 
-    @field_validator('title', 'body', mode='before')
+    @field_validator('body', mode='before')
     @classmethod
     def trim(cls, value):
         """先去空白再校验长度，不把数字等值转换为字符串。"""

@@ -15,6 +15,7 @@ class ForumPost(Base):
     id: Mapped[int] = mapped_column(RECORD_ID, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(USER_ID, ForeignKey('users.id'), nullable=False)
     request_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    # 保留 V4 历史列以兼容已有数据库；当前产品只发布正文，新记录写空字符串。
     title: Mapped[str] = mapped_column(String(80), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     like_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

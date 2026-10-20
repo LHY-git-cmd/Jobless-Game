@@ -18,13 +18,13 @@ export function contentCard(item,{kind='posts',summary=false,onLike,onReply,onRe
   if(kind==='comments')card.id=`comment-${item.id}`;
   const author=node('div','forum-author'),name=node('span','',item.username);
   author.append(createAvatarImage(item.avatar_id),name,timeLabel(item.created_at));card.append(author);
-  if(kind==='posts') {
-    const heading=node(summary?'h2':'h1','forum-post-title');
-    if(summary){const link=node('a','forum-post-link',item.title);link.href=`./forum-post.html?id=${item.id}`;heading.append(link);}
-    else heading.textContent=item.title;
-    card.append(heading);
-  } else if(item.reply_to_username)card.append(node('p','forum-reply-label',`回复 ${item.reply_to_username}`));
-  card.append(node('p',summary?'forum-excerpt':'forum-body',summary?item.excerpt:item.body));
+  if(kind==='comments'&&item.reply_to_username)card.append(node('p','forum-reply-label',`回复 ${item.reply_to_username}`));
+  const text=node('p',summary?'forum-excerpt':'forum-body');
+  if(summary&&kind==='posts'){
+    // 正文本身作为详情链接，不从正文另造一个标题，也不重复显示摘要。
+    const link=node('a','forum-post-link',item.excerpt);link.href=`./forum-post.html?id=${item.id}`;text.append(link);
+  }else text.textContent=summary?item.excerpt:item.body;
+  card.append(text);
   const actions=node('div','forum-actions'),like=node('button','forum-like');like.type='button';
   /** 当前对象的点赞展示总是来自服务端回包。 */
   function renderLike(){like.textContent=`${item.liked_by_me?'已赞':'赞'} · ${item.like_count}`;like.setAttribute('aria-pressed',String(item.liked_by_me));like.setAttribute('aria-label',`${item.liked_by_me?'取消点赞':'点赞'}，${item.like_count} 个赞`);}

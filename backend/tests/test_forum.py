@@ -53,9 +53,9 @@ class ForumTests(TestCase):
         if n:
             self.client.cookies.set(get_settings().session_cookie_name, f'forum-{n}')
 
-    def post(self, title='扫雷心得', body='中文\n<script>作为文字</script>', request_id=None):
+    def post(self, body='中文\n<script>作为文字</script>', request_id=None):
         """发布并确保不是静态挂载返回的 404。"""
-        response = self.client.post('/api/forum/posts', json={'title': title, 'body': body, 'request_id': request_id or str(uuid4())})
+        response = self.client.post('/api/forum/posts', json={'body': body, 'request_id': request_id or str(uuid4())})
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
 
@@ -69,7 +69,7 @@ class ForumTests(TestCase):
         """游客只读，同源校验和作者归属均不可绕过。"""
         self.login(None)
         self.assertEqual(self.client.get('/api/forum/posts').status_code, 200)
-        payload = {'request_id': str(uuid4()), 'title': 'a', 'body': 'b'}
+        payload = {'request_id': str(uuid4()), 'body': 'b'}
         self.assertEqual(self.client.post('/api/forum/posts', json=payload).status_code, 401)
         self.login(1)
         self.assertEqual(self.client.post('/api/forum/posts', json=payload, headers={'Origin':'https://evil.example'}).status_code, 403)
@@ -80,21 +80,23 @@ class ForumTests(TestCase):
         key = str(uuid4())
         first = self.post(request_id=key)
         self.assertEqual(self.post(request_id=key)['id'], first['id'])
-        response = self.client.post('/api/forum/posts', json={'request_id':key,'title':'不同','body':'不同'})
+        response = self.client.post('/api/forum/posts', json={'request_id':key,'body':'不同'})
         self.assertEqual(response.status_code, 409)
-        response = self.client.post('/api/forum/posts', json={'request_id':str(uuid4()),'title':'新帖','body':'正文'})
+        response = self.client.post('/api/forum/posts', json={'request_id':str(uuid4()),'body':'正文'})
         self.assertEqual(response.status_code, 429)
         self.assertGreater(int(response.headers['retry-after']), 0)
 
     def test_unicode_lengths_plain_text_and_summary(self):
         """Unicode 按码点计数，摘要有限，详情保留换行与 HTML 字面内容。"""
         body = '😀' * 1990 + '\n<b>文字</b>'
-        first = self.post(title='😀'*80, body=body)
+        first = self.post(body=body)
         detail = self.client.get(f"/api/forum/posts/{first['id']}").json()
         self.assertEqual(detail['body'], body)
+        self.assertNotIn('title', detail)
+        self.assertNotIn('title', self.client.get('/api/forum/posts').json()['items'][0])
         self.assertNotIn('body', self.client.get('/api/forum/posts').json()['items'][0])
-        for title, text in [('x'*81,'a'), ('a','😀'*2001), ('  ','b'), ('a',' \n')]:
-            response = self.client.post('/api/forum/posts', json={'request_id':str(uuid4()), 'title':title, 'body':text})
+        for text in ['😀'*2001, '  ', ' \n']:
+            response = self.client.post('/api/forum/posts', json={'request_id':str(uuid4()), 'body':text})
             self.assertEqual(response.status_code, 422)
 
     def test_comments_replies_context_and_ownership(self):
@@ -209,7 +211,7 @@ class ForumTests(TestCase):
     def test_independent_32k_body_limit_normal_and_chunked(self):
         """论坛允许完整中文转义正文，普通/分块超限拒绝且登录仍为4KiB。"""
         import json
-        payload = json.dumps({'request_id':str(uuid4()),'title':'标题','body':'中'*2000}).encode()
+        payload = json.dumps({'request_id':str(uuid4()),'body':'中'*2000}).encode()
         response = self.client.post('/api/forum/posts',content=payload,headers={'content-type':'application/json'})
         self.assertEqual(response.status_code,200,response.text)
         for body in (b'x'*32769, iter([b'x'*16000,b'x'*17000])):
@@ -233,6 +235,24 @@ class ForumTests(TestCase):
             db.commit()
         self.assertEqual(self.client.get('/api/forum/notifications/unread-count').json()['count'],100)
         self.assertEqual(self.client.get('/api/forum/posts').json()['items'][0]['avatar_id'],17)
+
+    def test_body_only_creation_and_legacy_post_retry(self):
+        """仅提交正文即可发帖；旧标题保留在数据库，不参与展示、重试或通知。"""
+        from backend.app.models.entities.forum import ForumPost
+        key=str(uuid4())
+        with self.sessions() as db:
+            db.add(ForumPost(user_id=1,request_id=key,title='历史标题',body='历史正文',created_at=utc_now()))
+            db.commit()
+        result=self.post(body='历史正文',request_id=key)
+        self.assertEqual(result['body'],'历史正文')
+        self.assertNotIn('title',result)
+        self.assertEqual(self.client.post('/api/forum/posts',json={'request_id':str(uuid4()),'title':'不再接受','body':'正文'}).status_code,422)
+        self.login(2)
+        self.client.put(f"/api/forum/posts/{result['id']}/like")
+        self.login(1)
+        notice=self.client.get('/api/forum/notifications').json()['items'][0]
+        self.assertNotIn('title',notice)
+        self.assertEqual(notice['excerpt'],'历史正文')
 
     def test_late_comment_context_and_finite_reply_pages(self):
         """后续页的通知目标直接可取；根评论、回复均按稳定游标分页。"""

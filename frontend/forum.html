@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#102b3c" />
     <title>论坛 · 无职游戏</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20261018-island" />
-    <link rel="stylesheet" href="./styles.css?v=20261020-forum" />
+    <link rel="stylesheet" href="./styles.css?v=20261020-body-only" />
   </head>
   <body>
     <div class="world-background" aria-hidden="true"></div>
@@ -22,26 +22,24 @@
         <div class="auth-controls" aria-label="账号"></div>
       </header>
       <main class="forum-content" aria-labelledby="forum-title">
-        <div class="forum-heading"><div><p class="eyebrow">冒险交流 / COMMUNITY</p><h1 id="forum-title">小岛论坛</h1><p>分享解谜心得，也聊聊你的新发现。</p></div><button type="button" id="forum-compose" class="forum-primary" aria-haspopup="dialog" aria-controls="forum-compose-dialog">发表主题</button></div>
+        <div class="forum-heading"><div><p class="eyebrow">冒险交流 / COMMUNITY</p><h1 id="forum-title">小岛论坛</h1><p>分享解谜心得，也聊聊你的新发现。</p></div><button type="button" id="forum-compose" class="forum-primary" aria-haspopup="dialog" aria-controls="forum-compose-dialog">发表帖子</button></div>
         <p id="forum-status" class="forum-status" role="status">正在读取讨论…</p>
-        <div id="forum-list" aria-label="主题列表"></div>
-        <button type="button" id="forum-more" class="forum-load" hidden>加载更多主题</button>
+        <div id="forum-list" aria-label="帖子列表"></div>
+        <button type="button" id="forum-more" class="forum-load" hidden>加载更多帖子</button>
         <button type="button" id="forum-retry" hidden>重新加载</button>
       </main>
       <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span><span>扫雷 / 照明 / 数独</span></footer>
     </div>
     <dialog id="forum-compose-dialog" class="forum-dialog" aria-labelledby="forum-compose-title">
-      <div class="notification-heading"><h2 id="forum-compose-title">发表主题</h2><button type="button" id="forum-compose-close" aria-label="关闭发表主题">×</button></div>
+      <div class="notification-heading"><h2 id="forum-compose-title">发表帖子</h2><button type="button" id="forum-compose-close" aria-label="关闭发表帖子">×</button></div>
       <form id="forum-form" novalidate>
-        <label for="forum-title-input">标题 <output id="forum-title-count" for="forum-title-input"></output></label>
-        <input id="forum-title-input" name="title" required aria-describedby="forum-title-count" />
         <label for="forum-body-input">正文 <output id="forum-body-count" for="forum-body-input"></output></label>
         <textarea id="forum-body-input" name="body" rows="8" required aria-describedby="forum-body-count forum-text-hint"></textarea>
         <p id="forum-text-hint" class="forum-hint">仅支持文字，保留换行。</p>
         <p id="forum-form-status" class="forum-status" role="status"></p>
-        <button type="submit" id="forum-submit" class="forum-primary">发布主题</button>
+        <button type="submit" id="forum-submit" class="forum-primary">发布</button>
       </form>
     </dialog>
-    <script type="module" src="./src/forum-page.js?v=20261020-forum"></script>
+    <script type="module" src="./src/forum-page.js?v=20261020-body-only"></script>
   </body>
 </html>

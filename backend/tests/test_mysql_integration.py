@@ -137,7 +137,7 @@ class MySQLIntegrationTests(TestCase):
             author, _, first, _ = auth_service.login_transaction(LoginRequest(username=self.new_name(), password='test-password'), db, get_settings())
             actor, _, second, _ = auth_service.login_transaction(LoginRequest(username=self.new_name(), password='test-password'), db, get_settings())
             author_id, actor_id = author.id, actor.id
-        payload = PostRequest(request_id=uuid4(), title='真实并发', body='仅专用测试库')
+        payload = PostRequest(request_id=uuid4(), body='仅专用测试库')
 
         def create():
             """独立连接同时重试同一次建帖，不使用进程内锁。"""

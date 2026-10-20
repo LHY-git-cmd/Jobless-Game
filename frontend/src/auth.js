@@ -4,7 +4,7 @@ import { usernameUnits, validateUsername, validatePassword } from "./auth-valida
 import { initMusic } from "./music.js?v=20261019-audio-settings";
 import { initGameSettings } from "./settings.js?v=20261020-avatars";
 import { createAvatarImage, updateAvatarImage } from "./avatar.js?v=20261020-avatars";
-import { initNotifications } from "./notifications.js?v=20261020-forum";
+import { initNotifications } from "./notifications.js?v=20261020-body-only";
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
 export function initAuth() {

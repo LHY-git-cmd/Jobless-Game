@@ -130,7 +130,7 @@ export function initNotifications() {
           link.append(createAvatarImage(item.avatar_id));
           const text=document.createElement('span'),title=document.createElement('strong'),excerpt=document.createElement('span'),time=document.createElement('time');
           title.textContent=`${item.read_at?'':'未读 · '}${item.username}${labels[item.kind]||'与你互动'}`;
-          excerpt.textContent=`${item.title} · ${item.excerpt}`;time.textContent=new Date(item.created_at+'Z').toLocaleString('zh-CN');time.dateTime=item.created_at+'Z';
+          excerpt.textContent=item.excerpt;time.textContent=new Date(item.created_at+'Z').toLocaleString('zh-CN');time.dateTime=item.created_at+'Z';
           text.append(title,excerpt,time);link.append(text);
           link.addEventListener('click',async event=>{
             if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey){void controller.read(item.id);return;}

@@ -76,7 +76,8 @@ def create_content(db, user_id, operation, payload, object_id, now):
     old = repo.by_request(db, model, user_id, str(payload.request_id))
     if old:
         same = old.body == payload.body
-        same = same and (old.title == payload.title if is_post else old.post_id == object_id and old.reply_to_comment_id == payload.reply_to_comment_id)
+        if not is_post:
+            same = same and old.post_id == object_id and old.reply_to_comment_id == payload.reply_to_comment_id
         if not same:
             raise AppError(409, '请求编号已用于其他内容，请勿修改重试负载。')
         return model, old.id
@@ -94,7 +95,8 @@ def create_content(db, user_id, operation, payload, object_id, now):
     config = get_settings()
     check_frequency(db, model, user_id, now, config.forum_post_interval_seconds if is_post else config.forum_comment_interval_seconds)
     common = dict(user_id=user_id, request_id=str(payload.request_id), body=payload.body, created_at=now, like_count=0)
-    obj = ForumPost(**common,title=payload.title,comment_count=0) if is_post else ForumComment(**common,post_id=post.id,
+    # 兼容已执行的 V4：旧 title 列写空字符串，不生成标题、不参与正文幂等或展示。
+    obj = ForumPost(**common,title='',comment_count=0) if is_post else ForumComment(**common,post_id=post.id,
              root_comment_id=root.id if root else None, reply_to_comment_id=target.id if target else None, reply_count=0)
     repo.add(db, obj)
     db.flush()

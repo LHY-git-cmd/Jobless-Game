@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="小岛论坛：讨论、回复与解谜心得。" />
     <meta name="theme-color" content="#102b3c" />
-    <title>主题详情 · 无职游戏</title>
+    <title>帖子详情 · 无职游戏</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20261018-island" />
-    <link rel="stylesheet" href="./styles.css?v=20261020-forum" />
+    <link rel="stylesheet" href="./styles.css?v=20261020-body-only" />
   </head>
   <body>
     <div class="world-background" aria-hidden="true"></div>
@@ -19,7 +19,8 @@
       </header>
       <main class="forum-content">
         <a class="forum-back" href="./forum.html">← 返回论坛</a>
-        <p id="forum-status" class="forum-status" role="status">正在读取主题…</p>
+        <h1 class="forum-detail-heading">帖子详情</h1>
+        <p id="forum-status" class="forum-status" role="status">正在读取帖子…</p>
         <button type="button" id="forum-retry" hidden>重新加载</button>
         <div id="forum-post"></div>
         <section id="forum-discussion" hidden aria-labelledby="discussion-title">
@@ -39,6 +40,6 @@
       </main>
       <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span><span>扫雷 / 照明 / 数独</span></footer>
     </div>
-    <script type="module" src="./src/forum-post-page.js?v=20261020-forum"></script>
+    <script type="module" src="./src/forum-post-page.js?v=20261020-body-only"></script>
   </body>
 </html>

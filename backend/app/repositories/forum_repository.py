@@ -43,7 +43,7 @@ def content_query(model, user_id, summary=False):
     columns = [model.id, model.user_id, model.created_at, model.like_count,
                User.username, User.avatar_id, (like.user_id.is_not(None)).label('liked_by_me')]
     if is_post:
-        columns += [model.title, model.comment_count]
+        columns += [model.comment_count]
     else:
         target = aliased(ForumComment)
         target_user = aliased(User)
@@ -107,7 +107,7 @@ def notifications(db, user_id, cursor, limit):
     """消息列表一次关联互动者、帖子及可选评论，只返回有限摘要。"""
     query = select(ForumNotification.id, ForumNotification.kind, ForumNotification.post_id,
                    ForumNotification.comment_id, ForumNotification.read_at, ForumNotification.created_at,
-                   User.username, User.avatar_id, ForumPost.title,
+                   User.username, User.avatar_id,
                    func.substr(func.coalesce(ForumComment.body, ForumPost.body), 1, 100).label('excerpt'))\
         .join(User, User.id == ForumNotification.actor_id).join(ForumPost, ForumPost.id == ForumNotification.post_id)\
         .outerjoin(ForumComment, ForumComment.id == ForumNotification.comment_id)\

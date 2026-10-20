@@ -141,7 +141,7 @@ npm test *> ../artifacts/frontend/auth-tests.log
 
 ## 文字论坛与站内消息
 
-所有接口位于 `/api/forum/`：公开读取帖子摘要/详情、顶层评论、根评论下回复及目标评论上下文；写入须登录且同源。接口完整清单和规则见 [论坛实施报告](../docs/forum-implementation-report.md)。请求不能指定作者或根评论；回复根归属由服务端验证。文字仅按纯文本显示，标题80、正文2000、评论/回复500个 Unicode 码点，先去除首尾空白。
+所有接口位于 `/api/forum/`：公开读取帖子摘要/详情、顶层评论、根评论下回复及目标评论上下文；写入须登录且同源。接口完整清单和规则见 [论坛实施报告](../docs/forum-implementation-report.md)。发布帖子只接收 request_id 和 body，无标题输入或生成标题；请求不能指定作者或根评论，回复根归属由服务端验证。文字仅按纯文本显示，正文2000、评论/回复500个 Unicode 码点，先去除首尾空白。V4 历史 title 列保留以兼容已有数据库，新帖写空字符串，接口和页面不返回/展示它，不需新增迁移。
 
 `POST /posts`、`POST /posts/{id}/comments` 需要 UUID `request_id`。同账号同编号同负载返回原内容，改负载409；先确认幂等再检查发布间隔。`FORUM_POST_INTERVAL_SECONDS=60`、`FORUM_COMMENT_INTERVAL_SECONDS=3` 可配置，评论与回复共用间隔，超限429携带 Retry-After。帖子及评论的点赞使用 PUT/DELETE `/posts/{id}/like`、`/comments/{id}/like`，重复调用不重复计数。用户、帖子、评论按固定顺序加锁，内容、计数和通知统一提交或回滚。
 
