@@ -61,7 +61,7 @@ flyway -configFiles=backend/flyway.conf info
 
 | 接口 | 成功行为 | 主要失败 |
 | --- | --- | --- |
-| `POST /api/auth/login` | 首次自动注册或验证已有密码；返回 `{user:{id,username},created}` 并设置 Cookie | 401 密码错误、403 来源错误、413 请求体过大、422 输入错误、429 频率/哈希繁忙、503 数据库/执行槽繁忙 |
+| `POST /api/auth/login` | 首次自动注册或验证已有密码；返回 `{user:{id,username,avatar_id},created}` 并设置 Cookie | 401 密码错误、403 来源错误、413 请求体过大、422 输入错误、429 频率/哈希繁忙、503 数据库/执行槽繁忙 |
 | `GET /api/auth/me` | 返回 `{id,username,avatar_id}` | 401 会话无效、503 数据库/执行槽繁忙 |
 | `PUT /api/auth/avatar` | 提交 `{avatar_id}`，更新当前账号并返回 `{id,username,avatar_id}` | 401 未登录、403 来源错误、413 超过4KiB、422 非严格整数/清单未知编号/多余字段、503 数据库/执行槽繁忙 |
 | `POST /api/auth/logout` | 当前会话失效并清除 Cookie，返回 204 | 403 来源错误、503 暂时不可用 |

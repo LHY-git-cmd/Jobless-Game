@@ -462,3 +462,45 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   .records-list li { grid-template-columns: 18px minmax(0, 1fr) auto; gap: 6px; }
   .records-badge { margin-left: 5px; }
 }
+
+/* 预设头像共享磁盘文件；固定尺寸避免加载抖动，账号入口和排行榜保留文字身份。 */
+.avatar-image { display: block; flex: 0 0 auto; object-fit: cover; border-radius: 50%; background: #d4dee4; }
+.avatar-unavailable { visibility: hidden; }
+.auth-user { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px; text-align: left; }
+.auth-user.hidden { display: none; }
+.auth-username { min-width: 0; overflow-wrap: anywhere; }
+.auth-avatar { width: 28px; height: 28px; }
+.ranking-identity { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.ranking-identity > span { min-width: 0; overflow-wrap: anywhere; }
+.settings-avatar { margin-bottom: 20px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: #071e3244; }
+.settings-avatar-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.settings-avatar h3 { margin: 0; color: var(--paper); font-size: 16px; font-weight: 500; }
+.avatar-account-note { color: var(--muted); font-size: 12px; }
+.avatar-current { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+.avatar-preview { width: 64px; height: 64px; flex: 0 0 auto; border: 1px solid #f0d49a88; border-radius: 50%; }
+.avatar-preview .avatar-image { width: 100%; height: 100%; }
+.avatar-caption { margin: 0 0 6px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.avatar-expand, .avatar-retry { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+.avatar-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-height: 260px; overflow-y: auto; padding: 5px; margin: 12px -5px 12px; scroll-padding: 5px; }
+.avatar-option { position: relative; width: 100%; min-width: 44px; min-height: 44px; aspect-ratio: 1; padding: 4px; border: 2px solid transparent; border-radius: 14px; background: #102b3c99; }
+.avatar-option .avatar-image { width: 100%; height: 100%; border-radius: 9px; }
+.avatar-option[aria-pressed="true"] { border-color: var(--gold); background: #f0d49a22; }
+.avatar-option[aria-pressed="true"]::after { content: "✓"; position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--gold); color: var(--gold-ink); font-size: 12px; font-weight: 700; }
+.avatar-option:focus-visible, .avatar-expand:focus-visible, .avatar-retry:focus-visible, .avatar-save:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.avatar-save { width: 100%; min-height: 44px; padding: 10px 12px; border-color: #f0d49a88; background: #f0d49a18; color: var(--gold); font-size: 14px; }
+.avatar-retry { margin-bottom: 12px; }
+.avatar-status { min-height: 18px; margin: 10px 0 0; color: #ffdfb4; font-size: 12px; line-height: 1.6; }
+.avatar-status:empty { display: none; }
+.settings-avatar [hidden] { display: none !important; }
+.settings-dialog, .avatar-grid { scrollbar-width: thin; scrollbar-color: #748e99 #17384d; }
+@media (max-width: 600px) {
+  .auth-user { max-width: 132px; gap: 6px; padding-inline: 8px; }
+  .settings-avatar { padding: 14px 12px; }
+  .avatar-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ranking-identity { gap: 6px; }
+  .ranking-identity .avatar-image { width: 28px; height: 28px; }
+}
+@media (max-width: 360px) {
+  .auth-user { max-width: 112px; }
+  .avatar-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

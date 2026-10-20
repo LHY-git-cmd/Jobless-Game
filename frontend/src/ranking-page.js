@@ -1,13 +1,15 @@
 /** 四个排行榜页面共用的分页、空榜、失败重试和快照明细渲染。 */
-import { initAuth } from "./auth.js?v=20261019-audio-settings";
+import { initAuth } from "./auth.js?v=20261020-avatars";
 import { rankingRequest } from "./ranking-client.js";
 import { formatTime } from "./session.js";
+import { createAvatarImage, updateAvatarImage } from "./avatar.js?v=20261020-avatars";
 
 const $ = (id) => document.getElementById(id);
 const category = document.body.dataset.ranking;
 let page = 1;
 let pages = 1;
 let generation = 0;
+const updatedAvatars = new Map();
 initAuth();
 
 /** 使用 textContent 处理所有用户名和成绩，不把服务端字段拼进 HTML。 */
@@ -24,7 +26,15 @@ function renderRows(entries) {
   for (const entry of entries) {
     const row = document.createElement("tr");
     if (entry.rank <= 3) row.className = "ranking-podium";
-    row.append(cell(String(entry.rank), "ranking-position"), cell(entry.username, "ranking-player"));
+    const player = cell("", "ranking-player");
+    const identity = document.createElement("div");
+    identity.className = "ranking-identity";
+    const image = createAvatarImage(updatedAvatars.get(entry.user_id) ?? entry.avatar_id);
+    image.dataset.userId = String(entry.user_id);
+    const name = document.createElement("span");
+    name.textContent = entry.username;
+    identity.append(image, name); player.append(identity);
+    row.append(cell(String(entry.rank), "ranking-position"), player);
     const result = cell("", "ranking-time");
     const strong = document.createElement("strong");
     strong.textContent = formatTime(entry.duration_seconds);
@@ -76,4 +86,12 @@ async function load() {
 $("ranking-prev").addEventListener("click", () => { if (page > 1) { page--; void load(); } });
 $("ranking-next").addEventListener("click", () => { if (page < pages) { page++; void load(); } });
 $("ranking-retry").addEventListener("click", () => { void load(); });
+// 同页更换头像只更新可见图片，不重新提交成绩或改变分页；映射也覆盖在途榜单旧响应。
+document.addEventListener("user-profile-updated", event => {
+  const user = event.detail.user;
+  updatedAvatars.set(user.id, user.avatar_id);
+  for (const image of document.querySelectorAll(".ranking-identity img")) {
+    if (image.dataset.userId === String(user.id)) updateAvatarImage(image, user.avatar_id);
+  }
+});
 void load();

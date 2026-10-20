@@ -99,7 +99,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
 │   ├── ranking-implementation-report.md   # 排行榜实际产出、测试与待完成环境验收
-│   └── avatar-implementation-plan.md      # 用户确认的25张硬盘预设头像、账号及四榜实施计划
+│   ├── avatar-implementation-plan.md      # 用户确认的25张硬盘预设头像、账号及四榜实施计划
+│   └── avatar-implementation-report.md    # 头像实际行为、资源、测试及待完成MySQL/服务器验收
 │
 ├── frontend/                             # 可独立预览的网页前端及其测试
 │   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
@@ -120,7 +121,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── session.js                    # 确认开始后持续计时与结算记录；不是账号登录会话
 │   │   ├── progress.js                   # 按账号保存棋局/候选笔记、绝对计时起点及待确认请求
 │   │   ├── audio-settings.js             # 音乐/音效独立开关、音量偏好持久化与订阅同步
-│   │   ├── settings.js                   # 用户名打开的游戏设置弹窗：开关、滑块和键盘焦点
+│   │   ├── settings.js                   # 共享游戏设置：头像选择、音频开关/滑块和键盘焦点
+│   │   ├── avatar.js                     # 固定图片路径、清单读取、错误回退及按账号隔离保存状态
+│   │   ├── avatar-picker.js              # 设置中的头像网格、按需加载、明确保存和失败重试
 │   │   ├── auth.js                       # 共享登录弹窗、会话恢复、用户名设置入口及退出
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
@@ -159,6 +162,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── audio-settings.test.js        # 默认开启、独立音量、偏好持久化与存储异常
 │       ├── mine-effects.test.js          # 爆炸顺序、动画、实时增益与静音停止测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
+│       ├── avatar.test.js                # 头像路径、清单错误、保存重试和退出/换号晚到响应隔离
 │       ├── completion.test.js            # 首页逐关入口、前关结果/后关续玩、规则计时、退出恢复与保存回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
@@ -194,6 +198,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_live_timers.py         # 游戏实时计时显示验证脚本
         ├── verify_progress.py            # 数独笔记、首页续玩、规则计时、手机布局与刷新/退出恢复验证
         ├── verify_audio_settings.py      # 用户名设置入口、真实音频音量、跨页偏好与手机/键盘验证
+        ├── verify_avatars.py             # 真实临时API/Chrome：25图、保存/失败、棋局保持、四榜及窄屏
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料
