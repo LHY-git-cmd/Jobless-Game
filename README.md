@@ -68,5 +68,3 @@
 本机完整 Docker 验证（Nginx、FastAPI、MySQL 与一次性 Flyway）已提供，入口为 `http://127.0.0.1:8080/`。首次准备 `.env.docker` 后运行 `docker compose --env-file .env.docker up -d --build --wait --wait-timeout 180`。配置、数据卷、资源限制与验证步骤见 [Docker 部署说明](./backend/deploy/docker/README.md)。该配置只绑定本机，不替代服务器 HTTPS 与资源验收。
 
 Nginx 站点根目录指向 `frontend/`，使用 HTTPS 并将同源 `/api/` 转发到本机单进程 FastAPI；后端和真实配置放在 Web 根目录之外。Flyway 在维护窗口单次执行后退出。宝塔、Nginx、systemd 以及低资源配置模板位于 `backend/deploy/`，具体步骤见 [部署说明](./backend/README.md)。切换前备份原配置与文件，先验证后切换。
-
-当前没有服务器登录信息和域名，尚未部署到服务器；本机 Docker 验证结果见 [Docker 部署说明](./backend/deploy/docker/README.md)，历史实施及目标服务器验收状态见 [实施报告](./docs/login-implementation-report.md)。
