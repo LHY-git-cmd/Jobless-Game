@@ -1,4 +1,4 @@
-"""公共 HTTP 中间件：登录请求体上限与 API 安全响应头。"""
+"""公共 HTTP 中间件：登录、挑战和头像写入请求体上限与 API 安全响应头。"""
 
 from fastapi.responses import JSONResponse
 
@@ -20,6 +20,7 @@ class LoginBodyLimit:
         if scope["type"] == "http" and scope["path"].startswith("/api/"):
             send = secure_send
         if scope["type"] != "http" or not (scope["path"] == "/api/auth/login" or
+                (scope["path"] == "/api/auth/avatar" and scope.get("method") == "PUT") or
                 (scope["path"].startswith("/api/challenges/") and scope.get("method") == "POST")):
             return await self.app(scope, receive, send)
         body = bytearray()

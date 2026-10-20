@@ -1,6 +1,6 @@
 # 本机 Docker 部署与验证
 
-本方案用于当前电脑验证：Nginx 提供网页，单进程 FastAPI 处理 API，MySQL 8.4 使用独立命名卷保存数据。Flyway 完成 V1/V2 后退出，迁移失败时 API 不启动。不读取或修改已有 `backend/.env` 和宝塔数据库。
+本方案用于当前电脑验证：Nginx 提供网页，单进程 FastAPI 处理 API，MySQL 8.4 使用独立命名卷保存数据。Flyway 完成 V1/V2/V3 后退出，迁移失败时 API 不启动。不读取或修改已有 `backend/.env` 和宝塔数据库。V3 为用户头像编号，默认001；25张成品保存在网页静态目录，由 Nginx 分发。下文历史验收仅覆盖当时 V1/V2，本次 V3 因 Docker 引擎未运行而尚未完成真实 MySQL/Flyway 验收，见 [头像实施报告](../../../docs/avatar-implementation-report.md)。
 
 ## 启动
 

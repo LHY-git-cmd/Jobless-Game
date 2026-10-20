@@ -31,10 +31,12 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── controllers/                 # 控制层：HTTP 协议、Cookie 和响应映射
 │   │   │   ├── __init__.py               # 控制层包标识
 │   │   │   ├── auth_controller.py        # 登录、当前用户、注销路由及同源校验
+│   │   │   ├── avatar_controller.py      # 当前登录账号更换预设头像的同源接口
 │   │   │   └── ranking_controller.py     # 挑战创建/重开/通关、个人记录与公开排行榜路由
 │   │   ├── services/                    # 业务层：流程、事务与登录专属资源限制
 │   │   │   ├── __init__.py               # 业务层包标识
 │   │   │   ├── auth_service.py           # 注册/验证密码、会话业务及事务控制
+│   │   │   ├── avatar_service.py         # 有界线程中认证和更新账号头像，管理事务
 │   │   │   ├── auth_rules.py             # 用户名计数、账号键和密码长度规则
 │   │   │   ├── login_limiter.py          # 有界单进程登录频率保护
 │   │   │   └── ranking_service.py        # 逐关资格、幂等、总榜快照与成绩保留事务
@@ -53,10 +55,12 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   └── schemas/                 # 请求 DTO 与脱敏响应模型
 │   │   │       ├── __init__.py           # 接口模型包标识
 │   │   │       ├── auth.py               # 登录输入、用户输出及登录结果
+│   │   │       ├── avatar.py             # 仅接收清单有效编号的严格头像写入请求
 │   │   │       └── ranking.py            # 严格挑战请求 DTO 和脱敏成绩/榜单响应模型
 │   │   └── common/                      # 公共层：跨业务基础设施，不反向依赖业务
 │   │       ├── __init__.py               # 公共层包标识
 │   │       ├── config.py                 # 环境配置，保持读取 backend/.env
+│   │       ├── avatar_catalog.py         # 缓存共用清单编号并核验静态资源存在性
 │   │       ├── database.py               # 实体基类、有界连接池和会话生命周期
 │   │       ├── security.py               # Argon2id、token 摘要与 UTC 时间工具
 │   │       ├── exceptions.py             # 公共业务异常及统一 HTTP 异常处理
@@ -64,7 +68,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │       └── concurrency.py            # 有界执行槽、线程池和取消时的资源保护
 │   ├── migrations/                       # Flyway 版本化 SQL，执行后不可直接修改
 │   │   ├── V1__create_auth_tables.sql     # 用户、会话与相关唯一/到期索引
-│   │   └── V2__create_ranking_tables.sql  # 当前轮次、成绩、最佳摘要及排序/去重索引
+│   │   ├── V2__create_ranking_tables.sql  # 当前轮次、成绩、最佳摘要及排序/去重索引
+│   │   └── V3__add_user_avatar.sql       # 用户预设头像编号，新老账号默认001
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -85,6 +90,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   └── logrotate.conf.example        # 可选日志轮转，避免与宝塔重复配置
 │   └── tests/                            # 后端安全、资源及真实数据库联调测试
 │       ├── test_auth.py                  # 真实哈希与数据库替身单元/API 测试
+│       ├── test_avatar.py                # 头像存储、严格编号/来源/体积、账号隔离和四榜跟随
 │       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、真实登录与排行并发联调
 │       └── test_ranking.py               # 排名、保留集合、快照、事务及挑战 API 回归
 │

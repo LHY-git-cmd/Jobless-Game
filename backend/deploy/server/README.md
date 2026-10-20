@@ -16,7 +16,7 @@ Get-Content artifacts/server-deploy/build.log -Tail 8
 
 本机须有运行中的 Linux Docker 和 `redgate/flyway:13.6.0` 镜像。
 输出为 `artifacts/server-deploy/jobless-game-server.zip` 和同名 `.sha256` 校验文件。
-包内包含 API、Flyway 两个镜像、网页、原始 V1/V2 迁移、Compose、交互配置脚本及 Nginx 模板。
+包内包含 API、Flyway 两个镜像、网页（含25张硬盘预设头像）、V1/V2/V3 迁移、Compose、交互配置脚本及 Nginx 模板。已有 V2 数据库先备份并执行 V3 用户头像迁移，再发布新后端和网页；V1/V2 原有文件保持不变。V3 本次尚未在目标 MySQL/Flyway 环境验收，详见 [头像实施报告](../../../docs/avatar-implementation-report.md)。
 没有本机 `.env`、MySQL 数据、测试账号或原始素材；服务器不用构建镜像或安装 Python 项目依赖。
 
 ## 服务器首次启动

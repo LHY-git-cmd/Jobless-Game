@@ -172,6 +172,16 @@ class MySQLIntegrationTests(TestCase):
             for connection in held:
                 connection.close()
 
+    def test_avatar_defaults_and_persistence(self):
+        """真实 Flyway 新列的默认值与编号更新应在重新登录后保持。"""
+        name = self.new_name()
+        first = self.client.post("/api/auth/login", json={"username": name, "password": "avatar-secret"})
+        self.assertEqual(first.json()["user"]["avatar_id"], 1)
+        self.assertEqual(self.client.put("/api/auth/avatar", json={"avatar_id": 17}).status_code, 200)
+        self.client.post("/api/auth/logout")
+        again = self.client.post("/api/auth/login", json={"username": name, "password": "avatar-secret"})
+        self.assertEqual(again.json()["user"]["avatar_id"], 17)
+
 
 if __name__ == "__main__":
     import unittest

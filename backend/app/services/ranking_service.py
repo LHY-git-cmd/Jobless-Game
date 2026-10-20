@@ -181,7 +181,7 @@ def rankings_transaction(category, page, page_size, db):
     """在一个读取事务中计算榜单，名次跨页仍使用完整分数集合。"""
     rows, total = repository.ranking_rows(db, category, page, page_size)
     return {"category": category, "page": page, "page_size": page_size, "total": total,
-            "entries": [{"rank": row["rank"], "user_id": row["user_id"], "username": row["username"],
+            "entries": [{"rank": row["rank"], "user_id": row["user_id"], "username": row["username"], "avatar_id": row["avatar_id"],
                          "duration_seconds": row["duration_seconds"], "achieved_at": row["achieved_at"],
                          "times": [row["mine_seconds"], row["akari_seconds"], row["sudoku_seconds"]] if category == "total" else None}
                         for row in rows]}

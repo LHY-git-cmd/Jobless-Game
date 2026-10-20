@@ -53,7 +53,7 @@ flyway -configFiles=backend/flyway.conf migrate
 flyway -configFiles=backend/flyway.conf info
 ```
 
-确认目标库名、备份和维护窗口。新库依次执行 `V1__create_auth_tables.sql` 和 `V2__create_ranking_tables.sql`；已有 V1 的库只新增 V2。再次 migrate 不应有待执行迁移。配置禁止 `clean` 和自动 baseline；禁止直接修改已执行 SQL，后续变更新增 V3 等新版本。
+确认目标库名、备份和维护窗口。新库依次执行 `V1__create_auth_tables.sql`、`V2__create_ranking_tables.sql` 和 `V3__add_user_avatar.sql`；已有库只执行尚未应用的版本，已有 V2 的库新增 V3。再次 migrate 不应有待执行迁移。配置禁止 `clean` 和自动 baseline；禁止直接修改已执行 SQL，后续变更新增 V4 等新版本。
 
 2 核/2GB 与宝塔共存时先检查 `MemAvailable` 和现有服务占用；必要时停止本项目 Python，再单次执行迁移，完成后退出并启动 Python。`JAVA_ARGS=-Xms32m -Xmx256m` 仅为评估起点，不能视为 Flyway 全进程内存上限。
 
@@ -62,10 +62,17 @@ flyway -configFiles=backend/flyway.conf info
 | 接口 | 成功行为 | 主要失败 |
 | --- | --- | --- |
 | `POST /api/auth/login` | 首次自动注册或验证已有密码；返回 `{user:{id,username},created}` 并设置 Cookie | 401 密码错误、403 来源错误、413 请求体过大、422 输入错误、429 频率/哈希繁忙、503 数据库/执行槽繁忙 |
-| `GET /api/auth/me` | 返回 `{id,username}` | 401 会话无效、503 数据库/执行槽繁忙 |
+| `GET /api/auth/me` | 返回 `{id,username,avatar_id}` | 401 会话无效、503 数据库/执行槽繁忙 |
+| `PUT /api/auth/avatar` | 提交 `{avatar_id}`，更新当前账号并返回 `{id,username,avatar_id}` | 401 未登录、403 来源错误、413 超过4KiB、422 非严格整数/清单未知编号/多余字段、503 数据库/执行槽繁忙 |
 | `POST /api/auth/logout` | 当前会话失效并清除 Cookie，返回 204 | 403 来源错误、503 暂时不可用 |
 
 状态修改接口要求同源 `Origin` 或 `Referer`，命令行客户端也须提供正确 `Origin`。服务不开放跨源 CORS。API 响应为 `no-store`，错误不回显密码、密码摘要或数据库内部消息。
+
+登录返回的 user 同样增加 `avatar_id`。头像原图为 `source/imge/avatar/001.png` 至 `025.png`，在开发机安装 Pillow 后执行 `python source/imge/prepare_avatars.py --preview`，生成 `frontend/assets/avatars/v1/` 的25张128px WebP及共用清单。服务器硬盘保存成品，Nginx分发；数据库只存 `TINYINT UNSIGNED NOT NULL DEFAULT 1` 编号，不存图片、Base64或路径。生产 Python 不依赖 Pillow，不在请求中处理图片。图片内容更新时使用新版本资源路径，并同步生成器、清单读取路径和前端资源路径。
+
+头像业务使用独立 Controller/Service、现有用户 Repository和有界数据库执行器，认证和单字段写入在一个工作线程内提交。MySQL 5.7 不依赖 CHECK，严格输入校验按共用清单执行。四榜现有用户关联查询直接带出当前头像，不改变历史成绩快照。清单只缓存编号，不缓存图片内容。
+
+上线前备份并执行 V3，再更新后端与前端；用户表 ALTER 的锁表时间需在目标版本和数据量下评估，必要时安排维护窗口。回退旧应用可保留新增列。当前资源打包已递归包含 frontend/assets 和 migrations，无需新增卷或常驻服务。头像完整实现及验收状态见 [实施报告](../docs/avatar-implementation-report.md)。
 
 用户名按 Unicode 字符计数：ASCII 字母/数字计 2，汉字计 3，上限 24。前后端固定采用 Unicode 15.1 已分配汉字范围，包含常见、兼容及补充平面汉字，排除未分配码位；更新范围时须同步两端。仅折叠 ASCII 大小写，数据库 `utf8mb4_bin` 唯一键保留其他字符差异。密码至少六个 Unicode 字符，原样保留空格与大小写；总请求体仍受 4KiB 限制。
 

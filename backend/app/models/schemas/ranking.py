@@ -66,6 +66,7 @@ class RankingEntryResponse(BaseModel):
     rank: int
     user_id: int
     username: str
+    avatar_id: int = 1
     duration_seconds: int
     achieved_at: datetime
     times: list[int] | None
