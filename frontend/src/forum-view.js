@@ -1,4 +1,5 @@
 /** 论坛共享纯文本渲染：公开作者、码点输入提示、点赞及两层评论卡片。 */
+import { Events } from "./lib/events.js";
 import { createAvatarImage } from './avatar.js';
 
 /** 通过 textContent 创建节点，用户文字不会进入 HTML 解析器。 */
@@ -80,6 +81,6 @@ export function bindCount(input,output,max) {
 /** 401 统一清理全站当前身份；晚到响应不显示错误。 */
 export function showError(error,status) {
   if(error.stale)return;
-  if(error.status===401)document.dispatchEvent(new Event('auth-expired'));
+  if(error.status===401)document.dispatchEvent(new Event(Events.AUTH_EXPIRED));
   status.textContent=error.status===401?'登录已失效，请重新登录。':error.message;
 }

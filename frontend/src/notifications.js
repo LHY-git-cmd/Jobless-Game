@@ -1,4 +1,5 @@
 /** 全站站内消息：可见且登录才轮询，消息失败不影响游戏，账号切换废弃旧响应。 */
+import { Events } from "./lib/events.js";
 import { forumRequest } from './forum-client.js';
 import { createAvatarImage } from './avatar.js';
 
@@ -111,7 +112,7 @@ export function initNotifications() {
   let lastItems=null;
   const labels={post_like:'赞了你的帖子',comment_like:'赞了你的评论',comment:'评论了你的帖子',reply:'回复了你'};
   const controller=new NotificationController({
-    onUnauthorized:()=>document.dispatchEvent(new Event('auth-expired')),
+    onUnauthorized:()=>document.dispatchEvent(new Event(Events.AUTH_EXPIRED)),
     onChange:state=>{
       for(const button of bells){
         button.classList.toggle('hidden',!controller.user);button.setAttribute('aria-label',`站内消息，${state.count>99?'99+':state.count} 条未读`);
@@ -150,7 +151,7 @@ export function initNotifications() {
   dialog.querySelector('.notification-retry').addEventListener('click',()=>void controller.load());
   more.addEventListener('click',()=>void controller.load(true));
   dialog.querySelector('.notification-read-all').addEventListener('click',()=>void controller.readAll());
-  document.addEventListener('auth-changed',event=>{if(dialog.open)close();controller.setUser(event.detail.user);});
+  document.addEventListener(Events.AUTH_CHANGED,event=>{if(dialog.open)close();controller.setUser(event.detail.user);});
   document.addEventListener('visibilitychange',()=>controller.setVisible(!document.hidden));
   window.addEventListener('pagehide',()=>controller.setVisible(false));
   window.addEventListener('pageshow',()=>controller.setVisible(!document.hidden));

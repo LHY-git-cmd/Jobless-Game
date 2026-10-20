@@ -1,4 +1,5 @@
 /** 三页复用的登录弹窗、会话恢复和关卡登录拦截；不改变关卡计时与规则。 */
+import { Events } from "./lib/events.js";
 import { authRequest } from "./auth-client.js";
 import { usernameUnits, validateUsername, validatePassword } from "./auth-validation.js";
 import { initMusic } from "./music.js";
@@ -52,7 +53,7 @@ export function initAuth() {
     onAvatarSaved: value => {
       if (user?.id !== value.id) return;
       renderUser(value);
-      document.dispatchEvent(new CustomEvent("user-profile-updated", { detail: { user: { ...value } } }));
+      document.dispatchEvent(new CustomEvent(Events.USER_PROFILE_UPDATED, { detail: { user: { ...value } } }));
     },
     onUnauthorized: () => { renderUser(null); headerStatus.textContent = "登录已失效，请重新登录。"; },
   });
@@ -68,7 +69,7 @@ export function initAuth() {
   let submitting = false;
   let generation = 0;
   let identityGeneration = 0;
-  document.addEventListener('auth-expired', () => { renderUser(null); headerStatus.textContent = '登录已失效，请重新登录。'; });
+  document.addEventListener(Events.AUTH_EXPIRED, () => { renderUser(null); headerStatus.textContent = '登录已失效，请重新登录。'; });
 
   /** 用户名只写入 textContent，避免把用户输入作为 HTML 插入。 */
   function renderUser(value) {
@@ -77,7 +78,7 @@ export function initAuth() {
     if (previousId !== user?.id) identityGeneration++;
     if (previousId !== user?.id) gameSettings.close();
     gameSettings.setUser(user);
-    if (previousId !== user?.id) document.dispatchEvent(new CustomEvent("auth-changed", {
+    if (previousId !== user?.id) document.dispatchEvent(new CustomEvent(Events.AUTH_CHANGED, {
       detail: { user: user ? { ...user } : null },
     }));
     const label = host.querySelector(".auth-user");

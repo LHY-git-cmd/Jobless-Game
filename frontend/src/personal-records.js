@@ -1,4 +1,6 @@
 /** 首页个人通关记录：仅随登录、分类切换、保存和手动刷新请求，不进行轮询。 */
+import { cacheIds } from "./lib/dom.js";
+import { Events } from "./lib/events.js";
 import { rankingRequest } from "./ranking-client.js";
 import { formatTime } from "./session.js";
 
@@ -16,29 +18,43 @@ function recordDate(value) {
 
 /** 初始化固定在首页的记录面板，账号和请求可注入以验证异步隔离。 */
 export function initPersonalRecords({ request = rankingRequest, onLogin, dom = document } = {}) {
-  const $ = id => dom.getElementById(id);
-  if (!$("personal-records")) return null;
+  const ui = cacheIds({
+    personalRecords: "personal-records",
+    recordsBest: "records-best",
+    recordsRecent: "records-recent",
+    recordsBestTime: "records-best-time",
+    recordsBestDate: "records-best-date",
+    recordsList: "records-list",
+    recordsStatus: "records-status",
+    recordsLogin: "records-login",
+    recordsRefresh: "records-refresh",
+    recordsRetry: "records-retry",
+    recordsPanel: "records-panel",
+    recordsBestLabel: "records-best-label"
+  }, dom);
+  const categoryButtons = cacheIds({ mine: "records-mine", akari: "records-akari", sudoku: "records-sudoku" }, dom);
+  if (!ui.personalRecords) return null;
   let user = null;
   let category = "mine";
   let generation = 0;
 
   /** 隐藏并删除旧值，退出、换号、切换分类和请求失败时不残留私人成绩。 */
   function clearRecords() {
-    $("records-best").classList.add("hidden");
-    $("records-recent").classList.add("hidden");
-    $("records-best-time").textContent = "";
-    $("records-best-date").textContent = "";
-    $("records-list").replaceChildren();
+    ui.recordsBest.classList.add("hidden");
+    ui.recordsRecent.classList.add("hidden");
+    ui.recordsBestTime.textContent = "";
+    ui.recordsBestDate.textContent = "";
+    ui.recordsList.replaceChildren();
   }
 
   /** 统一登录态控件；未登录不查询私人接口。 */
   function showLoggedOut(message = "登录后查看你的最佳成绩和最近三次通关。") {
     clearRecords();
-    $("records-status").textContent = message;
-    $("records-login").classList.remove("hidden");
-    $("records-refresh").classList.add("hidden");
-    $("records-retry").classList.add("hidden");
-    $("records-panel").setAttribute("aria-busy", "false");
+    ui.recordsStatus.textContent = message;
+    ui.recordsLogin.classList.remove("hidden");
+    ui.recordsRefresh.classList.add("hidden");
+    ui.recordsRetry.classList.add("hidden");
+    ui.recordsPanel.setAttribute("aria-busy", "false");
   }
 
   /** 所有动态成绩使用 textContent，最近记录中的最佳仅加标签，不虚构额外记录。 */
@@ -49,15 +65,15 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
       throw new Error("通关记录返回异常，请重试。");
     }
     if (!data.best && data.recent.length === 0) {
-      $("records-status").textContent = `还没有${LABELS[category]}通关记录，完成挑战后会显示在这里。`;
+      ui.recordsStatus.textContent = `还没有${LABELS[category]}通关记录，完成挑战后会显示在这里。`;
       return;
     }
-    $("records-status").textContent = "";
+    ui.recordsStatus.textContent = "";
     if (data.best) {
-      $("records-best-label").textContent = "最佳";
-      $("records-best-time").textContent = formatTime(data.best.duration_seconds);
-      $("records-best-date").textContent = recordDate(data.best.completed_at);
-      $("records-best").classList.remove("hidden");
+      ui.recordsBestLabel.textContent = "最佳";
+      ui.recordsBestTime.textContent = formatTime(data.best.duration_seconds);
+      ui.recordsBestDate.textContent = recordDate(data.best.completed_at);
+      ui.recordsBest.classList.remove("hidden");
     }
     const rows = data.recent.map((record, index) => {
       const row = dom.createElement("li");
@@ -80,8 +96,8 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
       row.append(position, description, time);
       return row;
     });
-    $("records-list").replaceChildren(...rows);
-    $("records-recent").classList.remove("hidden");
+    ui.recordsList.replaceChildren(...rows);
+    ui.recordsRecent.classList.remove("hidden");
   }
 
   /** 每次加载独立编号，旧账号或旧分类响应即使晚到也不能渲染。 */
@@ -89,12 +105,12 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
     if (!user) return;
     const current = ++generation;
     clearRecords();
-    $("records-status").textContent = "正在读取通关记录…";
-    $("records-login").classList.add("hidden");
-    $("records-retry").classList.add("hidden");
-    $("records-refresh").classList.remove("hidden");
-    $("records-refresh").disabled = true;
-    $("records-panel").setAttribute("aria-busy", "true");
+    ui.recordsStatus.textContent = "正在读取通关记录…";
+    ui.recordsLogin.classList.add("hidden");
+    ui.recordsRetry.classList.add("hidden");
+    ui.recordsRefresh.classList.remove("hidden");
+    ui.recordsRefresh.disabled = true;
+    ui.recordsPanel.setAttribute("aria-busy", "true");
     try {
       const data = await request(`records/me?category=${category}`);
       if (current === generation) render(data);
@@ -105,13 +121,13 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
         user = null;
         showLoggedOut("登录已过期，请重新登录查看通关记录。");
       } else {
-        $("records-status").textContent = error.message;
-        $("records-retry").classList.remove("hidden");
+        ui.recordsStatus.textContent = error.message;
+        ui.recordsRetry.classList.remove("hidden");
       }
     } finally {
       if (current === generation) {
-        $("records-refresh").disabled = false;
-        $("records-panel").setAttribute("aria-busy", "false");
+        ui.recordsRefresh.disabled = false;
+        ui.recordsPanel.setAttribute("aria-busy", "false");
       }
     }
   }
@@ -131,32 +147,32 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
     category = value;
     for (const name of CATEGORIES) {
       const selected = name === category;
-      $(`records-${name}`).setAttribute("aria-selected", String(selected));
-      $(`records-${name}`).tabIndex = selected ? 0 : -1;
+      categoryButtons[name].setAttribute("aria-selected", String(selected));
+      categoryButtons[name].tabIndex = selected ? 0 : -1;
     }
-    $("records-panel").setAttribute("aria-labelledby", `records-${category}`);
+    ui.recordsPanel.setAttribute("aria-labelledby", `records-${category}`);
     return refresh();
   }
 
   for (const [index, name] of CATEGORIES.entries()) {
-    $(`records-${name}`).addEventListener("click", () => select(name));
-    $(`records-${name}`).addEventListener("keydown", event => {
+    categoryButtons[name].addEventListener("click", () => select(name));
+    categoryButtons[name].addEventListener("keydown", event => {
       const next = { ArrowRight: (index + 1) % CATEGORIES.length,
         ArrowLeft: (index + CATEGORIES.length - 1) % CATEGORIES.length, Home: 0, End: CATEGORIES.length - 1 }[event.key];
       if (next === undefined) return;
       event.preventDefault();
-      $(`records-${CATEGORIES[next]}`).focus();
+      categoryButtons[CATEGORIES[next]].focus();
       return select(CATEGORIES[next]);
     });
   }
-  $("records-refresh").addEventListener("click", refresh);
-  $("records-retry").addEventListener("click", refresh);
-  $("records-login").addEventListener("click", async () => {
+  ui.recordsRefresh.addEventListener("click", refresh);
+  ui.recordsRetry.addEventListener("click", refresh);
+  ui.recordsLogin.addEventListener("click", async () => {
     try { await onLogin?.(setUser); }
-    catch (error) { $("records-status").textContent = error.message; }
+    catch (error) { ui.recordsStatus.textContent = error.message; }
   });
-  dom.addEventListener("auth-changed", event => setUser(event.detail?.user || null));
-  dom.addEventListener("records-updated", refresh);
+  dom.addEventListener(Events.AUTH_CHANGED, event => setUser(event.detail?.user || null));
+  dom.addEventListener(Events.RECORDS_UPDATED, refresh);
   showLoggedOut();
   return { setUser, refresh };
 }

@@ -1,4 +1,5 @@
 /** 首页三关的登录拦截，以及个人通关记录的账号状态接入。 */
+import { Events } from "./lib/events.js";
 import { initAuth } from "./auth.js";
 import { initPersonalRecords } from "./personal-records.js";
 
@@ -11,7 +12,7 @@ for (const id of ["start-button", "akari-entry", "sudoku-entry"]) {
     if (checking) return;
     checking = true;
     button.setAttribute("aria-busy", "true");
-    try { await auth.requireLogin(() => button.dispatchEvent(new Event("authorized-start"))); }
+    try { await auth.requireLogin(() => button.dispatchEvent(new Event(Events.AUTHORIZED_START))); }
     finally { checking = false; button.setAttribute("aria-busy", "false"); }
   });
 }

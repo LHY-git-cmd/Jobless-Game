@@ -2,6 +2,7 @@
  * 无职游戏页面入口：管理扫雷、数独、照明三关与对应的规则弹窗。
  * 三个关卡独立开放；按账号保存棋局，离开期间计时继续累计。
  */
+import { Events } from "./lib/events.js";
 
 import { createGame, revealSelected, selectCell, toggleFlag } from "./game.js";
 import { createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote, sudokuConflicts, checkSudoku } from "./sudoku.js";
@@ -256,7 +257,7 @@ async function persistCompletion() {
     const request = challenge.complete(index, session.levels[index].seconds, development);
     persistProgress();
     await request;
-    document.dispatchEvent(new CustomEvent("records-updated"));
+    document.dispatchEvent(new CustomEvent(Events.RECORDS_UPDATED));
     recordStatus("通关记录已保存，可查看本关排行。");
   } catch (error) {
     if (generation === challenge.generation) recordStatus(error.message, persistCompletion);
@@ -473,7 +474,7 @@ function viewExistingLevel(index) {
 /** 返回首页保存所有关卡棋局和结果；旧异步响应始终失效。 */
 function returnHome() {
   persistProgress(true);
-  document.dispatchEvent(new CustomEvent("settlement-closed"));
+  document.dispatchEvent(new CustomEvent(Events.SETTLEMENT_CLOSED));
   challenge.reset();
   operationBusy = saveBusy = false;
   development = false;
@@ -764,7 +765,7 @@ function openSettlement() {
   $("settlement-note").textContent = "本关成绩已保存，可返回首页选择其他挑战。";
   $("settlement-time").textContent = formatTime(challenge.state.levels[currentIndex].seconds);
   $("settlement-dialog").classList.remove("hidden");
-  document.dispatchEvent(new CustomEvent("settlement-opened", { detail: { runId: challenge.state.levels[currentIndex].attempt_id } }));
+  document.dispatchEvent(new CustomEvent(Events.SETTLEMENT_OPENED, { detail: { runId: challenge.state.levels[currentIndex].attempt_id } }));
   $("settlement-home").focus();
   persistProgress();
 }
@@ -805,7 +806,7 @@ $("challenge-action").addEventListener("click", () => {
   if ($("challenge-action").dataset.action === "select") $("level-select").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 // 首页三关共用登录后的存档续接。
-homeEntries.forEach((entry, index) => entry.button.addEventListener("authorized-start", () => enterFromHome(index)));
+homeEntries.forEach((entry, index) => entry.button.addEventListener(Events.AUTHORIZED_START, () => enterFromHome(index)));
 $("back-button").addEventListener("click", returnHome);
 $("restart-button").addEventListener("click", () => requestRestart(0, restartGame));
 $("mine-sound").addEventListener("click", () => {
@@ -897,7 +898,7 @@ $("settlement-ranking").addEventListener("click", () => {
   if (challenge.saved(currentIndex)) window.location.assign(`./ranking-${["mine", "akari", "sudoku"][currentIndex]}.html`);
 });
 for (const id of ["challenge-retry", "save-retry"]) $(id).addEventListener("click", () => { void retryOperation?.(); });
-document.addEventListener("auth-changed", (event) => {
+document.addEventListener(Events.AUTH_CHANGED, (event) => {
   const nextUserId = event?.detail?.user?.id ?? null;
   if (nextUserId === currentUserId) return;
   returnHome();
@@ -955,7 +956,7 @@ document.addEventListener("keydown", (event) => {
     }
     if (!$("settlement-dialog").classList.contains("hidden")) {
       $("settlement-dialog").classList.add("hidden");
-      document.dispatchEvent(new CustomEvent("settlement-closed"));
+      document.dispatchEvent(new CustomEvent(Events.SETTLEMENT_CLOSED));
       viewResult();
       return;
     }

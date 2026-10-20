@@ -1,12 +1,33 @@
 /** 独立帖子详情：评论分页、两层回复、通知直接定位与失败保留输入。 */
+import { cacheIds, $ } from "./lib/dom.js";
+import { Events } from "./lib/events.js";
 import { initAuth } from './auth.js';
 import { ForumClient, validateText } from './forum-client.js';
 import { contentCard, node, bindCount, showError } from './forum-view.js';
 
-const auth=initAuth(),client=new ForumClient(),$=selector=>document.querySelector(selector);
+const ui = cacheIds({
+  forumStatus: 'forum-status',
+  forumComments: 'forum-comments',
+  forumContext: 'forum-context',
+  commentBody: 'comment-body',
+  commentSubmit: 'comment-submit',
+  commentStatus: 'comment-status',
+  commentCount: 'comment-count',
+  commentTarget: 'comment-target',
+  commentCancel: 'comment-cancel',
+  commentForm: 'comment-form',
+  forumDiscussion: 'forum-discussion',
+  commentsStatus: 'comments-status',
+  commentsMore: 'comments-more',
+  commentsRetry: 'comments-retry',
+  forumPost: 'forum-post',
+  forumRetry: 'forum-retry'
+});
+
+const auth=initAuth(),client=new ForumClient();
 const params=new URLSearchParams(location.search),raw=params.get('id'),postId=/^[1-9]\d*$/.test(raw||'')?Number(raw):0;
-const status=$('#forum-status'),comments=$('#forum-comments'),context=$('#forum-context'),body=$('#comment-body'),submit=$('#comment-submit'),formStatus=$('#comment-status');
-const updateCount=bindCount(body,$('#comment-count'),500);
+const status=ui.forumStatus,comments=ui.forumComments,context=ui.forumContext,body=ui.commentBody,submit=ui.commentSubmit,formStatus=ui.commentStatus;
+const updateCount=bindCount(body,ui.commentCount,500);
 let cursor=null,commentBusy=false,started=false,target=null,revision=0;
 const replyPages=new Map();
 
@@ -19,18 +40,18 @@ async function like(item,kind){
 /** 回复目标固定展示，失败待重试时不允许悄悄改换目标或负载。 */
 function reply(item){
   if(client.pending.size){formStatus.textContent='请先重试当前待确认的评论。';return;}
-  void auth.requireLogin(()=>{target=item;$('#comment-target').textContent=`回复 ${item.username}`;$('#comment-cancel').hidden=false;body.focus();$('#comment-form').scrollIntoView({block:'center',behavior:'smooth'});});
+  void auth.requireLogin(()=>{target=item;ui.commentTarget.textContent=`回复 ${item.username}`;ui.commentCancel.hidden=false;body.focus();ui.commentForm.scrollIntoView({block:'center',behavior:'smooth'});});
 }
 
 /** 清理回复选择，不覆盖用户正文。 */
-function cancelReply(){target=null;$('#comment-target').textContent='发表评论';$('#comment-cancel').hidden=true;}
+function cancelReply(){target=null;ui.commentTarget.textContent='发表评论';ui.commentCancel.hidden=true;}
 
 /** 详情卡片的评论数也可收起/展开讨论，右侧回复图标直接聚焦现有表单。 */
-function toggleDiscussion(_,button){const panel=$('#forum-discussion');panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',String(!panel.hidden));}
+function toggleDiscussion(_,button){const panel=ui.forumDiscussion;panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',String(!panel.hidden));}
 
 /** 回复帖子时清除评论目标，避免把新评论误发给上一次回复的人。 */
 function replyToPost(){void auth.requireLogin(()=>{
-  $('#forum-discussion').hidden=false;$('#forum-post .forum-count')?.setAttribute('aria-expanded','true');
+  ui.forumDiscussion.hidden=false;$('.forum-count', ui.forumPost)?.setAttribute('aria-expanded','true');
   if(!client.pending.size)cancelReply();body.focus();
 });}
 
@@ -82,7 +103,7 @@ async function locate(id,scroll=true){
 /** 顶层评论每次最多20条，失败重试仍沿原游标读取。 */
 async function loadComments(append=false){
   if(commentBusy)return;commentBusy=true;const epoch=client.epoch,currentRevision=revision;
-  const message=$('#comments-status'),more=$('#comments-more'),retry=$('#comments-retry');
+  const message=ui.commentsStatus,more=ui.commentsMore,retry=ui.commentsRetry;
   message.textContent='正在读取评论…';more.disabled=true;retry.hidden=true;
   try{
     const result=await client.read(`posts/${postId}/comments${append&&cursor?`?cursor=${cursor}`:''}`);if(currentRevision!==revision)return;
@@ -98,36 +119,36 @@ async function loadComments(append=false){
 
 /** 详情可刷新、可收藏，编号错误不发数据库请求。 */
 async function load(){
-  const currentRevision=++revision;commentBusy=false;replyPages.clear();cursor=null;comments.replaceChildren();context.replaceChildren();$('#forum-post').replaceChildren();
-  $('#forum-discussion').hidden=true;$('#forum-retry').hidden=true;
+  const currentRevision=++revision;commentBusy=false;replyPages.clear();cursor=null;comments.replaceChildren();context.replaceChildren();ui.forumPost.replaceChildren();
+  ui.forumDiscussion.hidden=true;ui.forumRetry.hidden=true;
   if(!postId||!Number.isSafeInteger(postId)){status.textContent='帖子编号无效，请返回论坛。';return;}
   status.textContent='正在读取帖子…';
   try{
     const item=await client.read(`posts/${postId}`);if(currentRevision!==revision)return;
-    $('#forum-post').append(contentCard(item,{onLike:like,onComments:toggleDiscussion,onReply:replyToPost,commentsId:'forum-discussion',commentsExpanded:true}));document.title='帖子详情 · 无职游戏';status.textContent='';$('#forum-discussion').hidden=false;
+    ui.forumPost.append(contentCard(item,{onLike:like,onComments:toggleDiscussion,onReply:replyToPost,commentsId:'forum-discussion',commentsExpanded:true}));document.title='帖子详情 · 无职游戏';status.textContent='';ui.forumDiscussion.hidden=false;
     await loadComments();if(params.get('comment')&&/^[1-9]\d*$/.test(params.get('comment')))await locate(params.get('comment'));
-  }catch(error){if(!error.stale&&currentRevision===revision){showError(error,status);$('#forum-retry').hidden=false;}}
+  }catch(error){if(!error.stale&&currentRevision===revision){showError(error,status);ui.forumRetry.hidden=false;}}
 }
 
-$('#comment-cancel').addEventListener('click',()=>{if(!client.pending.size)cancelReply();});
-$('#forum-retry').addEventListener('click',()=>void load());
-$('#comments-more').addEventListener('click',()=>void loadComments(true));
-$('#comments-retry').addEventListener('click',()=>void loadComments(Boolean(comments.children.length)));
-$('#comment-form').addEventListener('submit',event=>{
+ui.commentCancel.addEventListener('click',()=>{if(!client.pending.size)cancelReply();});
+ui.forumRetry.addEventListener('click',()=>void load());
+ui.commentsMore.addEventListener('click',()=>void loadComments(true));
+ui.commentsRetry.addEventListener('click',()=>void loadComments(Boolean(comments.children.length)));
+ui.commentForm.addEventListener('submit',event=>{
   event.preventDefault();if(submit.disabled)return;
   void auth.requireLogin(async()=>{
     let text;try{text=validateText(body.value,500);}catch(error){formStatus.textContent=error.message;return;}
-    const epoch=client.epoch;submit.disabled=true;body.readOnly=true;$('#comment-cancel').disabled=true;formStatus.textContent='正在发布…';
+    const epoch=client.epoch;submit.disabled=true;body.readOnly=true;ui.commentCancel.disabled=true;formStatus.textContent='正在发布…';
     try{
       const result=await client.publish(`posts/${postId}/comments`,{body:text,reply_to_comment_id:target?.id||null});if(!result)return;
       body.value='';updateCount();cancelReply();formStatus.textContent='评论已发布。';
       await load();await locate(result.id);
     }catch(error){showError(error,formStatus);if(!error.stale)formStatus.textContent+=' 原文已保留，请重试。';}
-    finally{if(epoch===client.epoch){submit.disabled=false;submit.textContent=client.pending.size?'重试发布':'发表评论';body.readOnly=Boolean(client.pending.size);$('#comment-cancel').disabled=Boolean(client.pending.size);}}
+    finally{if(epoch===client.epoch){submit.disabled=false;submit.textContent=client.pending.size?'重试发布':'发表评论';body.readOnly=Boolean(client.pending.size);ui.commentCancel.disabled=Boolean(client.pending.size);}}
   });
 });
-document.addEventListener('auth-changed',event=>{
-  if(!started)return;client.setUser(event.detail.user);cancelReply();body.value='';updateCount();body.readOnly=false;submit.disabled=false;submit.textContent='发表评论';$('#comment-cancel').disabled=false;formStatus.textContent='';void load();
+document.addEventListener(Events.AUTH_CHANGED,event=>{
+  if(!started)return;client.setUser(event.detail.user);cancelReply();body.value='';updateCount();body.readOnly=false;submit.disabled=false;submit.textContent='发表评论';ui.commentCancel.disabled=false;formStatus.textContent='';void load();
 });
-document.addEventListener('user-profile-updated',()=>void load());
+document.addEventListener(Events.USER_PROFILE_UPDATED,()=>void load());
 auth.ready.then(()=>{started=true;client.setUser(auth.currentUser);void load();});

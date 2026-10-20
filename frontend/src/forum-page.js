@@ -1,13 +1,30 @@
 /** 论坛正文列表：有限游标、登录续接发帖、固定负载重试和返回位置恢复。 */
+import { cacheIds } from "./lib/dom.js";
+import { Events } from "./lib/events.js";
 import { initAuth } from './auth.js';
 import { ForumClient, validateText } from './forum-client.js';
 import { bindCount, showError } from './forum-view.js';
 import { createPostThread } from './forum-discussion.js';
 
+const ui = cacheIds({
+  forumList: 'forum-list',
+  forumStatus: 'forum-status',
+  forumMore: 'forum-more',
+  forumRetry: 'forum-retry',
+  forumComposeDialog: 'forum-compose-dialog',
+  forumForm: 'forum-form',
+  forumBodyInput: 'forum-body-input',
+  forumFormStatus: 'forum-form-status',
+  forumSubmit: 'forum-submit',
+  forumBodyCount: 'forum-body-count',
+  forumCompose: 'forum-compose',
+  forumComposeClose: 'forum-compose-close'
+});
+
 const auth=initAuth(),client=new ForumClient();
-const $=selector=>document.querySelector(selector),list=$('#forum-list'),status=$('#forum-status'),more=$('#forum-more'),retry=$('#forum-retry');
-const dialog=$('#forum-compose-dialog'),form=$('#forum-form'),body=$('#forum-body-input'),formStatus=$('#forum-form-status'),submit=$('#forum-submit');
-const bodyCount=bindCount(body,$('#forum-body-count'),2000);
+const list=ui.forumList,status=ui.forumStatus,more=ui.forumMore,retry=ui.forumRetry;
+const dialog=ui.forumComposeDialog,form=ui.forumForm,body=ui.forumBodyInput,formStatus=ui.forumFormStatus,submit=ui.forumSubmit;
+const bodyCount=bindCount(body,ui.forumBodyCount,2000);
 let cursor=null,busy=false,started=false,pages=0,loadSerial=0,retryAppend=false;
 const threads=new Map();
 
@@ -57,9 +74,9 @@ async function load(append=false) {
 }
 
 /** 关闭时保留未确认的原文，打开后可继续使用相同请求编号重试。 */
-function close(){dialog.close();$('#forum-compose').focus();}
-$('#forum-compose').addEventListener('click',()=>void auth.requireLogin(()=>{dialog.showModal();body.focus();}));
-$('#forum-compose-close').addEventListener('click',close);
+function close(){dialog.close();ui.forumCompose.focus();}
+ui.forumCompose.addEventListener('click',()=>void auth.requireLogin(()=>{dialog.showModal();body.focus();}));
+ui.forumComposeClose.addEventListener('click',close);
 dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
 more.addEventListener('click',()=>void load(true));retry.addEventListener('click',()=>void load(retryAppend));
 form.addEventListener('submit',async event=>{
@@ -76,11 +93,11 @@ form.addEventListener('submit',async event=>{
 });
 
 /** 换号后清空发布内容和旧账号点赞，公开讨论重新以当前身份读取。 */
-document.addEventListener('auth-changed',event=>{
+document.addEventListener(Events.AUTH_CHANGED,event=>{
   if(!started)return;client.setUser(event.detail.user);busy=false;cursor=null;clearThreads();form.reset();formStatus.textContent='';
   body.readOnly=false;submit.disabled=false;submit.textContent='发布';bodyCount();if(dialog.open)close();void load();
 });
-document.addEventListener('user-profile-updated',()=>{busy=false;void load();});
+document.addEventListener(Events.USER_PROFILE_UPDATED,()=>{busy=false;void load();});
 window.addEventListener('pagehide',()=>{try{sessionStorage.setItem('forum-return',JSON.stringify({pages:Math.min(pages,5),y:scrollY}));}catch{}});
 auth.ready.then(async()=>{
   started=true;client.setUser(auth.currentUser);await load();

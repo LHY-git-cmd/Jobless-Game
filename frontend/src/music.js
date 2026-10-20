@@ -1,4 +1,5 @@
 /** 全站音轨：背景音乐和胜利音效独立控制，保留一次性结算与切页播放位置。 */
+import { Events } from "./lib/events.js";
 import { createAudioSettings, getAudioSettings } from "./audio-settings.js";
 
 // 使用用户提供的同曲 MP3，不直接向浏览器发送原始 NCM。
@@ -160,8 +161,8 @@ export function initMusic({ dom = document, view = window } = {}) {
   dom.addEventListener("click", unlock, true);
   dom.addEventListener("keydown", event => { if (["Enter", " "].includes(event.key)) unlock(event); }, true);
   dom.addEventListener("visibilitychange", () => { if (dom.hidden) controller.suspend(); else void controller.resume(); });
-  dom.addEventListener("settlement-opened", event => { void controller.celebrate(event.detail?.runId); });
-  dom.addEventListener("settlement-closed", () => { void controller.leaveSettlement(); });
+  dom.addEventListener(Events.SETTLEMENT_OPENED, event => { void controller.celebrate(event.detail?.runId); });
+  dom.addEventListener(Events.SETTLEMENT_CLOSED, () => { void controller.leaveSettlement(); });
   view.addEventListener("pagehide", () => controller.persist());
   view.addEventListener("pageshow", () => { if (!dom.hidden) void controller.resume(); });
   void controller.resume();
