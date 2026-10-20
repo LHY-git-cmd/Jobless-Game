@@ -128,8 +128,19 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── src/                              # 浏览器运行的 JavaScript 源码
 │   │   ├── lib/                          # 无业务状态的DOM查询、事件与传输基础工具
 │   │   │   ├── dom.js                    # 语义名称映射固定节点及局部选择器查询
-│   │   │   └── events.js                 # 跨模块事件名、分发与可取消订阅
-│   │   ├── main.js                       # 首页自由选关、独立重开/续玩、规则计时与单关结算
+│   │   │   ├── events.js                 # 跨模块事件名、分发与可取消订阅
+│   │   │   └── lifecycle.js              # 实例监听/订阅/定时器清理与异步回调保护
+│   │   ├── pages/                        # 页面展示入口，业务流程通过回调连接
+│   │   │   └── home.js                   # 首页选关事件与开始/继续/已通关状态展示
+│   │   ├── game/                         # 游戏控制器与页面协调，不包含规则算法
+│   │   │   ├── game-controller.js        # 账号/轮次、选关/重开、规则计时与通关协调
+│   │   │   ├── game-ui.js                # 游戏固定节点语义映射，避免控制器散落ID
+│   │   │   ├── mine-controller.js        # 扫雷独立棋盘、事件、连锁爆炸与音效
+│   │   │   ├── sudoku-controller.js      # 数独独立棋盘、笔记、输入与检查
+│   │   │   ├── akari-controller.js       # 照明独立棋盘、灯光/数字墙提示与点击
+│   │   │   ├── progress-coordinator.js  # 当前账号快照收集/保存及恢复期间写入保护
+│   │   │   └── result-dialog.js          # 结果/单关结算展示、按钮回调及焦点管理
+│   │   ├── main.js                       # 显式创建游戏控制器实例的启动入口
 │   │   ├── game.js                       # 扫雷棋盘与规则逻辑
 │   │   ├── akari.js                      # 照明题盘、灯光与通关判断
 │   │   ├── sudoku.js                     # 数独题盘、正式答案/候选笔记、旧存档兼容与通关判断
@@ -176,6 +187,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │
 │   └── test/                             # Node.js 自动化测试，验证规则与页面流程
 │       ├── dom-events.test.js            # 固定节点语义映射、局部查询及事件取消订阅契约
+│       ├── controller-contracts.test.js  # 无副作用导入、独立棋盘、存档协调及实例资源清理
 │       ├── game.test.js                  # 扫雷规则测试
 │       ├── akari.test.js                 # 照明规则测试
 │       ├── sudoku.test.js                # 数独规则、候选笔记独立性、编辑保护与旧存档兼容
@@ -188,7 +200,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── forum-body.test.js            # 正文表单/链接、旧标题隐藏、左评论按钮及右侧图标交互
 │       ├── notifications.test.js         # 浏览器计时器、登录/可见性、账号隔离及已读边界
 │       ├── avatar.test.js                # 头像路径、清单错误、保存重试和退出/换号晚到响应隔离
-│       ├── completion.test.js            # 自由选关、单关重开/结算、规则计时、退出恢复与保存回归
+│       ├── completion.test.js            # 自由选关/计时/存档/保存及销毁重建和旧响应回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
 │       └── music.test.js                 # 音轨切换、独立音量/静音、同轮一次、播放拒绝与切页状态

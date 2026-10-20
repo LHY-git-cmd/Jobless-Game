@@ -3,6 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { SUDOKU_PUZZLE, SUDOKU_SOLUTION } from "../src/sudoku.js";
+import { createGameController } from "../src/game/game-controller.js";
 /** 页面所需的最小 DOM，disabled 控件不会触发点击。 */
 class Element {
   /** 初始化类名、子节点与事件。 */
@@ -21,6 +22,8 @@ class Element {
   replaceChildren(v) { this.children = [...v.children]; }
   /** 保存事件回调。 */
   addEventListener(k, v) { this.listeners[k] = v; }
+  /** 实例卸载只移除自己的处理器，保留其他组件监听。 */
+  removeEventListener(k, v) { if (this.listeners[k] === v) delete this.listeners[k]; }
   /** 返回键盘按钮。 */
   querySelectorAll() { return this.children; }
   /** 找到可聚焦按钮。 */
@@ -58,10 +61,14 @@ test("独立关卡、冻结计时、保存重试与当前关开发验收", async
   const startRequests = [];
   const submissions = [];
   Date.now = () => now; Math.random = () => 0;
-  globalThis.document = { getElementById: $, createElement: () => new Element(), createDocumentFragment: () => new Element(), addEventListener: (k,v) => { keys[k]=v; }, dispatchEvent: event => keys[event.type]?.(event) };
-  const stored = new Map(), pageEvents = {};
-  globalThis.window = { scrollTo() {}, setInterval: callback => { pageEvents.tick = callback; }, location: { assign() {} },
+  globalThis.document = { getElementById: $, createElement: () => new Element(), createDocumentFragment: () => new Element(), addEventListener: (k,v) => { keys[k]=v; },
+    removeEventListener: (k,v) => { if(keys[k]===v) delete keys[k]; }, dispatchEvent: event => keys[event.type]?.(event) };
+  const stored = new Map(), pageEvents = {}, intervals = new Set();
+  let timerId = 0;
+  globalThis.window = { scrollTo() {}, setInterval: callback => { pageEvents.tick = callback; intervals.add(++timerId); return timerId; },
+    clearInterval: id => { intervals.delete(id); delete pageEvents.tick; }, location: { assign() {} },
     addEventListener: (key, callback) => { pageEvents[key] = callback; },
+    removeEventListener: (key, callback) => { if(pageEvents[key]===callback) delete pageEvents[key]; },
     localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value), removeItem: key => stored.delete(key) } };
   globalThis.fetch = async (path, options={}) => {
     const b = options.body ? JSON.parse(options.body) : null;
@@ -89,7 +96,8 @@ test("独立关卡、冻结计时、保存重试与当前关开发验收", async
     return { ok: true, json: async () => structuredClone(current) };
   };
   t.after(() => { Date.now=original.now; Math.random=original.random; for (const k of ["document","window","fetch"]) { if(original[k]===undefined) delete globalThis[k]; else globalThis[k]=original[k]; } });
-  await import("../src/main.js"); await settle();
+  let app = createGameController(); await settle();
+  t.after(() => app.destroy());
   keys["auth-changed"]({ detail: { user: { id: 1 } } }); await settle();
   const visible=id=>!$(id).classList.contains("hidden"), enter=id=>$(id).listeners["authorized-start"]();
   /** 三关统一验证：点击开始后无操作也计时，重看规则和刷新都不重置起点。 */
@@ -118,17 +126,21 @@ test("独立关卡、冻结计时、保存重试与当前关开发验收", async
     $(opener).click(); $(closer).click(); pageEvents.tick();
     assert.equal($(timer).textContent, "00:15");
   }
-  let reloads = 0;
   /** 不触发退出事件直接丢弃页面，验证保存不依赖 beforeunload/pagehide。 */
   async function reload(away = 0, userId = 1) {
     // 清理旧页面动画定时器，但丢弃清理操作写入的数据，只保留刷新前已落盘的存档。
     const committed = [...stored];
-    keys["auth-changed"]();
+    app.destroy();
+    assert.equal(intervals.size, 0);
+    assert.equal(Object.keys(keys).length, 0);
+    assert.equal(Object.keys(pageEvents).length, 0);
+    for (const node of nodes.values()) assert.equal(Object.keys(node.listeners).length, 0);
     stored.clear();
     for (const [key, value] of committed) stored.set(key, value);
     now += away;
     resetNodes();
-    await import(`../src/main.js?reload=${++reloads}`);
+    app = createGameController();
+    assert.equal(intervals.size, 1);
     keys["auth-changed"]({ detail: { user: { id: userId } } });
     await settle();
   }
@@ -322,5 +334,28 @@ test("独立关卡、冻结计时、保存重试与当前关开发验收", async
     assert.equal($("level-select").scrolled, true);
     assert.equal(current.run_id, originalRun);
     assert.equal([...stored.values()][0], originalSave);
+  });
+  await t.test("销毁实例清理所有监听和定时器，晚到建轮响应不生成棋盘", async () => {
+    app.destroy(); app.destroy(); resetNodes();
+    let finishStart;
+    app = createGameController({ request: async path => {
+      if(path === 'challenges/config') return {quick_complete_enabled:true};
+      if(path === 'challenges/start') return await new Promise(resolve => { finishStart=resolve; });
+      throw new Error(`意外请求 ${path}`);
+    } });
+    keys['auth-changed']({detail:{user:{id:99}}});
+    const pending = enter('start-button'), oldTick = pageEvents.tick;
+    assert.equal(typeof finishStart, 'function');
+    app.destroy(); app.destroy();
+    assert.equal(intervals.size, 0);
+    assert.equal(Object.keys(keys).length, 0);
+    assert.equal(Object.keys(pageEvents).length, 0);
+    for (const node of nodes.values()) assert.equal(Object.keys(node.listeners).length, 0);
+    const before = $('timer').textContent;
+    now += 10000; oldTick();
+    finishStart({ run_id:'late', revision:0, levels:[0,1,2].map(() => ({attempt_id:'a',seconds:null})) });
+    await pending; await settle();
+    assert.equal($('board').children.length, 0);
+    assert.equal($('timer').textContent, before);
   });
 });
