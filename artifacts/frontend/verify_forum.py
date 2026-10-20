@@ -14,6 +14,7 @@ import time
 
 import verify_ranking as qa
 from verify_progress import browser
+from backend.app.services import auth_service
 
 
 def main():
@@ -31,6 +32,9 @@ def main():
         qa.api.app.dependency_overrides[qa.get_db] = dependency
         config = qa.get_settings()
         previous = (config.cookie_secure,config.forum_post_interval_seconds,config.forum_comment_interval_seconds)
+        previous_limiter=auth_service.rate_limiter
+        # 多次切换隔离账号需要更高的测试额度，仅修改本进程并在 finally 恢复。
+        auth_service.rate_limiter=auth_service.LoginRateLimiter(50,60)
         config.cookie_secure=False
         config.forum_post_interval_seconds=config.forum_comment_interval_seconds=0
         listener=socket.socket();listener.bind(('127.0.0.1',0))
@@ -190,6 +194,7 @@ def main():
                         shot(f'forum-compose-mobile-{width}.png');click('#forum-compose-close')
                     checks.append('375px/320px 列表及正文发布弹窗无横向溢出')
                 with browser(str(Path(temporary)/'second-browser'),log) as (command,_):
+                    command('Network.enable')
                     navigate('forum.html');login('论坛甲')
                     wait("document.querySelector('.notification-bell').getAttribute('aria-label').includes('0 条未读')")
                     click('.notification-bell');wait("document.querySelectorAll('.notification-item').length===3")
@@ -197,9 +202,69 @@ def main():
                     click('.notification-close');click('.auth-logout');wait("document.querySelector('.auth-user').classList.contains('hidden')")
                     login('论坛乙');wait("document.querySelector('.notification-bell').getAttribute('aria-label').includes('2 条未读')")
                     checks.append('独立浏览器已读持久化，换号后仅显示自己的消息')
+                    # 新增列表交互验收：独立帖子不改变上面已确认的历史通知统计。
+                    inline=evaluate("(async()=>await(await fetch('/api/forum/posts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request_id:crypto.randomUUID(),body:'列表直接回复验收\\n短一些的卡片间距。'})})).json())()")
+                    inline_id=inline['id'];selector=f'.forum-thread[data-post-id="{inline_id}"]'
+                    command('Emulation.setDeviceMetricsOverride',{'width':1280,'height':960,'deviceScaleFactor':1,'mobile':False})
+                    navigate('forum.html');wait(f"!!document.querySelector('{selector} .forum-count')")
+                    click(selector+' .forum-count');wait(f"document.querySelector('{selector} .forum-inline-status').textContent.includes('还没有')")
+                    assert evaluate(f"document.querySelector('{selector} .forum-count').getAttribute('aria-expanded')==='true'")
+                    click(selector+' > .forum-card .forum-reply');wait(f"!document.querySelector('{selector} .forum-inline-form').hidden")
+                    assert evaluate(f"document.activeElement===document.querySelector('{selector} textarea')")
+                    evaluate(f"document.querySelector('{selector} textarea').value='不进入详情直接评论';")
+                    command('Network.setBlockedURLs',{'urls':[f'*api/forum/posts/{inline_id}/comments']})
+                    click(selector+' .forum-inline-submit');wait(f"document.querySelector('{selector} .forum-inline-form-status').textContent.includes('连接失败')")
+                    assert evaluate(f"document.querySelector('{selector} textarea').value==='不进入详情直接评论'")
+                    evaluate(f"window.inlineDraft=document.querySelector('{selector} textarea');document.dispatchEvent(new CustomEvent('user-profile-updated'))")
+                    wait("document.querySelector('#forum-status').textContent===''")
+                    assert evaluate(f"window.inlineDraft===document.querySelector('{selector} textarea') && window.inlineDraft.value==='不进入详情直接评论'")
+                    command('Network.setBlockedURLs',{'urls':[]});click(selector+' .forum-inline-submit')
+                    wait(f"document.querySelector('{selector} .forum-count').textContent==='1 条评论' && !document.querySelector('{selector} .forum-inline-submit').disabled")
+                    assert evaluate("location.pathname.endsWith('/forum.html')")
+                    checks.append('列表左侧展开评论、右侧图标直接回复及失败重试')
+                    click('.auth-logout');wait("document.querySelector('.auth-user').classList.contains('hidden')");login('论坛甲')
+                    wait(f"!!document.querySelector('{selector} .forum-count')");click(selector+' .forum-count')
+                    wait(f"document.querySelector('{selector} .forum-inline-comments .forum-body')?.textContent==='不进入详情直接评论'")
+                    click(selector+' .forum-inline-comments .forum-reply')
+                    evaluate(f"document.querySelector('{selector} textarea').value='在列表回复他人评论';")
+                    click(selector+' .forum-inline-submit');wait(f"document.querySelector('{selector} .forum-count').textContent==='2 条评论' && !document.querySelector('{selector} .forum-inline-submit').disabled")
+                    wait(f"[...document.querySelectorAll('{selector} .forum-replies .forum-body')].some(n=>n.textContent==='在列表回复他人评论')")
+                    click(selector+' > .forum-card .forum-like');wait(f"document.querySelector('{selector} > .forum-card .forum-like').getAttribute('aria-pressed')==='true'")
+                    assert evaluate(f"getComputedStyle(document.querySelector('{selector} > .forum-card .forum-like')).color==='rgb(255, 107, 107)'")
+                    click(selector+' .forum-inline-cancel')
+                    evaluate("scrollTo({top:0,behavior:'instant'})");shot('forum-inline-liked-desktop.png')
+                    click(selector+' > .forum-card .forum-like');wait(f"document.querySelector('{selector} > .forum-card .forum-like').getAttribute('aria-pressed')==='false'")
+                    checks.append('换号可展开他人评论并回复，拇指点赞变红且可取消')
+                    root=evaluate(f"Number(document.querySelector('{selector} .forum-inline-comments > article').dataset.id)")
+                    evaluate(f"(async()=>{{for(let i=0;i<34;i++){{const response=await fetch('/api/forum/posts/{inline_id}/comments',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{request_id:crypto.randomUUID(),body:'分页验收'+i,reply_to_comment_id:i<22?null:{root}}})}});if(!response.ok)throw new Error('分页数据写入失败');}}}})()")
+                    navigate('forum.html');wait(f"!!document.querySelector('{selector} .forum-count')");click(selector+' .forum-count')
+                    wait(f"document.querySelectorAll('{selector} .forum-inline-comments > article').length===20")
+                    click(selector+' .forum-inline-more');wait(f"document.querySelectorAll('{selector} .forum-inline-comments > article').length===23")
+                    root_selector=selector+f' #comment-{root}'
+                    click(root_selector+' .forum-expand');wait(f"document.querySelectorAll('{root_selector} .forum-replies > article').length===10")
+                    click(root_selector+' .forum-replies > .forum-load');wait(f"document.querySelectorAll('{root_selector} .forum-replies > article').length===13")
+                    reads=evaluate(f"performance.getEntriesByType('resource').filter(r=>r.name.includes('/api/forum/posts/{inline_id}/comments')).length")
+                    click(selector+' > .forum-card .forum-count');assert evaluate(f"document.querySelector('{selector} .forum-inline-discussion').hidden")
+                    click(selector+' > .forum-card .forum-count');assert evaluate(f"performance.getEntriesByType('resource').filter(r=>r.name.includes('/api/forum/posts/{inline_id}/comments')).length")==reads
+                    checks.append('列表评论20条及回复10条有限分页，反复展开不重复请求')
+                    for width in (1280,375,320):
+                        command('Emulation.setDeviceMetricsOverride',{'width':width,'height':960,'deviceScaleFactor':1,'mobile':False})
+                        evaluate(f"document.querySelector('{selector}').scrollIntoView({{block:'start'}})")
+                        wait(f"getComputedStyle(document.querySelector('{selector} .forum-inline-discussion')).opacity==='1'")
+                        assert evaluate('document.documentElement.scrollWidth<=innerWidth')
+                        assert evaluate(f"(()=>{{const c=document.querySelector('{selector} > .forum-card'),n=c.querySelector('.forum-count').getBoundingClientRect(),l=c.querySelector('.forum-like').getBoundingClientRect(),r=c.querySelector('.forum-reply').getBoundingClientRect();return n.left<l.left&&l.left<r.left&&l.height>=44&&r.width>=44&&parseFloat(getComputedStyle(c).paddingLeft)<=16;}})()")
+                        shot(f'forum-inline-{width}.png')
+                    checks.append('紧凑卡片及左评论右图标布局在桌面/375px/320px可用')
+                    click('.auth-logout');wait("document.querySelector('.auth-user').classList.contains('hidden')")
+                    wait(f"!!document.querySelector('{selector} .forum-count')");click(selector+' > .forum-card .forum-reply')
+                    wait("document.querySelector('#auth-dialog').open")
+                    evaluate("document.querySelector('#auth-username').value='论坛乙';document.querySelector('#auth-password').value='forum-secret';")
+                    click('.auth-submit');wait(f"!document.querySelector('{selector} .forum-inline-form').hidden && document.activeElement===document.querySelector('{selector} textarea')")
+                    checks.append('游客点击列表回复，登录后续接新卡片的正文输入')
             print(f'论坛浏览器验收：{len(checks)} 项通过，0 失败。')
         finally:
             config.cookie_secure,config.forum_post_interval_seconds,config.forum_comment_interval_seconds=previous
+            auth_service.rate_limiter=previous_limiter
             qa.api.app.dependency_overrides.clear();server.should_exit=True;worker.join(timeout=10);listener.close();engine.dispose()
 
 

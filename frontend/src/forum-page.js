@@ -1,13 +1,29 @@
 /** 论坛正文列表：有限游标、登录续接发帖、固定负载重试和返回位置恢复。 */
 import { initAuth } from './auth.js?v=20261020-body-only';
 import { ForumClient, validateText } from './forum-client.js';
-import { contentCard, bindCount, showError } from './forum-view.js?v=20261020-body-only';
+import { bindCount, showError } from './forum-view.js?v=20261021-inline';
+import { createPostThread } from './forum-discussion.js?v=20261021-inline';
 
 const auth=initAuth(),client=new ForumClient();
 const $=selector=>document.querySelector(selector),list=$('#forum-list'),status=$('#forum-status'),more=$('#forum-more'),retry=$('#forum-retry');
 const dialog=$('#forum-compose-dialog'),form=$('#forum-form'),body=$('#forum-body-input'),formStatus=$('#forum-form-status'),submit=$('#forum-submit');
 const bodyCount=bindCount(body,$('#forum-body-count'),2000);
 let cursor=null,busy=false,started=false,pages=0,loadSerial=0,retryAppend=false;
+const threads=new Map();
+
+/** 移除旧列表时废弃其异步渲染资格，不让展开请求影响后来的页面。 */
+function clearThreads(){for(const view of threads.values())view.dispose();threads.clear();list.replaceChildren();}
+
+/** 同帖独立管理评论与输入，评论编号不参与帖子列表的去重。 */
+function addThread(item){
+  const view=createPostThread(item,{client,onLike:like,onError:error=>{if(error.status===401)showError(error,status);},
+    onLogin:(id,target)=>void auth.requireLogin(async()=>{
+      // 登录会重新读取个人点赞状态，续接时找到新卡片，避免聚焦已移除的输入框。
+      try{await load();if(!threads.has(id))addThread(await client.read(`posts/${id}`));threads.get(id)?.reply(target);}
+      catch(error){showError(error,status);}
+    })});
+  threads.set(item.id,view);list.append(view.element);
+}
 
 /** 页面失败只更新状态，晚到的旧身份响应不能改变当前页面。 */
 async function like(item,kind) {
@@ -24,8 +40,16 @@ async function load(append=false) {
   try {
     const result=await client.read(`posts${append&&cursor?`?cursor=${cursor}`:''}`);
     if(serial!==loadSerial)return;
-    if(!append){list.replaceChildren();pages=0;}
-    for(const item of result.items)if(!list.querySelector(`[data-id="${item.id}"]`))list.append(contentCard(item,{summary:true,onLike:like}));
+    if(!append){
+      // 新帖发布或头像刷新不移除正在输入/发送的评论，避免丢失原文和待确认编号。
+      const drafts=[...threads].filter(([,view])=>view.hasDraft);
+      for(const view of threads.values())if(!view.hasDraft)view.dispose();
+      threads.clear();for(const [id,view] of drafts)threads.set(id,view);
+      list.replaceChildren();pages=0;
+    }
+    for(const item of result.items)if(!threads.has(item.id))addThread(item);
+    else if(!append)list.append(threads.get(item.id).element);
+    if(!append)for(const view of threads.values())if(!view.element.isConnected)list.append(view.element);
     cursor=result.next_cursor;pages++;more.hidden=!cursor;status.textContent=list.children.length?'':'还没有讨论，来发表第一个帖子吧。';
   }catch(error){if(serial===loadSerial){showError(error,status);if(!error.stale){retry.hidden=false;retryAppend=append;}}}
   finally{if(epoch===client.epoch&&serial===loadSerial){busy=false;more.disabled=false;}}
@@ -52,7 +76,7 @@ form.addEventListener('submit',async event=>{
 
 /** 换号后清空发布内容和旧账号点赞，公开讨论重新以当前身份读取。 */
 document.addEventListener('auth-changed',event=>{
-  if(!started)return;client.setUser(event.detail.user);busy=false;cursor=null;list.replaceChildren();form.reset();formStatus.textContent='';
+  if(!started)return;client.setUser(event.detail.user);busy=false;cursor=null;clearThreads();form.reset();formStatus.textContent='';
   body.readOnly=false;submit.disabled=false;submit.textContent='发布';bodyCount();if(dialog.open)close();void load();
 });
 document.addEventListener('user-profile-updated',()=>{busy=false;void load();});

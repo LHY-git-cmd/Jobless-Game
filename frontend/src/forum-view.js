@@ -12,8 +12,17 @@ export function timeLabel(value) {
   time.dateTime=value+'Z';return time;
 }
 
+/** 两个固定描边图标：拇指比赞与对话气泡；按钮自身提供可访问名称。 */
+function actionIcon(name) {
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  for(const [key,value] of Object.entries({viewBox:'0 0 24 24',width:'20',height:'20',fill:'none',stroke:'currentColor','stroke-width':'1.7','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))svg.setAttribute(key,value);
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',name==='like'?'M7 10v11H3V10h4Zm0 0 4-8a3 3 0 0 1 3 3v4h5a2 2 0 0 1 2 2.4l-1.4 7a3 3 0 0 1-3 2.6H7':'M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5Z');
+  svg.append(path);return svg;
+}
+
 /** 卡片由服务端确认的数据渲染，只有请求成功才更新点赞计数。 */
-export function contentCard(item,{kind='posts',summary=false,onLike,onReply,onReplies}={}) {
+export function contentCard(item,{kind='posts',summary=false,onLike,onReply,onReplies,onComments,commentsId,commentsExpanded=false}={}) {
   const card=node('article','forum-card');card.dataset.id=item.id;
   if(kind==='comments')card.id=`comment-${item.id}`;
   const author=node('div','forum-author'),name=node('span','',item.username);
@@ -25,28 +34,35 @@ export function contentCard(item,{kind='posts',summary=false,onLike,onReply,onRe
     const link=node('a','forum-post-link',item.excerpt);link.href=`./forum-post.html?id=${item.id}`;text.append(link);
   }else text.textContent=summary?item.excerpt:item.body;
   card.append(text);
-  const actions=node('div','forum-actions'),like=node('button','forum-like');like.type='button';
+  const actions=node('div','forum-actions'),icons=node('div','forum-action-icons'),like=node('button','forum-like');like.type='button';
+  const likeCount=node('span','forum-like-count');like.append(actionIcon('like'),likeCount);
   /** 当前对象的点赞展示总是来自服务端回包。 */
-  function renderLike(){like.textContent=`${item.liked_by_me?'已赞':'赞'} · ${item.like_count}`;like.setAttribute('aria-pressed',String(item.liked_by_me));like.setAttribute('aria-label',`${item.liked_by_me?'取消点赞':'点赞'}，${item.like_count} 个赞`);}
+  function renderLike(){likeCount.textContent=String(item.like_count);like.setAttribute('aria-pressed',String(item.liked_by_me));like.setAttribute('aria-label',`${item.liked_by_me?'取消点赞':'点赞'}，${item.like_count} 个赞`);}
   renderLike();like.addEventListener('click',async()=>{
     if(like.disabled)return;
     like.disabled=true;
     try { const result=await onLike?.(item,kind);if(result){Object.assign(item,result);renderLike();} }
     finally { like.disabled=false; }
-  });actions.append(like);
-  if(kind==='posts')actions.append(node('span','forum-count',`${item.comment_count} 条讨论`));
-  else {
-    const reply=node('button','forum-reply','回复');reply.type='button';reply.addEventListener('click',()=>onReply?.(item));actions.append(reply);
+  });
+  const reply=node('button','forum-reply');reply.type='button';reply.append(actionIcon('reply'));
+  reply.setAttribute('aria-label',kind==='posts'?'回复帖子':`回复 ${item.username}`);
+  reply.title=kind==='posts'?'回复帖子':`回复 ${item.username}`;
+  reply.addEventListener('click',()=>onReply?.(item));icons.append(like,reply);
+  if(kind==='posts'){
+    const count=node('button','forum-count',`${item.comment_count} 条评论`);count.type='button';
+    count.setAttribute('aria-expanded',String(commentsExpanded));if(commentsId)count.setAttribute('aria-controls',commentsId);
+    count.addEventListener('click',()=>onComments?.(item,count,card));actions.append(count);
+  } else {
     if(!item.root_comment_id) {
       const expand=node('button','forum-expand',`查看回复 · ${item.reply_count}`);expand.type='button';expand.setAttribute('aria-expanded','false');
       const replies=node('div','forum-replies');replies.hidden=true;replies.id=`replies-${item.id}`;expand.setAttribute('aria-controls',replies.id);
       expand.addEventListener('click',()=>{
         const show=replies.hidden;replies.hidden=!show;expand.setAttribute('aria-expanded',String(show));
         if(show)onReplies?.(item,replies,expand);
-      });actions.append(expand);card.append(actions,replies);return card;
+      });actions.append(expand,icons);card.append(actions,replies);return card;
     }
   }
-  card.append(actions);return card;
+  actions.append(icons);card.append(actions);return card;
 }
 
 /** 输入计数采用 Array.from，避免 emoji 被计算为两个字符。 */

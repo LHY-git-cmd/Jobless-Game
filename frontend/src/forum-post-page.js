@@ -1,7 +1,7 @@
 /** 独立帖子详情：评论分页、两层回复、通知直接定位与失败保留输入。 */
 import { initAuth } from './auth.js?v=20261020-body-only';
 import { ForumClient, validateText } from './forum-client.js';
-import { contentCard, node, bindCount, showError } from './forum-view.js?v=20261020-body-only';
+import { contentCard, node, bindCount, showError } from './forum-view.js?v=20261021-inline';
 
 const auth=initAuth(),client=new ForumClient(),$=selector=>document.querySelector(selector);
 const params=new URLSearchParams(location.search),raw=params.get('id'),postId=/^[1-9]\d*$/.test(raw||'')?Number(raw):0;
@@ -24,6 +24,15 @@ function reply(item){
 
 /** 清理回复选择，不覆盖用户正文。 */
 function cancelReply(){target=null;$('#comment-target').textContent='发表评论';$('#comment-cancel').hidden=true;}
+
+/** 详情卡片的评论数也可收起/展开讨论，右侧回复图标直接聚焦现有表单。 */
+function toggleDiscussion(_,button){const panel=$('#forum-discussion');panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',String(!panel.hidden));}
+
+/** 回复帖子时清除评论目标，避免把新评论误发给上一次回复的人。 */
+function replyToPost(){void auth.requireLogin(()=>{
+  $('#forum-discussion').hidden=false;$('#forum-post .forum-count')?.setAttribute('aria-expanded','true');
+  if(!client.pending.size)cancelReply();body.focus();
+});}
 
 /** 构造根评论和回复共用卡片，保持纯文本及固定两层展示。 */
 function card(item){return contentCard(item,{kind:'comments',onLike:like,onReply:reply,onReplies:loadReplies});}
@@ -95,7 +104,7 @@ async function load(){
   status.textContent='正在读取帖子…';
   try{
     const item=await client.read(`posts/${postId}`);if(currentRevision!==revision)return;
-    $('#forum-post').append(contentCard(item,{onLike:like}));document.title='帖子详情 · 无职游戏';status.textContent='';$('#forum-discussion').hidden=false;
+    $('#forum-post').append(contentCard(item,{onLike:like,onComments:toggleDiscussion,onReply:replyToPost,commentsId:'forum-discussion',commentsExpanded:true}));document.title='帖子详情 · 无职游戏';status.textContent='';$('#forum-discussion').hidden=false;
     await loadComments();if(params.get('comment')&&/^[1-9]\d*$/.test(params.get('comment')))await locate(params.get('comment'));
   }catch(error){if(!error.stale&&currentRevision===revision){showError(error,status);$('#forum-retry').hidden=false;}}
 }
