@@ -1,6 +1,6 @@
 # 项目目录树
 
-更新日期：2026-10-19。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
+更新日期：2026-10-20。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
 
 ```text
 crawler-portal/                            # 项目根目录：前端、登录后端、素材及文档
@@ -92,7 +92,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
-│   └── ranking-implementation-report.md   # 排行榜实际产出、测试与待完成环境验收
+│   ├── ranking-implementation-report.md   # 排行榜实际产出、测试与待完成环境验收
+│   └── avatar-implementation-plan.md      # 用户确认的25张硬盘预设头像、账号及四榜实施计划
 │
 ├── frontend/                             # 可独立预览的网页前端及其测试
 │   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
@@ -132,6 +133,10 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── island-mobile.webp            # 手机海岛背景
 │   │   ├── minesweeper.webp              # 扫雷入口图
 │   │   ├── bulb.webp                     # 照明入口图
+│   │   ├── avatars/                      # 用户共用的硬盘预设头像，账号只保存编号
+│   │   │   └── v1/                       # 版本化成品；修改内容后使用新版本路径
+│   │   │       ├── catalog.json           # 前后端共用的25个有效编号和站内图片路径
+│   │   │       └── *.webp                # 001至025，128px预设头像
 │   │   ├── audio/                        # 网页使用的音频资源
 │   │   │   ├── explosion.wav             # 裁剪处理后的爆炸音效
 │   │   │   ├── background.mp3            # 用户提供的阿尔法脑波背景音乐，低音量循环播放
@@ -165,6 +170,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── start.jpeg                    # 海岛入口原始图片
 │       ├── 扫雷.jpeg                     # 扫雷原始图片
 │       ├── 灯泡.png                      # 灯泡原始图片
+│       ├── avatar/                       # 用户提供的25张原始PNG头像，保留编号及原图
+│       │   └── *.png                     # 001至025原图
+│       ├── prepare_avatars.py            # 开发机生成128px WebP、共用清单及可选联系表
 │       └── extract_minesweeper.py         # 提取、处理扫雷格子素材
 │
 └── artifacts/                            # 验证过程产生的截图、日志与辅助检查材料
