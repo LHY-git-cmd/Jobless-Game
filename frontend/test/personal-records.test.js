@@ -27,8 +27,8 @@ class Element {
 /** 每个测试创建独立窗口和注入的接口。 */
 function setup(request) {
   const ids = ["personal-records", "records-panel", "records-status", "records-login", "records-refresh", "records-retry",
-    "records-best", "records-best-label", "records-best-time", "records-best-date", "records-breakdown", "records-recent", "records-list",
-    "records-total", "records-mine", "records-akari", "records-sudoku"];
+    "records-best", "records-best-label", "records-best-time", "records-best-date", "records-recent", "records-list",
+    "records-mine", "records-akari", "records-sudoku"];
   const nodes = Object.fromEntries(ids.map(id => [id, new Element()]));
   const events = {};
   const dom = { getElementById: id => nodes[id], createElement: () => new Element(), addEventListener: (name, callback) => { events[name] = callback; } };
@@ -37,8 +37,8 @@ function setup(request) {
 }
 
 /** 生成包含最佳与最近一次重合的真实形状响应。 */
-function result(category = "total", seconds = 75) {
-  const record = { id: 10, duration_seconds: seconds, completed_at: "2026-10-18T10:20:00", times: category === "total" ? [15, 20, 40] : null };
+function result(category = "mine", seconds = 75) {
+  const record = { id: 10, duration_seconds: seconds, completed_at: "2026-10-18T10:20:00", times: null };
   return { category, best: record, recent: [record] };
 }
 
@@ -48,19 +48,19 @@ test("登录后加载个人记录，切换类别后展示对应最佳和最近�
   assert.equal(calls.length, 0);
   assert.match(nodes["records-status"].textContent, /登录/);
   await panel.setUser({ id: 7 });
-  assert.deepEqual(calls, ["records/me?category=total"]);
+  assert.deepEqual(calls, ["records/me?category=mine"]);
   assert.equal(nodes["records-best-time"].textContent, "01:15");
-  assert.match(nodes["records-breakdown"].textContent, /扫雷 00:15/);
+  assert.equal(nodes["records-best-label"].textContent, "最佳");
   assert.equal(nodes["records-list"].children.length, 1);
-  await nodes["records-mine"].listeners.click();
-  assert.equal(calls.at(-1), "records/me?category=mine");
-  assert.equal(nodes["records-mine"].attributes["aria-selected"], "true");
-  assert.equal(nodes["records-breakdown"].classList.contains("hidden"), true);
+  await nodes["records-akari"].listeners.click();
+  assert.equal(calls.at(-1), "records/me?category=akari");
+  assert.equal(nodes["records-akari"].attributes["aria-selected"], "true");
+  assert.equal(nodes["records-best-label"].textContent, "最佳");
 });
 
 test("空记录不显示虚构零秒，真实零秒成绩正常显示", async () => {
   let empty = true;
-  const { nodes, panel } = setup(async () => empty ? { category: "total", best: null, recent: [] } : result("total", 0));
+  const { nodes, panel } = setup(async () => empty ? { category: "mine", best: null, recent: [] } : result("mine", 0));
   await panel.setUser({ id: 7 });
   assert.equal(nodes["records-best"].classList.contains("hidden"), true);
   assert.match(nodes["records-status"].textContent, /还没有/);
@@ -83,10 +83,10 @@ test("退出登录立即清空，旧账号晚到的响应不能恢复记录", as
 test("快速切换分类时丢弃上一分类响应", async () => {
   const waiting = [];
   const { nodes, panel } = setup(() => new Promise(resolve => waiting.push(resolve)));
-  const total = panel.setUser({ id: 7 });
-  const mine = nodes["records-mine"].listeners.click();
-  waiting[1](result("mine", 20)); await mine;
-  waiting[0](result("total", 99)); await total;
+  const mine = panel.setUser({ id: 7 });
+  const akari = nodes["records-akari"].listeners.click();
+  waiting[1](result("akari", 20)); await akari;
+  waiting[0](result("mine", 99)); await mine;
   assert.equal(nodes["records-best-time"].textContent, "00:20");
 });
 
@@ -110,9 +110,9 @@ test("方向键可切换分类，保存通知触发刷新", async () => {
   const calls = [];
   const { nodes, panel, events } = setup(async path => { calls.push(path); return result(path.split("=")[1]); });
   await panel.setUser({ id: 7 });
-  await nodes["records-total"].listeners.keydown({ key: "ArrowRight", preventDefault() {} });
-  assert.equal(nodes["records-mine"].focused, true);
-  assert.equal(nodes["records-panel"].attributes["aria-labelledby"], "records-mine");
+  await nodes["records-mine"].listeners.keydown({ key: "ArrowRight", preventDefault() {} });
+  assert.equal(nodes["records-akari"].focused, true);
+  assert.equal(nodes["records-panel"].attributes["aria-labelledby"], "records-akari");
   await events["records-updated"]();
   assert.equal(calls.length, 3);
 });

@@ -1,7 +1,7 @@
-/** 挑战计时测试：确认开始计时、通关冻结、重开、跳关和合计一致性。 */
+/** 独立关卡计时测试：确认开始、通关冻结、单关重开与直接进入数独。 */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createSession, restartLevel, startLevel, completeLevel, sessionSummary, formatTime } from "../src/session.js";
+import { createSession, restartLevel, startLevel, completeLevel, formatTime } from "../src/session.js";
 
 test("首次确认开始计时，重复确认不重置，通关后用时冻结", () => {
   const session = createSession();
@@ -12,22 +12,23 @@ test("首次确认开始计时，重复确认不重置，通关后用时冻结",
   assert.equal(session.levels[0].seconds, 11);
 });
 
-test("三关用时按序汇总，重开当前关不会清除前序关卡成绩", () => {
+test("重开当前关不会清除其他关卡成绩", () => {
   const session = createSession();
   for (let index = 0; index < 3; index += 1) {
     startLevel(session, index, 10000 * index);
     completeLevel(session, index, 10000 * index + (index + 1) * 1000);
   }
-  assert.deepEqual(sessionSummary(session), { times: [1, 2, 3], total: 6, complete: true });
+  assert.deepEqual(session.levels.map(level => level.seconds), [1, 2, 3]);
   restartLevel(session, 1);
-  assert.deepEqual(sessionSummary(session), { times: [1, null, null], total: 1, complete: false });
+  assert.deepEqual(session.levels.map(level => level.seconds), [1, null, 3]);
 });
 
-test("跳关不会伪造前序关卡零秒成绩，完整通关才能算全程成绩", () => {
+test("直接玩数独不会启动其他关卡计时或伪造通关成绩", () => {
   const session = createSession();
   startLevel(session, 2, 0);
   completeLevel(session, 2, 120000);
-  assert.deepEqual(sessionSummary(session), { times: [null, null, 120], total: 120, complete: false });
+  assert.deepEqual(session.levels, [{ startedAt: null, seconds: null },
+    { startedAt: null, seconds: null }, { startedAt: 0, seconds: 120 }]);
 });
 
 test("时长格式覆盖零秒、分钟与小时", () => {

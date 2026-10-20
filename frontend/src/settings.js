@@ -1,8 +1,9 @@
 /** 用户名打开的游戏设置弹窗：独立音乐/音效开关和音量，调节即时生效并自动保存。 */
 import { getAudioSettings } from "./audio-settings.js";
+import { initAvatarPicker } from "./avatar-picker.js?v=20261020-avatars";
 
 /** 复用原生 dialog 的模态焦点隔离，所有带账号页共用同一设置入口。 */
-export function initGameSettings({ dom = document, settings = getAudioSettings() } = {}) {
+export function initGameSettings({ dom = document, settings = getAudioSettings(), onAvatarSaved, onUnauthorized } = {}) {
   const dialog = dom.createElement("dialog");
   dialog.id = "game-settings";
   dialog.className = "auth-dialog settings-dialog";
@@ -10,7 +11,8 @@ export function initGameSettings({ dom = document, settings = getAudioSettings()
   dialog.innerHTML = `<div class="auth-card settings-card">
     <button type="button" class="auth-close settings-close" aria-label="关闭游戏设置">×</button>
     <p class="eyebrow">偏好设置 / SETTINGS</p><h2 id="settings-title">游戏设置</h2>
-    <p class="settings-intro">让声音，陪你解谜。</p>
+    <p class="settings-intro">选一个形象，让声音陪你解谜。</p>
+    <section class="settings-avatar" aria-labelledby="avatar-title"></section>
     ${[ ["music", "背景音乐"], ["effects", "音效"] ].map(([key, title]) => `
       <section class="settings-audio" aria-labelledby="settings-${key}-label">
         <div class="settings-audio-heading"><h3 id="settings-${key}-label">${title}</h3>
@@ -21,11 +23,13 @@ export function initGameSettings({ dom = document, settings = getAudioSettings()
         <div class="settings-volume-heading"><label for="settings-${key}-volume">音量</label><output id="settings-${key}-value" for="settings-${key}-volume"></output></div>
         <input type="range" id="settings-${key}-volume" min="0" max="100" step="1" aria-label="${title}音量">
       </section>`).join("")}
-    <p class="settings-note">设置自动保存。</p>
+    <p class="settings-note">声音设置即时生效，保存在当前浏览器。<br>头像点击保存后，跟随账号同步。</p>
   </div>`;
   dom.body.append(dialog);
   const closeButton = dialog.querySelector(".settings-close");
   let returnFocus;
+  let currentUser = null;
+  const avatar = initAvatarPicker(dialog.querySelector(".settings-avatar"), { dom, onSaved: onAvatarSaved, onUnauthorized });
 
   /** 关闭后回到用户名按钮，不触发游戏导航或改变计时。 */
   function close() {
@@ -37,7 +41,7 @@ export function initGameSettings({ dom = document, settings = getAudioSettings()
   // 原生 dialog 已阻止背景交互；显式循环 Tab 保持键盘操作顺序稳定。
   dialog.addEventListener("keydown", event => {
     if (event.key !== "Tab") return;
-    const controls = [...dialog.querySelectorAll("button, input")];
+    const controls = [...dialog.querySelectorAll("button:not(:disabled), input:not(:disabled)")].filter(control => !control.hidden && !control.closest("[hidden]"));
     const first = controls[0], last = controls.at(-1);
     if (event.shiftKey && dom.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && dom.activeElement === last) { event.preventDefault(); first.focus(); }
@@ -59,7 +63,9 @@ export function initGameSettings({ dom = document, settings = getAudioSettings()
   });
   return {
     /** 用户名按钮提供可访问名称与焦点来源。 */
-    open(trigger) { if (!dialog.open) { returnFocus = trigger; dialog.showModal(); closeButton.focus(); } },
+    open(trigger) { if (!dialog.open) { returnFocus = trigger; avatar.reset(currentUser); dialog.showModal(); closeButton.focus(); } },
+    /** 账号头像跟随服务端身份，音频偏好继续保存在当前浏览器。 */
+    setUser(user) { currentUser = user; avatar.setUser(user); },
     /** 换号或退出时关闭设置窗口，不残留失效的账号入口。 */
     close,
   };

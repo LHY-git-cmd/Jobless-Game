@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     login_window_seconds: int = Field(default=60, ge=1, le=3600)
     login_hash_concurrency: int = Field(default=1, ge=1, le=1)
     max_request_body_bytes: int = Field(default=4096, ge=256, le=4096)
+    forum_post_interval_seconds: int = Field(default=60, ge=0, le=3600)
+    forum_comment_interval_seconds: int = Field(default=3, ge=0, le=60)
     # 一键通关默认关闭，仅在开发环境显式配置 DEV_QUICK_COMPLETE_ENABLED=true 时开启。
     dev_quick_complete_enabled: bool = False
 

@@ -1,0 +1,105 @@
+{
+  "default_id": 1,
+  "avatars": [
+    {
+      "id": 1,
+      "src": "/assets/avatars/v1/001.webp"
+    },
+    {
+      "id": 2,
+      "src": "/assets/avatars/v1/002.webp"
+    },
+    {
+      "id": 3,
+      "src": "/assets/avatars/v1/003.webp"
+    },
+    {
+      "id": 4,
+      "src": "/assets/avatars/v1/004.webp"
+    },
+    {
+      "id": 5,
+      "src": "/assets/avatars/v1/005.webp"
+    },
+    {
+      "id": 6,
+      "src": "/assets/avatars/v1/006.webp"
+    },
+    {
+      "id": 7,
+      "src": "/assets/avatars/v1/007.webp"
+    },
+    {
+      "id": 8,
+      "src": "/assets/avatars/v1/008.webp"
+    },
+    {
+      "id": 9,
+      "src": "/assets/avatars/v1/009.webp"
+    },
+    {
+      "id": 10,
+      "src": "/assets/avatars/v1/010.webp"
+    },
+    {
+      "id": 11,
+      "src": "/assets/avatars/v1/011.webp"
+    },
+    {
+      "id": 12,
+      "src": "/assets/avatars/v1/012.webp"
+    },
+    {
+      "id": 13,
+      "src": "/assets/avatars/v1/013.webp"
+    },
+    {
+      "id": 14,
+      "src": "/assets/avatars/v1/014.webp"
+    },
+    {
+      "id": 15,
+      "src": "/assets/avatars/v1/015.webp"
+    },
+    {
+      "id": 16,
+      "src": "/assets/avatars/v1/016.webp"
+    },
+    {
+      "id": 17,
+      "src": "/assets/avatars/v1/017.webp"
+    },
+    {
+      "id": 18,
+      "src": "/assets/avatars/v1/018.webp"
+    },
+    {
+      "id": 19,
+      "src": "/assets/avatars/v1/019.webp"
+    },
+    {
+      "id": 20,
+      "src": "/assets/avatars/v1/020.webp"
+    },
+    {
+      "id": 21,
+      "src": "/assets/avatars/v1/021.webp"
+    },
+    {
+      "id": 22,
+      "src": "/assets/avatars/v1/022.webp"
+    },
+    {
+      "id": 23,
+      "src": "/assets/avatars/v1/023.webp"
+    },
+    {
+      "id": 24,
+      "src": "/assets/avatars/v1/024.webp"
+    },
+    {
+      "id": 25,
+      "src": "/assets/avatars/v1/025.webp"
+    }
+  ]
+}

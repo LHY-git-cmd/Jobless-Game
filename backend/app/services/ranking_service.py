@@ -1,4 +1,4 @@
-"""挑战顺序、记录保留、幂等和排行榜事务；同步业务通过公共有界执行器运行。"""
+"""独立关卡、记录保留、幂等和排行榜事务；同步业务通过公共有界执行器运行。"""
 
 from copy import deepcopy
 from uuid import uuid4
@@ -58,18 +58,12 @@ def start_transaction(token, payload, db):
 
 
 def require_progress(token, run_id, db):
-    """只接受当前登录用户的当前轮次，历史成绩不能解锁新轮次。"""
+    """只接受当前登录用户的当前进度，拒绝旧轮次写入。"""
     user = require_user(token, db, True)
     progress = repository.progress(db, user.id)
     if not progress or progress.run_id != str(run_id):
-        raise AppError(409, "本轮已失效，请返回首页从第一关重新开始。")
+        raise AppError(409, "挑战已失效，请返回首页重新选择关卡。")
     return progress
-
-
-def require_previous(levels, index):
-    """前序关卡必须在本轮全部保存，禁止直接请求接口跳关。"""
-    if any(level["seconds"] is None for level in levels[:index]):
-        raise AppError(409, "请先通关并保存前一关。")
 
 
 def progress_transaction(token, run_id, db):
@@ -84,7 +78,7 @@ def progress_transaction(token, run_id, db):
 
 
 def restart_transaction(token, run_id, payload, db):
-    """重开先校验解锁，幂等请求不会重复递增版本或换新尝试。"""
+    """仅重置指定关卡，幂等请求不会重复递增版本或换新尝试。"""
     try:
         progress = require_progress(token, run_id, db)
         state = deepcopy(progress.game_state)
@@ -95,11 +89,7 @@ def restart_transaction(token, run_id, payload, db):
         if payload.revision != progress.revision:
             raise AppError(409, "关卡状态已更新，请重新开始本轮。")
         index = GAMES.index(payload.category)
-        require_previous(state["levels"], index)
-        # 总成绩已冻结。再次挑战必须新建完整轮次，避免改写同一轮总快照。
-        if progress.total_recorded:
-            raise AppError(409, "本轮已完成，请返回首页开始新一轮。")
-        state["levels"][index:] = [new_level() for _ in GAMES[index:]]
+        state["levels"][index] = new_level()
         state["last_restart"] = request
         progress.game_state = state
         progress.revision += 1
@@ -111,13 +101,11 @@ def restart_transaction(token, run_id, payload, db):
         raise
 
 
-def save_record(db, progress, category, attempt_id, seconds, times=None):
+def save_record(db, progress, category, attempt_id, seconds):
     """同事务写快照、严格改善最佳并清理其余记录，时间相同保留先达成最佳。"""
     now = utc_now()
     record = CompletionRecord(user_id=progress.user_id, category=category, run_id=progress.run_id,
-                              attempt_id=attempt_id, duration_seconds=seconds, completed_at=now,
-                              mine_seconds=times[0] if times else None, akari_seconds=times[1] if times else None,
-                              sudoku_seconds=times[2] if times else None)
+                              attempt_id=attempt_id, duration_seconds=seconds, completed_at=now)
     repository.add(db, record)
     db.flush()
     entry = repository.best(db, progress.user_id, category, lock=True)
@@ -132,7 +120,7 @@ def save_record(db, progress, category, attempt_id, seconds, times=None):
 
 
 def complete_transaction(token, run_id, payload, db, config):
-    """仅完成一个当前关；三关成功保存时自动创建独立总榜快照。"""
+    """任意关卡均可独立保存，不再生成整轮成绩。"""
     try:
         if payload.development and not config.dev_quick_complete_enabled:
             raise AppError(403, "开发验收通关未启用。")
@@ -140,9 +128,9 @@ def complete_transaction(token, run_id, payload, db, config):
         state = deepcopy(progress.game_state)
         index = GAMES.index(payload.category)
         level = state["levels"][index]
-        if progress.revision != payload.revision or level["attempt_id"] != str(payload.attempt_id):
+        # 尝试编号隔离本关重开；其他关重开后的全局版本变化不作废本关待提交成绩。
+        if payload.revision > progress.revision or level["attempt_id"] != str(payload.attempt_id):
             raise AppError(409, "此尝试已失效，请重新开始本轮。")
-        require_previous(state["levels"], index)
         if level["seconds"] is not None:
             if level["seconds"] != payload.duration_seconds or level["development"] != payload.development:
                 raise AppError(409, "已接收的通关成绩不能修改。")
@@ -150,10 +138,6 @@ def complete_transaction(token, run_id, payload, db, config):
             return state_response(progress)
         level["seconds"], level["development"] = payload.duration_seconds, payload.development
         save_record(db, progress, payload.category, level["attempt_id"], payload.duration_seconds)
-        times = [item["seconds"] for item in state["levels"]]
-        if all(value is not None for value in times) and not progress.total_recorded:
-            save_record(db, progress, "total", progress.run_id, sum(times), times)
-            progress.total_recorded = True
         progress.game_state, progress.updated_at = state, utc_now()
         db.commit()
         return state_response(progress)
@@ -163,9 +147,9 @@ def complete_transaction(token, run_id, payload, db, config):
 
 
 def record_response(record):
-    """只序列化公开成绩字段，总榜明细来自原轮次快照。"""
+    """只序列化单关公开成绩字段，旧数据库快照字段不再对外展示。"""
     return {"id": record.id, "duration_seconds": record.duration_seconds, "completed_at": record.completed_at,
-            "times": [record.mine_seconds, record.akari_seconds, record.sudoku_seconds] if record.category == "total" else None}
+            "times": None}
 
 
 def records_transaction(token, category, db):
@@ -181,9 +165,9 @@ def rankings_transaction(category, page, page_size, db):
     """在一个读取事务中计算榜单，名次跨页仍使用完整分数集合。"""
     rows, total = repository.ranking_rows(db, category, page, page_size)
     return {"category": category, "page": page, "page_size": page_size, "total": total,
-            "entries": [{"rank": row["rank"], "user_id": row["user_id"], "username": row["username"],
+            "entries": [{"rank": row["rank"], "user_id": row["user_id"], "username": row["username"], "avatar_id": row["avatar_id"],
                          "duration_seconds": row["duration_seconds"], "achieved_at": row["achieved_at"],
-                         "times": [row["mine_seconds"], row["akari_seconds"], row["sudoku_seconds"]] if category == "total" else None}
+                         "times": None}
                         for row in rows]}
 
 

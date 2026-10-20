@@ -16,7 +16,7 @@ Get-Content artifacts/server-deploy/build.log -Tail 8
 
 本机须有运行中的 Linux Docker 和 `redgate/flyway:13.6.0` 镜像。
 输出为 `artifacts/server-deploy/jobless-game-server.zip` 和同名 `.sha256` 校验文件。
-包内包含 API、Flyway 两个镜像、网页、原始 V1/V2 迁移、Compose、交互配置脚本及 Nginx 模板。
+包内包含 API、Flyway 两个镜像、网页（含25张硬盘预设头像）、V1～V4 迁移、Compose、交互配置脚本及 Nginx 模板。已有库先备份并执行未应用迁移，再发布新后端和网页；V1～V3 原有文件保持不变。V4 为文字论坛及站内消息五张表；合并新的 `/api/forum/` 32KiB location，其余 `/api/` 保持4KiB。生成器已递归打包新页面、模块和迁移，无需新增常驻服务。V4 尚未在目标 MySQL/Flyway 环境验收，详见 [论坛实施报告](../../../docs/forum-implementation-report.md)。
 没有本机 `.env`、MySQL 数据、测试账号或原始素材；服务器不用构建镜像或安装 Python 项目依赖。
 
 ## 服务器首次启动
@@ -77,7 +77,7 @@ API 必须经相同 IP、协议和端口的 `/api/` 调用，不要让浏览器�
 
 ## 验收、清理与更新
 
-浏览器验证：首次登录创建账号、再次登录、刷新保持会话、退出、逐关通关保存、个人记录、四榜。
+浏览器验证：首次登录创建账号、再次登录、刷新保持会话、退出、任意选关、单关通关保存与重开、单关结算、个人记录、三个单项榜。
 开发一键通关始终关闭；不要将本机测试账号导入正式库。
 记录启动前后 `free -m`、`docker stats --no-stream`、数据库连接数和错误日志；本机兼容性测试不代替目标服务器资源验收。
 

@@ -44,7 +44,7 @@ class MySQLIntegrationTests(TestCase):
         if url.drivername != "mysql+pymysql" or not (url.database or "").startswith("jobless_auth_test_"):
             raise ValueError("只允许 mysql+pymysql 且数据库名以 jobless_auth_test_ 开头的专用测试库")
         cls.engine = create_engine(url, pool_size=3, max_overflow=0, pool_timeout=.2, connect_args={"connect_timeout": 3, "read_timeout": 5, "write_timeout": 5})
-        unexpected = set(inspect(cls.engine).get_table_names()) - {"users", "auth_sessions", "flyway_schema_history", "challenge_progress", "completion_records", "leaderboard_entries"}
+        unexpected = set(inspect(cls.engine).get_table_names()) - {"users", "auth_sessions", "flyway_schema_history", "challenge_progress", "completion_records", "leaderboard_entries", "forum_posts", "forum_comments", "forum_post_likes", "forum_comment_likes", "forum_notifications"}
         if unexpected:
             raise ValueError("测试库存在其他业务表，已停止")
         env = dict(os.environ)
@@ -90,6 +90,17 @@ class MySQLIntegrationTests(TestCase):
         self.client.close()
         main.app.dependency_overrides.clear()
         with self.sessions() as db:
+            # 论坛没有删除业务；测试按外键顺序仅清理本例账号产生的隔离数据。
+            from backend.app.models.entities.forum import ForumPost, ForumComment, ForumPostLike, ForumCommentLike, ForumNotification
+            ids = list(db.scalars(select(User.id).where(User.username_key.in_(self.keys))))
+            posts = select(ForumPost.id).where(ForumPost.user_id.in_(ids))
+            comments = select(ForumComment.id).where(ForumComment.post_id.in_(posts))
+            db.execute(delete(ForumNotification).where(ForumNotification.post_id.in_(posts)))
+            db.execute(delete(ForumCommentLike).where(ForumCommentLike.comment_id.in_(comments)))
+            db.execute(delete(ForumPostLike).where(ForumPostLike.post_id.in_(posts)))
+            for comment_id in db.scalars(select(ForumComment.id).where(ForumComment.post_id.in_(posts)).order_by(ForumComment.id.desc())).all():
+                db.execute(delete(ForumComment).where(ForumComment.id == comment_id))
+            db.execute(delete(ForumPost).where(ForumPost.user_id.in_(ids)))
             db.execute(delete(User).where(User.username_key.in_(self.keys)))
             db.commit()
 
@@ -111,9 +122,57 @@ class MySQLIntegrationTests(TestCase):
             db.execute(update(AuthSession).where(AuthSession.user_id == user.id).values(expires_at=utc_now() - timedelta(seconds=1)))
             db.commit()
         self.assertEqual(self.client.get("/api/auth/me").status_code, 401)
+
         self.assertEqual(self.client.post("/api/auth/login", json={"username": name.upper(), "password": " secret "}).status_code, 200)
         self.assertEqual(self.client.post("/api/auth/logout").status_code, 204)
         self.assertEqual(self.client.get("/api/auth/me").status_code, 401)
+
+    def test_forum_v4_foreign_keys_and_concurrent_idempotency(self):
+        """真实 V4 外键/唯一键及 InnoDB 并发建帖、点赞、计数和提醒一致性。"""
+        from backend.app.services import forum_service as forum
+        from backend.app.models.schemas.forum import PostRequest, CommentRequest
+        from backend.app.models.entities.forum import ForumPost, ForumPostLike, ForumNotification
+        from sqlalchemy.exc import IntegrityError
+        with self.sessions() as db:
+            author, _, first, _ = auth_service.login_transaction(LoginRequest(username=self.new_name(), password='test-password'), db, get_settings())
+            actor, _, second, _ = auth_service.login_transaction(LoginRequest(username=self.new_name(), password='test-password'), db, get_settings())
+            author_id, actor_id = author.id, actor.id
+        payload = PostRequest(request_id=uuid4(), body='仅专用测试库')
+
+        def create():
+            """独立连接同时重试同一次建帖，不使用进程内锁。"""
+            with self.sessions() as db:
+                return forum.write_transaction(first, 'create_post', payload, None, db)
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            results = list(pool.map(lambda _:create(), range(3)))
+        post_id = results[0]['id']
+        self.assertEqual(len({item['id'] for item in results}),1)
+
+        def like(enabled):
+            """每个点赞事务使用独立连接，依靠唯一键与内容行锁。"""
+            with self.sessions() as db:
+                return forum.write_transaction(second,'posts',enabled,post_id,db)
+        for enabled in (True,False,False,True):
+            with ThreadPoolExecutor(max_workers=3) as pool:
+                outcomes=list(pool.map(like,[enabled]*3))
+            self.assertTrue(all(item['like_count']==int(enabled) for item in outcomes))
+        with self.sessions() as db:
+            self.assertEqual(len(db.scalars(select(ForumPostLike).where(ForumPostLike.post_id==post_id)).all()),1)
+            self.assertEqual(len(db.scalars(select(ForumNotification).where(ForumNotification.post_id==post_id)).all()),1)
+            notice=forum.read_transaction(first,'notifications',{'cursor':None,'limit':20},db)
+            forum.write_transaction(first,'read',None,notice['items'][0]['id'],db)
+            root=forum.write_transaction(first,'create_comment',CommentRequest(request_id=uuid4(),body='根评论'),post_id,db)
+            reply=forum.write_transaction(second,'create_comment',CommentRequest(request_id=uuid4(),body='回复',reply_to_comment_id=root['id']),post_id,db)
+            self.assertEqual(reply['root_comment_id'],root['id'])
+            self.assertEqual(forum.read_transaction(first,'post',{'post_id':post_id},db)['comment_count'],2)
+        with self.sessions() as db:
+            db.add(ForumPost(user_id=author_id,request_id=str(payload.request_id),title='重复',body='b',created_at=utc_now()))
+            with self.assertRaises(IntegrityError):db.commit()
+            db.rollback()
+            db.add(ForumPostLike(post_id=9007199254740991,user_id=actor_id,created_at=utc_now()))
+            with self.assertRaises(IntegrityError):db.commit()
+            db.rollback()
+        self.assertGreaterEqual(len(inspect(self.engine).get_foreign_keys('forum_comments')),4)
 
     def test_two_connections_race_on_case_insensitive_account(self):
         name = self.new_name()
@@ -160,7 +219,7 @@ class MySQLIntegrationTests(TestCase):
                 idx = ranking_service.GAMES.index(category)
                 payload = CompleteRequest(category=category, revision=0, attempt_id=state["levels"][idx]["attempt_id"], duration_seconds=seconds)
                 state = ranking_service.complete_transaction(raw, state["run_id"], payload, db, get_settings())
-            self.assertEqual(ranking_service.records_transaction(raw, "total", db)["best"]["times"], [10, 20, 30])
+            self.assertEqual(db.scalars(select(CompletionRecord).where(CompletionRecord.user_id == user_id, CompletionRecord.category == "total")).all(), [])
 
     def test_pool_exhaustion_returns_bounded_503(self):
         # 占满真实测试库三条连接，API 应在 pool_timeout 后返回 503。
@@ -171,6 +230,16 @@ class MySQLIntegrationTests(TestCase):
         finally:
             for connection in held:
                 connection.close()
+
+    def test_avatar_defaults_and_persistence(self):
+        """真实 Flyway 新列的默认值与编号更新应在重新登录后保持。"""
+        name = self.new_name()
+        first = self.client.post("/api/auth/login", json={"username": name, "password": "avatar-secret"})
+        self.assertEqual(first.json()["user"]["avatar_id"], 1)
+        self.assertEqual(self.client.put("/api/auth/avatar", json={"avatar_id": 17}).status_code, 200)
+        self.client.post("/api/auth/logout")
+        again = self.client.post("/api/auth/login", json={"username": name, "password": "avatar-secret"})
+        self.assertEqual(again.json()["user"]["avatar_id"], 17)
 
 
 if __name__ == "__main__":

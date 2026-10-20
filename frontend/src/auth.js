@@ -1,8 +1,10 @@
 /** 三页复用的登录弹窗、会话恢复和关卡登录拦截；不改变关卡计时与规则。 */
-import { authRequest } from "./auth-client.js";
+import { authRequest } from "./auth-client.js?v=20261020-avatars";
 import { usernameUnits, validateUsername, validatePassword } from "./auth-validation.js";
 import { initMusic } from "./music.js?v=20261019-audio-settings";
-import { initGameSettings } from "./settings.js";
+import { initGameSettings } from "./settings.js?v=20261020-avatars";
+import { createAvatarImage, updateAvatarImage } from "./avatar.js?v=20261020-avatars";
+import { initNotifications } from "./notifications.js?v=20261020-body-only";
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
 export function initAuth() {
@@ -12,6 +14,7 @@ export function initAuth() {
   host.innerHTML = `<button type="button" class="auth-open" aria-haspopup="dialog">登录</button>
     <button type="button" class="auth-user hidden" aria-haspopup="dialog" aria-controls="game-settings" title="打开游戏设置"></button><button type="button" class="auth-logout hidden">退出登录</button>
     <span class="auth-header-status" role="status"></span>`;
+  initNotifications();
   const modal = document.createElement("dialog");
   modal.id = "auth-dialog";
   modal.className = "auth-dialog";
@@ -45,25 +48,41 @@ export function initAuth() {
   const openButton = host.querySelector(".auth-open");
   const logoutButton = host.querySelector(".auth-logout");
   const headerStatus = host.querySelector(".auth-header-status");
-  const gameSettings = initGameSettings();
+  const gameSettings = initGameSettings({
+    onAvatarSaved: value => {
+      if (user?.id !== value.id) return;
+      renderUser(value);
+      document.dispatchEvent(new CustomEvent("user-profile-updated", { detail: { user: { ...value } } }));
+    },
+    onUnauthorized: () => { renderUser(null); headerStatus.textContent = "登录已失效，请重新登录。"; },
+  });
   const userButton = host.querySelector(".auth-user");
+  const avatarImage = createAvatarImage(1, { size: 28, className: "auth-avatar" });
+  const usernameLabel = document.createElement("span");
+  usernameLabel.className = "auth-username";
+  userButton.append(avatarImage, usernameLabel);
   userButton.addEventListener("click", () => { if (user) gameSettings.open(userButton); });
   let user = null;
   let pending = null;
   let returnFocus = null;
   let submitting = false;
   let generation = 0;
+  let identityGeneration = 0;
+  document.addEventListener('auth-expired', () => { renderUser(null); headerStatus.textContent = '登录已失效，请重新登录。'; });
 
   /** 用户名只写入 textContent，避免把用户输入作为 HTML 插入。 */
   function renderUser(value) {
     const previousId = user?.id;
-    user = value;
+    user = value ? { id: value.id, username: value.username, avatar_id: value.avatar_id ?? 1 } : null;
+    if (previousId !== user?.id) identityGeneration++;
     if (previousId !== user?.id) gameSettings.close();
+    gameSettings.setUser(user);
     if (previousId !== user?.id) document.dispatchEvent(new CustomEvent("auth-changed", {
-      detail: { user: user ? { id: user.id, username: user.username } : null },
+      detail: { user: user ? { ...user } : null },
     }));
     const label = host.querySelector(".auth-user");
-    label.textContent = user?.username || "";
+    usernameLabel.textContent = user?.username || "";
+    updateAvatarImage(avatarImage, user?.avatar_id);
     label.setAttribute("aria-label", user ? `${user.username}，打开游戏设置` : "打开游戏设置");
     label.classList.toggle("hidden", !user);
     openButton.classList.toggle("hidden", Boolean(user));
@@ -161,6 +180,8 @@ export function initAuth() {
     }
   });
   logoutButton.addEventListener("click", async () => {
+    // 注销启动即废弃旧身份检查，防止晚到的 /me 重新显示已退出账号。
+    identityGeneration++;
     logoutButton.disabled = true;
     try { await authRequest("logout", { method: "POST" }); renderUser(null); openButton.focus(); }
     catch (error) { headerStatus.textContent = error.message; }
@@ -170,18 +191,24 @@ export function initAuth() {
   return {
     ready,
     /** 向首页个人记录提供公开用户信息，不返回 Cookie 或凭据。 */
-    get currentUser() { return user ? { id: user.id, username: user.username } : null; },
+    get currentUser() { return user ? { ...user } : null; },
     /** 仅在确认当前会话后续接原入口回调，错误时停在登录表单。 */
     async requireLogin(continuation) {
       await ready;
-      try { renderUser(await authRequest("me")); }
+      const identity = identityGeneration;
+      try {
+        const value = await authRequest("me");
+        if (identity !== identityGeneration) return;
+        renderUser(value);
+      }
       catch (error) {
+        if (identity !== identityGeneration) return;
         if (error.status === 401) renderUser(null);
         open(continuation);
         if (error.status !== 401) status.textContent = "暂时无法确认登录状态，请重试登录。";
         return;
       }
-      continuation();
+      return continuation();
     },
   };
 }

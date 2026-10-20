@@ -1,6 +1,6 @@
 # 登录后端运行与部署
 
-采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供逐关挑战、通关记录与四个排行榜，论坛仍为占位页面。
+采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供三个独立关卡、通关记录、三个单项排行榜以及文字论坛和站内消息。
 
 需要在本机把 MySQL 一并容器化验证时，使用项目根目录 `compose.yaml`，参见 [Docker 部署与验收](./deploy/docker/README.md)。该方案使用独立数据库与数据卷，不读取下面的 `backend/.env`；服务器宝塔复用方案仍按本文执行。
 
@@ -53,7 +53,7 @@ flyway -configFiles=backend/flyway.conf migrate
 flyway -configFiles=backend/flyway.conf info
 ```
 
-确认目标库名、备份和维护窗口。新库依次执行 `V1__create_auth_tables.sql` 和 `V2__create_ranking_tables.sql`；已有 V1 的库只新增 V2。再次 migrate 不应有待执行迁移。配置禁止 `clean` 和自动 baseline；禁止直接修改已执行 SQL，后续变更新增 V3 等新版本。
+确认目标库名、备份和维护窗口。新库依次执行 V1～V4，V3 为头像，`V4__create_forum_tables.sql` 为论坛五张表；已有库只执行尚未应用的版本。再次 migrate 不应有待执行迁移。配置禁止 `clean` 和自动 baseline；禁止直接修改已执行 SQL，后续变更新增 V5 等新版本。用户外键沿用现有 `INT UNSIGNED`，论坛内容编号采用 `BIGINT UNSIGNED`；兼容 MySQL 5.7，不依赖 CHECK 或窗口函数。
 
 2 核/2GB 与宝塔共存时先检查 `MemAvailable` 和现有服务占用；必要时停止本项目 Python，再单次执行迁移，完成后退出并启动 Python。`JAVA_ARGS=-Xms32m -Xmx256m` 仅为评估起点，不能视为 Flyway 全进程内存上限。
 
@@ -61,11 +61,18 @@ flyway -configFiles=backend/flyway.conf info
 
 | 接口 | 成功行为 | 主要失败 |
 | --- | --- | --- |
-| `POST /api/auth/login` | 首次自动注册或验证已有密码；返回 `{user:{id,username},created}` 并设置 Cookie | 401 密码错误、403 来源错误、413 请求体过大、422 输入错误、429 频率/哈希繁忙、503 数据库/执行槽繁忙 |
-| `GET /api/auth/me` | 返回 `{id,username}` | 401 会话无效、503 数据库/执行槽繁忙 |
+| `POST /api/auth/login` | 首次自动注册或验证已有密码；返回 `{user:{id,username,avatar_id},created}` 并设置 Cookie | 401 密码错误、403 来源错误、413 请求体过大、422 输入错误、429 频率/哈希繁忙、503 数据库/执行槽繁忙 |
+| `GET /api/auth/me` | 返回 `{id,username,avatar_id}` | 401 会话无效、503 数据库/执行槽繁忙 |
+| `PUT /api/auth/avatar` | 提交 `{avatar_id}`，更新当前账号并返回 `{id,username,avatar_id}` | 401 未登录、403 来源错误、413 超过4KiB、422 非严格整数/清单未知编号/多余字段、503 数据库/执行槽繁忙 |
 | `POST /api/auth/logout` | 当前会话失效并清除 Cookie，返回 204 | 403 来源错误、503 暂时不可用 |
 
 状态修改接口要求同源 `Origin` 或 `Referer`，命令行客户端也须提供正确 `Origin`。服务不开放跨源 CORS。API 响应为 `no-store`，错误不回显密码、密码摘要或数据库内部消息。
+
+登录返回的 user 同样增加 `avatar_id`。头像原图为 `source/imge/avatar/001.png` 至 `025.png`，在开发机安装 Pillow 后执行 `python source/imge/prepare_avatars.py --preview`，生成 `frontend/assets/avatars/v1/` 的25张128px WebP及共用清单。服务器硬盘保存成品，Nginx分发；数据库只存 `TINYINT UNSIGNED NOT NULL DEFAULT 1` 编号，不存图片、Base64或路径。生产 Python 不依赖 Pillow，不在请求中处理图片。图片内容更新时使用新版本资源路径，并同步生成器、清单读取路径和前端资源路径。
+
+头像业务使用独立 Controller/Service、现有用户 Repository和有界数据库执行器，认证和单字段写入在一个工作线程内提交。MySQL 5.7 不依赖 CHECK，严格输入校验按共用清单执行。三个单项榜现有用户关联查询直接带出当前头像，不改变历史成绩快照。清单只缓存编号，不缓存图片内容。
+
+上线前备份并执行 V3，再更新后端与前端；用户表 ALTER 的锁表时间需在目标版本和数据量下评估，必要时安排维护窗口。回退旧应用可保留新增列。当前资源打包已递归包含 frontend/assets 和 migrations，无需新增卷或常驻服务。头像完整实现及验收状态见 [实施报告](../docs/avatar-implementation-report.md)。
 
 用户名按 Unicode 字符计数：ASCII 字母/数字计 2，汉字计 3，上限 24。前后端固定采用 Unicode 15.1 已分配汉字范围，包含常见、兼容及补充平面汉字，排除未分配码位；更新范围时须同步两端。仅折叠 ASCII 大小写，数据库 `utf8mb4_bin` 唯一键保留其他字符差异。密码至少六个 Unicode 字符，原样保留空格与大小写；总请求体仍受 4KiB 限制。
 
@@ -102,14 +109,14 @@ cd /www/wwwroot/jobless-game
 | --- | --- |
 | `GET /api/challenges/config` | 仅返回开发通关按钮开关，默认关闭 |
 | `POST /api/challenges/start` | 登录后使用 request_id 幂等创建本轮；旧轮次失效 |
-| `POST /api/challenges/{run_id}/restart` | 校验已解锁、revision 和 request_id，重置本关与后续本轮状态 |
-| `POST /api/challenges/{run_id}/complete` | 校验本轮前序关及 attempt_id，单次只保存当前关；三关齐全自动保存总成绩 |
-| `GET /api/rankings/{category}?page=1&page_size=20` | 公开分页；category 为 total/mine/akari/sudoku；单页上限 50 |
-| `GET /api/records/me?category=total` | 登录用户自己的最佳与最近三次，重合使用同一记录 ID |
+| `POST /api/challenges/{run_id}/restart` | 校验 revision 和 request_id，仅重置指定关卡，其他关卡不受影响 |
+| `POST /api/challenges/{run_id}/complete` | 校验当前进度及 attempt_id，可按任意顺序保存单关，不生成总成绩 |
+| `GET /api/rankings/{category}?page=1&page_size=20` | 公开分页；category 为 mine/akari/sudoku；单页上限 50，total 返回 422 |
+| `GET /api/records/me?category=mine` | 默认扫雷，可切换照明/数独，返回本人最佳与最近三次，total 返回 422 |
 
-新增 `challenge_progress`（每人最多一行）、`completion_records`（每人每类最多四条）和 `leaderboard_entries`（每人每类一行）。总成绩自带三项用时快照，不依赖单项历史记录长期存在；写入按用户行锁串行化，在同一事务维护最佳、最新记录和摘要。查询先用索引读取有限页，再统计更快人数得到跨页并列名次，不使用窗口函数或持久化名次。
+沿用 `challenge_progress`（每人最多一行，存储三个独立尝试）、`completion_records`（每人每类最多四条）和 `leaderboard_entries`（每人每类一行）。停止创建和公开整轮成绩，既有总榜字段、数据及已执行迁移保留，本次无需数据库迁移。写入按用户行锁串行化，在同一事务维护单项最佳、最新记录和摘要。查询先用索引读取有限页，再统计更快人数得到跨页并列名次，不使用窗口函数或持久化名次。
 
-`duration_seconds` 必须为 0～604800 的整数；未完成用 null，不能把 0 当作未完成。`revision`、尝试和轮次必须匹配；重复上传相同数据不会追加记录，修改已经接收的成绩返回 409。未登录返回 401、顺序或轮次冲突 409、开发标记未启用 403、校验错误 422；写请求要求同源，实际请求体不超过 4KiB，数据库繁忙沿用 503。
+`duration_seconds` 必须为 0～604800 的整数；未完成用 null，不能把 0 当作未完成。重开要求匹配当前 `revision`，通关要求匹配当前关卡的尝试和进度标识，不接受未来版本；其他关重开导致的版本增长不作废本关待提交成绩。重复上传相同数据不会追加记录，修改已经接收的成绩返回 409。未登录返回 401、尝试或进度冲突 409、开发标记未启用 403、校验错误 422；写请求要求同源，实际请求体不超过 4KiB，数据库繁忙沿用 503。
 
 开发验收在专用开发库设置 `DEV_QUICK_COMPLETE_ENABLED=true` 并重启；前端读取开关后显示“开发验收：一键通关”，每次只完成当前关。默认及正式环境保持 false；关闭时专用开发标记写入被拒绝。后续移除配置、config 响应字段、`dev-quick-complete.js`、按钮和 main 中开发入口，再回归正常通关及结算。
 
@@ -128,9 +135,23 @@ npm test *> ../artifacts/frontend/auth-tests.log
 
 `test_auth.py` 使用真实 Argon2id 与模拟数据库验证规则、安全与资源拒绝；`test_mysql_integration.py` 必须使用真实 MySQL/Flyway，未配置时跳过。后者要求设置 `TEST_DATABASE_URL`（库名以 `jobless_auth_test_` 开头）与 `TEST_FLYWAY_COMMAND`，测试库由管理员预先创建，不可填生产库。测试执行两次 Flyway、检查无 Pending，并验证唯一键竞争、持久化会话及真实连接池耗尽；只删除本用例创建的随机账号。
 
-`artifacts/frontend/verify_login.py` 保留为早期登录验收材料，其数据库替身与自由选关步骤不支持当前挑战接口；当前登录与逐关回归使用下述 `verify_ranking.py`。需要 Chrome、`websocket-client`，可选依赖见 `requirements-browser.txt`。
+`artifacts/frontend/verify_login.py` 保留为早期登录验收材料，其数据库替身不支持当前挑战接口；当前登录与独立关卡回归使用下述 `verify_ranking.py`。需要 Chrome、`websocket-client`，可选依赖见 `requirements-browser.txt`。
 
-`python artifacts/frontend/verify_ranking.py` 使用临时 SQLite 与独立 Chrome 验证真实登录、逐关通关、保存失败重试、完整结算、四榜分页与手机布局，输出摘要并保存截图。临时数据在结束后清理；该验证不替代 MySQL JSON、行锁、外键与 Flyway 验收。`test_mysql_integration.py` 增加真实并发重复通关与总成绩快照验证；没有专用库和 Flyway 时明确跳过。
+`python artifacts/frontend/verify_ranking.py` 使用临时 SQLite 与独立 Chrome 验证真实登录、自由选关、单关重开、保存失败重试、单关结算、三个分榜分页与手机布局，输出摘要并保存截图。临时数据在结束后清理；该验证不替代 MySQL JSON、行锁、外键与 Flyway 验收。`test_mysql_integration.py` 覆盖真实并发重复通关与不生成整轮记录；没有专用库和 Flyway 时明确跳过。
+
+## 文字论坛与站内消息
+
+所有接口位于 `/api/forum/`：公开读取帖子摘要/详情、顶层评论、根评论下回复及目标评论上下文；写入须登录且同源。接口完整清单和规则见 [论坛实施报告](../docs/forum-implementation-report.md)。发布帖子只接收 request_id 和 body，无标题输入或生成标题；请求不能指定作者或根评论，回复根归属由服务端验证。文字仅按纯文本显示，正文2000、评论/回复500个 Unicode 码点，先去除首尾空白。V4 历史 title 列保留以兼容已有数据库，新帖写空字符串，接口和页面不返回/展示它，不需新增迁移。
+
+`POST /posts`、`POST /posts/{id}/comments` 需要 UUID `request_id`。同账号同编号同负载返回原内容，改负载409；先确认幂等再检查发布间隔。`FORUM_POST_INTERVAL_SECONDS=60`、`FORUM_COMMENT_INTERVAL_SECONDS=3` 可配置，评论与回复共用间隔，超限429携带 Retry-After。帖子及评论的点赞使用 PUT/DELETE `/posts/{id}/like`、`/comments/{id}/like`，重复调用不重复计数。用户、帖子、评论按固定顺序加锁，内容、计数和通知统一提交或回滚。
+
+`GET /notifications/unread-count` 只返回本人未读数（最多100）和最新编号；`GET /notifications` 返回有限页和 `through_id`。单条已读使用 `PUT /notifications/{id}/read`，全部已读使用 `POST /notifications/read-all` 和 `{through_id}`，不处理边界之后到达的新消息。自己互动不通知；回复只提醒直接被回复作者；首次点赞通知以固定事件键去重，取消和重新点赞不追加或重置已读。
+
+帖子和消息按 ID 倒序，评论和回复正序；`cursor` 可选，`limit` 默认20（回复10），最大50。响应包含 `items` 与可空的 `next_cursor`。列表只含160字符摘要，完整正文由详情返回；作者、当前头像和点赞状态使用批量关联，不逐条查库。上下文接口 `/posts/{post_id}/comments/{comment_id}` 返回 `target` 和 `root` 供通知直接定位。
+
+应用与两种 Nginx 模板为论坛写请求单独设置32KiB，按实际字节计数并覆盖无 Content-Length 请求；原登录、头像、挑战仍4KiB。沿用四槽同步数据库执行器、现有连接池和单 Uvicorn worker。页面可见且登录时，前一次检查结束后安排60秒下一轮；隐藏或退出停止，503遵循 Retry-After 退避。
+
+本地回归运行 `python artifacts/frontend/verify_forum.py`，完整输出重定向到日志。该脚本使用独立 Chrome、临时 SQLite 和两个真实 Cookie 账号验证发布/回复/点赞、消息定位、跨浏览器已读、手机布局和棋局恢复。真实 V4/Flyway、外键及并发测试在 `test_mysql_integration.py`，只允许配置的 `jobless_auth_test_` 专用库；缺少环境时明确跳过，不能将 SQLite 当作 MySQL 验收。
 
 ## 目标服务器资源验收
 

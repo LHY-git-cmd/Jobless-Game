@@ -16,6 +16,7 @@ class UserResponse(BaseModel):
 
     id: int
     username: str
+    avatar_id: int = 1
 
 
 class LoginResponse(BaseModel):

@@ -17,13 +17,14 @@ class ChallengeProgress(Base):
     run_id: Mapped[str] = mapped_column(String(36), unique=True)
     revision: Mapped[int] = mapped_column(Integer, nullable=False)
     game_state: Mapped[dict] = mapped_column(JSON, nullable=False)
+    # 兼容既有 Flyway 表和旧存档，独立关卡不再写入总成绩。
     total_recorded: Mapped[bool] = mapped_column(Boolean, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
 class CompletionRecord(Base):
-    """四类成绩分别保留最佳与最近三次；总榜自带三项快照。"""
+    """单项成绩保留最佳与最近三次；旧总榜快照字段仅为兼容既有数据。"""
     __tablename__ = "completion_records"
     __table_args__ = (
         UniqueConstraint("user_id", "category", "attempt_id", name="uq_completion_attempt"),

@@ -1,6 +1,6 @@
 /**
  * 无职游戏页面入口：管理扫雷、数独、照明三关与对应的规则弹窗。
- * 本轮按扫雷、照明、数独顺序挑战；按账号保存棋局，离开期间计时继续累计。
+ * 三个关卡独立开放；按账号保存棋局，离开期间计时继续累计。
  */
 
 import { createGame, revealSelected, selectCell, toggleFlag } from "./game.js";
@@ -8,8 +8,8 @@ import { createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote, sudok
 import { AKARI_SIZE, akariCell, createAkari, inspectAkari, toggleBulb } from "./akari.js";
 import { createExplosionSequence, createExplosionSound, explosionOrder } from "./mine-effects.js?v=20261019-audio-settings";
 import { getAudioSettings } from "./audio-settings.js";
-import { createSession, restartLevel, startLevel, completeLevel, levelSeconds, sessionSummary, formatTime } from "./session.js";
-import { ChallengeClient, rankingRequest } from "./ranking-client.js?v=20261019-progress";
+import { createSession, restartLevel, startLevel, completeLevel, levelSeconds, formatTime } from "./session.js?v=20261020-independent";
+import { ChallengeClient, rankingRequest } from "./ranking-client.js?v=20261020-independent";
 import { loadProgress, saveProgress, clearProgress } from "./progress.js?v=20261019-sudoku-notes";
 
 const $ = (id) => document.getElementById(id);
@@ -48,7 +48,6 @@ let quickEnabled = false;
 let development = false;
 let currentUserId = null;
 let restoring = false;
-let pendingNewRound = null;
 let progressStorage;
 try { progressStorage = window.localStorage; } catch { /* 存储不可用时保留正常游戏操作。 */ }
 const dialogIds = ["rules-dialog", "akari-rules-dialog", "sudoku-rules-dialog", "result-dialog", "settlement-dialog"];
@@ -63,25 +62,22 @@ const homeEntries = [
   { button: ui.sudokuEntry, status: $("sudoku-entry-status"), name: "第三关数独" },
 ];
 
-/** 首页按当前账号的本轮进度开放入口，返回首页或刷新后仍展示已解锁状态。 */
+/** 三关始终开放，各入口按当前账号存档展示开始、继续或已通关。 */
 function syncHomeEntries() {
   const snapshot = challenge.state ? null : loadProgress(progressStorage, currentUserId);
   const state = challenge.state ?? snapshot?.challenge.state;
   const levels = challenge.state ? session.levels : snapshot?.session.levels;
   homeEntries.forEach((entry, index) => {
-    const unlocked = index === 0 || Boolean(state?.levels.slice(0, index).every(level => level.seconds !== null));
     const completed = state?.levels[index].seconds != null;
     const started = levels?.[index].startedAt != null;
-    const label = !unlocked ? "待解锁" : completed ? "已通关" : started ? "继续游戏" : state ? "已解锁" : "开始游戏";
+    const label = completed ? "已通关" : started ? "继续游戏" : "开始游戏";
     entry.status.textContent = label;
-    entry.button.disabled = operationBusy || !unlocked;
+    entry.button.disabled = operationBusy;
     entry.button.setAttribute("aria-label", `${entry.name}，${completed ? "查看通关结果" : label}`);
   });
-  const inProgress = Boolean(state && !state.total_recorded &&
-    levels?.some(level => level.startedAt !== null || level.seconds !== null));
-  $("challenge-action").dataset.action = inProgress ? "restart" : "select";
-  $("challenge-action-label").textContent = inProgress ? "重新挑战：从第一关开始" : "选择你的挑战";
-  $("challenge-action-icon").textContent = inProgress ? "→" : "↓";
+  $("challenge-action").dataset.action = "select";
+  $("challenge-action-label").textContent = "选择你的挑战";
+  $("challenge-action-icon").textContent = "↓";
   $("challenge-action").disabled = operationBusy;
   $("challenge-action").setAttribute("aria-busy", String(operationBusy));
 }
@@ -181,7 +177,7 @@ async function restoreProgress(snapshot) {
       [renderMine, renderAkari, renderSudoku][currentIndex]();
       const activeBoard = [game, akari, sudoku][currentIndex];
       const completed = challenge.saved(currentIndex) || (currentIndex === 0 ? game?.status === "won" : activeBoard?.complete);
-      if (completed || game?.status === "lost") {
+      if (completed || (currentIndex === 0 && game?.status === "lost")) {
         [() => showMineResult(game?.status ?? "won"), showAkariResult, showSudokuResult][currentIndex]();
         if (!snapshot.dialogs.includes("result-dialog") && snapshot.resultMode) viewResult();
       }
@@ -189,7 +185,7 @@ async function restoreProgress(snapshot) {
         if (dialogIds.includes(id) && id !== "settlement-dialog") $(id).classList.remove("hidden");
       }
       // 兼容旧版本未操作且已关闭规则的存档，仍须明确点击开始后才起计时。
-      if (!completed && game?.status !== "lost" && session.levels[currentIndex].startedAt === null) showRules(currentIndex);
+      if (!completed && !(currentIndex === 0 && game?.status === "lost") && session.levels[currentIndex].startedAt === null) showRules(currentIndex);
       refreshRuleText(currentIndex);
       if (!ruleControls[currentIndex].dialog.classList.contains("hidden")) ruleControls[currentIndex].close.focus();
       if (snapshot.dialogs.includes("settlement-dialog")) openSettlement();
@@ -230,13 +226,13 @@ function recordStatus(message = "", retry = null) {
   retryOperation = retry;
 }
 
-/** 只有服务端已经接收本关才开启下一关，失效轮次不会借用旧完成状态。 */
+/** 只有服务端已经接收本关才开启本关结算，其他关始终可从首页进入。 */
 function syncProgressActions() {
   $("mine-next").disabled = !challenge.saved(0) || operationBusy;
   $("akari-next").disabled = !challenge.saved(1) || operationBusy;
   $("settlement-open").disabled = !challenge.saved(2) || operationBusy;
   if (resultMode.endsWith("won")) ui.resultPrimary.disabled = !challenge.saved(currentIndex) || operationBusy;
-  $("settlement-ranking").disabled = !challenge.state?.total_recorded;
+  $("settlement-ranking").disabled = !challenge.saved(currentIndex) || operationBusy;
   ui.sudokuNotes.disabled = !sudoku || !canPlay(2);
   for (const [index, id] of ["mine-quick", "akari-quick", "sudoku-quick"].entries()) {
     $(id).classList[quickEnabled ? "remove" : "add"]("hidden");
@@ -261,7 +257,7 @@ async function persistCompletion() {
     persistProgress();
     await request;
     document.dispatchEvent(new CustomEvent("records-updated"));
-    recordStatus(index === 2 ? "三关成绩已保存，可查看总榜。" : "通关记录已保存，下一关已解锁。");
+    recordStatus("通关记录已保存，可查看本关排行。");
   } catch (error) {
     if (generation === challenge.generation) recordStatus(error.message, persistCompletion);
   } finally {
@@ -333,15 +329,17 @@ function cancelMineExplosion() {
   mineExplosion = null;
 }
 
-/** 新局或返回首页时隐藏上一局的下一关入口。 */
+/** 新局或返回首页时隐藏上一局的结算入口。 */
 function resetCompletionActions() {
+  // 自由换关时，上一关可能尚未关闭首次规则；避免多个关卡弹窗叠在一起。
+  ruleControls.forEach(({ dialog }) => dialog.classList.add("hidden"));
   $("mine-next").classList.add("hidden");
   $("akari-next").classList.add("hidden");
   $("settlement-open").classList.add("hidden");
   $("settlement-dialog").classList.add("hidden");
 }
 
-/** 关闭结果弹窗并保留终盘，通关后在棋盘下方右侧提供下一关入口。 */
+/** 关闭结果弹窗并保留终盘，各关下方均提供单关结算入口。 */
 function viewResult() {
   ui.result.classList.add("hidden");
   if (resultMode === "mine-won") {
@@ -362,11 +360,11 @@ function viewResult() {
 
 /** 从入口进入扫雷先显示规则，确认开始后才计时。 */
 function enterGame() {
-  if (!ui.landing.classList.contains("hidden")) session = createSession();
+  if (operationBusy || saveBusy || challenge.restartPayload || !challenge.canEnter(0)) return;
+  if (game || challenge.saved(0)) { viewExistingLevel(0); return; }
   explosionSound.unlock();
-  sudoku = null;
-  akari = null;
   currentIndex = 0;
+  development = false;
   restartGame();
   ui.landing.classList.add("hidden");
   ui.sudokuScreen.classList.add("hidden");
@@ -378,7 +376,6 @@ function enterGame() {
 
 /** 清空当前扫雷棋盘与计时；服务端重开在外层确认。 */
 function restartGame() {
-  akari = sudoku = null;
   restartLevel(session, 0);
   resetCompletionActions();
   cancelMineExplosion();
@@ -435,9 +432,8 @@ function enterAkari() {
   syncProgressActions();
 }
 
-/** 重置灯泡与本关计时，前序扫雷用时保持冻结。 */
+/** 重置灯泡与本关计时，其他关卡棋盘和用时保持原样。 */
 function restartAkari() {
-  sudoku = null;
   restartLevel(session, 1);
   resetCompletionActions();
   akari = createAkari();
@@ -474,13 +470,11 @@ function viewExistingLevel(index) {
   window.scrollTo(0, 0);
 }
 
-/** 返回首页保存未完成棋局，完整结算后清理存档；旧异步响应始终失效。 */
+/** 返回首页保存所有关卡棋局和结果；旧异步响应始终失效。 */
 function returnHome() {
-  if (challenge.state?.total_recorded) clearProgress(progressStorage, currentUserId);
-  else persistProgress(true);
+  persistProgress(true);
   document.dispatchEvent(new CustomEvent("settlement-closed"));
   challenge.reset();
-  pendingNewRound = null;
   operationBusy = saveBusy = false;
   development = false;
   recordStatus();
@@ -703,8 +697,8 @@ function showMineResult(outcome) {
     updateTimer();
     resultMode = "mine-won";
     ui.resultTitle.textContent = "第一关通关成功";
-    ui.resultDescription.textContent = "已排开全部 90 个安全格。可以继续挑战照明。";
-    ui.resultPrimary.textContent = "进入第二关";
+    ui.resultDescription.textContent = `已排开全部 90 个安全格，用时 ${formatTime(session.levels[0].seconds)}。`;
+    ui.resultPrimary.textContent = "查看本关结算";
     ui.resultSecondary.textContent = "查看结果";
   } else {
     resultMode = "mine-lost";
@@ -720,16 +714,14 @@ function showMineResult(outcome) {
   syncProgressActions();
 }
 
-/** 数独完成后先祝贺，等待保存成功才能打开结算。 */
+/** 数独完成后先祝贺，等待保存成功后打开本关结算。 */
 function showSudokuResult() {
   completeLevel(session, 2);
   updateTimer();
   resultMode = "sudoku-won";
   ui.resultTitle.textContent = "恭喜你，挑战完成！";
-  ui.resultDescription.textContent = sessionSummary(session).complete
-    ? "你已完成扫雷、照明与数独三关挑战。开始结算，看看这场冒险的用时。"
-    : "你已完成最后一关数独。开始结算，查看本轮已完成关卡的用时。";
-  ui.resultPrimary.textContent = "开始结算";
+  ui.resultDescription.textContent = `你已完成数独挑战，用时 ${formatTime(session.levels[2].seconds)}。`;
+  ui.resultPrimary.textContent = "查看本关结算";
   ui.resultSecondary.textContent = "查看结果";
   ui.result.classList.remove("hidden");
   void persistCompletion();
@@ -737,14 +729,14 @@ function showSudokuResult() {
   syncProgressActions();
 }
 
-/** 照明完成后冻结秒数并提交，保存失败时保持下一关锁定。 */
+/** 照明完成后冻结秒数并提交，保存成功后可查看本关结算。 */
 function showAkariResult() {
   completeLevel(session, 1);
   updateTimer();
   resultMode = "akari-won";
   ui.resultTitle.textContent = "第二关通关成功";
-  ui.resultDescription.textContent = "所有可放灯格已照亮，数字线索也全部满足。可以继续挑战数独。";
-  ui.resultPrimary.textContent = "进入第三关";
+  ui.resultDescription.textContent = `所有可放灯格已照亮，数字线索也全部满足，用时 ${formatTime(session.levels[1].seconds)}。`;
+  ui.resultPrimary.textContent = "查看本关结算";
   ui.resultSecondary.textContent = "查看结果";
   ui.result.classList.remove("hidden");
   void persistCompletion();
@@ -764,42 +756,32 @@ function inputSudoku(value) {
   if (sudoku.complete) showSudokuResult();
 }
 
-/** 仅为成功保存完整三关的本轮展示结算。 */
+/** 仅展示当前关的已保存成绩，胜利音按本次尝试去重。 */
 function openSettlement() {
-  if (!sudoku?.complete || !challenge.state?.total_recorded || saveBusy) return;
+  if (!challenge.saved(currentIndex) || saveBusy || operationBusy) return;
   ui.result.classList.add("hidden");
-  const summary = sessionSummary(session);
-  ["mine", "akari", "sudoku"].forEach((name, index) => {
-    $("settlement-" + name).textContent = summary.times[index] === null ? "未挑战" : formatTime(summary.times[index]);
-  });
-  $("settlement-note").textContent = summary.complete
-    ? "三关全部通关，感谢你完成这场解谜之旅。"
-    : "本轮尚未完成三关。";
-  $("settlement-note").textContent += "成绩已保存。";
-  $("settlement-total-label").textContent = summary.complete ? "总共花费时间" : "已完成关卡用时合计";
-  $("settlement-total").textContent = formatTime(summary.total);
+  $("settlement-title").textContent = `${["扫雷", "照明", "数独"][currentIndex]}通关结算`;
+  $("settlement-note").textContent = "本关成绩已保存，可返回首页选择其他挑战。";
+  $("settlement-time").textContent = formatTime(challenge.state.levels[currentIndex].seconds);
   $("settlement-dialog").classList.remove("hidden");
-  document.dispatchEvent(new CustomEvent("settlement-opened", { detail: { runId: challenge.state.run_id } }));
+  document.dispatchEvent(new CustomEvent("settlement-opened", { detail: { runId: challenge.state.levels[currentIndex].attempt_id } }));
   $("settlement-home").focus();
   persistProgress();
 }
 
 // 棋盘使用事件委托，重新绘制格子后仍能处理点击。
 // 登录模块确认会话后才发出入口事件；规则阅读与计时继续由游戏模块管理。
-/** 首页入口恢复该账号的原轮次，再进入选中的已解锁关卡；第一关无存档才建新轮。 */
+/** 首页可任选一关；先恢复其他关卡进度，无存档时创建进度再进入所选关。 */
 async function enterFromHome(index) {
   if (operationBusy || ui.landing.classList.contains("hidden")) return;
   const snapshot = loadProgress(progressStorage, currentUserId);
   if (snapshot) {
-    if (!snapshot.challenge.state.levels.slice(0, index).every(level => level.seconds !== null)) return;
     if (!await restoreProgress(snapshot)) return;
     if (currentIndex !== index) {
-      if (index === 0) viewExistingLevel(0);
-      else [null, enterAkari, enterSudoku][index]();
+      [enterGame, enterAkari, enterSudoku][index]();
     }
     return;
   }
-  if (index !== 0) return;
   operationBusy = true;
   syncHomeEntries();
   const generation = challenge.generation;
@@ -809,7 +791,8 @@ async function enterFromHome(index) {
     await challenge.start();
     recordStatus();
     development = false;
-    enterGame();
+    operationBusy = false;
+    [enterGame, enterAkari, enterSudoku][index]();
   } catch (error) { if (generation === challenge.generation) recordStatus(error.message); }
   finally {
     if (generation === challenge.generation) { operationBusy = false; syncProgressActions(); }
@@ -817,38 +800,11 @@ async function enterFromHome(index) {
   }
 }
 
-/** 重新挑战新建完整轮次；创建成功后才替换旧存档，网络失败复用同一个请求编号。 */
-async function restartChallenge() {
-  if (operationBusy || saveBusy || ui.landing.classList.contains("hidden") ||
-      $("challenge-action").dataset.action !== "restart") return;
-  const nextRound = pendingNewRound ||= new ChallengeClient();
-  let generation = challenge.generation;
-  operationBusy = true;
-  syncHomeEntries();
-  recordStatus("正在从第一关重新挑战…");
-  try {
-    await nextRound.start();
-    if (generation !== challenge.generation) return;
-    challenge.restore(nextRound.snapshot());
-    generation = challenge.generation;
-    pendingNewRound = null;
-    clearProgress(progressStorage, currentUserId);
-    recordStatus();
-    development = false;
-    enterGame();
-  } catch (error) {
-    if (generation === challenge.generation) recordStatus(error.message, restartChallenge);
-  } finally {
-    if (generation === challenge.generation) { operationBusy = false; syncProgressActions(); }
-  }
-}
-
-// 普通状态保留选择关卡的滚动操作；重新挑战必须先由登录模块确认账号。
+// 首页按钮只滚动到关卡选择，不再重置整轮进度。
 $("challenge-action").addEventListener("click", () => {
   if ($("challenge-action").dataset.action === "select") $("level-select").scrollIntoView({ behavior: "smooth", block: "start" });
 });
-$("challenge-action").addEventListener("authorized-start", restartChallenge);
-// 首页三关共用登录后的续接；手工派发事件也不能绕过本轮解锁检查。
+// 首页三关共用登录后的存档续接。
 homeEntries.forEach((entry, index) => entry.button.addEventListener("authorized-start", () => enterFromHome(index)));
 $("back-button").addEventListener("click", returnHome);
 $("restart-button").addEventListener("click", () => requestRestart(0, restartGame));
@@ -860,8 +816,8 @@ $("sudoku-back").addEventListener("click", returnHome);
 $("sudoku-restart").addEventListener("click", () => requestRestart(2, restartSudoku));
 $("akari-back").addEventListener("click", returnHome);
 $("akari-restart").addEventListener("click", () => requestRestart(1, restartAkari));
-$("mine-next").addEventListener("click", enterAkari);
-$("akari-next").addEventListener("click", enterSudoku);
+$("mine-next").addEventListener("click", openSettlement);
+$("akari-next").addEventListener("click", openSettlement);
 for (const [index, controls] of ruleControls.entries()) {
   controls.open.addEventListener("click", () => {
     if (!controls.open.disabled) showRules(index);
@@ -931,16 +887,14 @@ ui.akariBoard.addEventListener("click", (event) => {
   if (akari.complete) showAkariResult();
 });
 ui.resultPrimary.addEventListener("click", () => {
-  if (resultMode === "mine-won") enterAkari();
-  else if (resultMode === "mine-lost") void requestRestart(0, restartGame);
-  else if (resultMode === "akari-won") enterSudoku();
-  else if (resultMode === "sudoku-won") openSettlement();
+  if (resultMode === "mine-lost") void requestRestart(0, restartGame);
+  else if (resultMode.endsWith("won")) openSettlement();
 });
 ui.resultSecondary.addEventListener("click", viewResult);
 $("settlement-open").addEventListener("click", openSettlement);
 $("settlement-home").addEventListener("click", returnHome);
 $("settlement-ranking").addEventListener("click", () => {
-  if (challenge.state?.total_recorded) window.location.assign("./ranking.html");
+  if (challenge.saved(currentIndex)) window.location.assign(`./ranking-${["mine", "akari", "sudoku"][currentIndex]}.html`);
 });
 for (const id of ["challenge-retry", "save-retry"]) $(id).addEventListener("click", () => { void retryOperation?.(); });
 document.addEventListener("auth-changed", (event) => {
@@ -953,7 +907,7 @@ document.addEventListener("auth-changed", (event) => {
   if (snapshot && !snapshot.atHome) void restoreProgress(snapshot);
 });
 
-/** 临时开发入口只完成当前关，动态加载便于后续删除，不更改正常解锁链路。 */
+/** 临时开发入口只完成当前关，动态加载便于后续删除。 */
 async function quickComplete() {
   if (!quickEnabled || !canPlay(currentIndex) || saveBusy || !challenge.canEnter(currentIndex)) return;
   const index = currentIndex;

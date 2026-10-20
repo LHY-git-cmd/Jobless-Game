@@ -2,8 +2,8 @@
 import { rankingRequest } from "./ranking-client.js";
 import { formatTime } from "./session.js";
 
-const CATEGORIES = ["total", "mine", "akari", "sudoku"];
-const LABELS = { total: "整轮", mine: "扫雷", akari: "照明", sudoku: "数独" };
+const CATEGORIES = ["mine", "akari", "sudoku"];
+const LABELS = { mine: "扫雷", akari: "照明", sudoku: "数独" };
 
 /** 服务器时间为 UTC，补齐无时区响应后按浏览器本地时间显示。 */
 function recordDate(value) {
@@ -19,7 +19,7 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
   const $ = id => dom.getElementById(id);
   if (!$("personal-records")) return null;
   let user = null;
-  let category = "total";
+  let category = "mine";
   let generation = 0;
 
   /** 隐藏并删除旧值，退出、换号、切换分类和请求失败时不残留私人成绩。 */
@@ -28,8 +28,6 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
     $("records-recent").classList.add("hidden");
     $("records-best-time").textContent = "";
     $("records-best-date").textContent = "";
-    $("records-breakdown").textContent = "";
-    $("records-breakdown").classList.add("hidden");
     $("records-list").replaceChildren();
   }
 
@@ -51,21 +49,15 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
       throw new Error("通关记录返回异常，请重试。");
     }
     if (!data.best && data.recent.length === 0) {
-      $("records-status").textContent = category === "total"
-        ? "还没有整轮通关记录，完成三关后会显示在这里。"
-        : `还没有${LABELS[category]}通关记录，完成挑战后会显示在这里。`;
+      $("records-status").textContent = `还没有${LABELS[category]}通关记录，完成挑战后会显示在这里。`;
       return;
     }
     $("records-status").textContent = "";
     if (data.best) {
-      $("records-best-label").textContent = `${LABELS[category]}最佳`;
+      $("records-best-label").textContent = "最佳";
       $("records-best-time").textContent = formatTime(data.best.duration_seconds);
       $("records-best-date").textContent = recordDate(data.best.completed_at);
       $("records-best").classList.remove("hidden");
-      if (category === "total" && Array.isArray(data.best.times) && data.best.times.length === 3) {
-        $("records-breakdown").textContent = data.best.times.map((seconds, index) => `${["扫雷", "照明", "数独"][index]} ${formatTime(seconds)}`).join(" · ");
-        $("records-breakdown").classList.remove("hidden");
-      }
     }
     const rows = data.recent.map((record, index) => {
       const row = dom.createElement("li");
@@ -149,7 +141,8 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
   for (const [index, name] of CATEGORIES.entries()) {
     $(`records-${name}`).addEventListener("click", () => select(name));
     $(`records-${name}`).addEventListener("keydown", event => {
-      const next = { ArrowRight: (index + 1) % 4, ArrowLeft: (index + 3) % 4, Home: 0, End: 3 }[event.key];
+      const next = { ArrowRight: (index + 1) % CATEGORIES.length,
+        ArrowLeft: (index + CATEGORIES.length - 1) % CATEGORIES.length, Home: 0, End: CATEGORIES.length - 1 }[event.key];
       if (next === undefined) return;
       event.preventDefault();
       $(`records-${CATEGORIES[next]}`).focus();

@@ -83,12 +83,12 @@ export class ChallengeClient {
     return this.accept(state, generation);
   }
 
-  /** 只允许本轮前序关卡全部保存后进入下一关。 */
+  /** 有效进度中的三个关卡全部开放。 */
   canEnter(index) {
-    return Boolean(this.state && this.state.levels.slice(0, index).every((level) => level.seconds !== null));
+    return Boolean(this.state && Number.isInteger(index) && index >= 0 && index < 3);
   }
 
-  /** 当前关保存后才能启用下一关与结算操作。 */
+  /** 当前关保存后启用本关结算操作。 */
   saved(index) { return this.state?.levels[index]?.seconds !== null && this.state?.levels[index]?.seconds !== undefined; }
 
   /** 服务器回包必须属于仍然有效的本地轮次。 */
@@ -101,7 +101,7 @@ export class ChallengeClient {
 
   /** 首次提交冻结完整负载；失败重试不能改变秒数、开发标记或尝试标识。 */
   async complete(index, seconds, development = false) {
-    if (!this.canEnter(index)) throw new Error("请先通关并保存前一关。");
+    if (!this.canEnter(index)) throw new Error("请先选择有效关卡。");
     const generation = this.generation;
     if (!this.pending.has(index)) this.pending.set(index, {
       category: ["mine", "akari", "sudoku"][index], revision: this.state.revision,
@@ -113,15 +113,15 @@ export class ChallengeClient {
     return state;
   }
 
-  /** 重开失败时复用同一标识，成功后清理本关和后续的旧提交负载。 */
+  /** 重开失败复用同一标识，成功后仅清理本关的旧提交负载。 */
   async restart(index) {
-    if (!this.canEnter(index)) throw new Error("请先通关并保存前一关。");
+    if (!this.canEnter(index)) throw new Error("请先选择有效关卡。");
     const generation = this.generation;
     this.restartPayload ||= { category: ["mine", "akari", "sudoku"][index], revision: this.state.revision, request_id: this.uuid() };
     const state = await this.request(`challenges/${this.state.run_id}/restart`, { method: "POST", body: this.restartPayload });
     this.accept(state, generation);
     this.restartPayload = null;
-    for (let i = index; i < 3; i++) this.pending.delete(i);
+    this.pending.delete(index);
     return state;
   }
 }

@@ -58,7 +58,7 @@ def ranking_rows(db, category, page, page_size):
     rank = select(func.count() + 1).select_from(LeaderboardEntry).where(
         LeaderboardEntry.category == category, LeaderboardEntry.best_duration_seconds < ranked.c.duration_seconds
     ).correlate(ranked).scalar_subquery().label("rank")
-    rows = db.execute(select(ranked, rank, User.username, CompletionRecord.mine_seconds,
+    rows = db.execute(select(ranked, rank, User.username, User.avatar_id, CompletionRecord.mine_seconds,
                              CompletionRecord.akari_seconds, CompletionRecord.sudoku_seconds)
                       .join(User, User.id == ranked.c.user_id)
                       .join(CompletionRecord, CompletionRecord.id == ranked.c.best_record_id)
