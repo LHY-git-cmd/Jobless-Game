@@ -26,9 +26,13 @@ export function actionIcon(name) {
 export function contentCard(item,{kind='posts',summary=false,onLike,onReply,onReplies,onComments,commentsId,commentsExpanded=false}={}) {
   const card=node('article','forum-card');card.dataset.id=item.id;
   if(kind==='comments')card.id=`comment-${item.id}`;
-  const author=node('div','forum-author'),name=node('span','',item.username);
-  author.append(createAvatarImage(item.avatar_id),name,timeLabel(item.created_at));card.append(author);
-  if(kind==='comments'&&item.reply_to_username)card.append(node('p','forum-reply-label',`回复 ${item.reply_to_username}`));
+  const author=node('div','forum-author'),identity=node('span','forum-identity');
+  identity.append(node('span','forum-username',item.username));
+  // 发送者与接收者共用一个不换行的身份组，正文不再被回复关系额外占一行。
+  const label=kind==='comments'&&item.reply_to_username?`${item.username} 回复 ${item.reply_to_username}`:item.username;
+  if(kind==='comments'&&item.reply_to_username)identity.append(node('span','forum-relation','回复'),node('span','forum-reply-recipient',item.reply_to_username));
+  identity.title=label;identity.setAttribute('aria-label',label);
+  author.append(createAvatarImage(item.avatar_id),identity,timeLabel(item.created_at));card.append(author);
   const text=node('p',summary?'forum-excerpt':'forum-body');
   if(summary&&kind==='posts'){
     // 正文本身作为详情链接，不从正文另造一个标题，也不重复显示摘要。

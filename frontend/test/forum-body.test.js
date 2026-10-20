@@ -55,3 +55,15 @@ test('帖子左侧评论数可点击，右侧拇指点赞与回复图标独立�
   finish({like_count:3,liked_by_me:true});await request;
   assert.equal(like.attributes['aria-pressed'],'true');assert.match(like.attributes['aria-label'],/取消点赞.*3/);
 });
+
+test('回复者、回复关系和接收者同属头像旁的一行，正文保持独立',t=>{
+  const original=globalThis.document;t.after(()=>{globalThis.document=original;});
+  globalThis.document={createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag)};
+  const card=contentCard({id:9,username:'first',reply_to_username:'test',root_comment_id:3,body:'正文',created_at:'2026-10-21T00:00:00',like_count:0,liked_by_me:false},{kind:'comments'});
+  const author=card.children.find(node=>node.className==='forum-author');
+  const identity=author.children.find(node=>node.className==='forum-identity');assert.ok(identity);
+  assert.deepEqual(identity.children.map(node=>node.textContent),['first','回复','test']);
+  assert.equal(identity.attributes['aria-label'],'first 回复 test');
+  assert.equal(card.children.some(node=>node.className==='forum-reply-label'),false);
+  assert.equal(card.children.find(node=>node.className==='forum-body').textContent,'正文');
+});

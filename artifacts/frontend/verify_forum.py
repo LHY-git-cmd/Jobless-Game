@@ -121,6 +121,7 @@ def main():
                     click('#comment-submit');wait("!!document.querySelector('.forum-replies article')")
                     wait("!document.querySelector('#comment-submit').disabled")
                     reply_id=evaluate("Number(document.querySelector('.forum-replies article').dataset.id)")
+                    assert evaluate(f"(()=>{{const c=document.querySelector('#comment-{reply_id}'),n=c.querySelector('.forum-author .forum-identity');return !!n&&n.getAttribute('aria-label')==='论坛乙 回复 论坛甲'&&!c.querySelector(':scope > .forum-reply-label');}})()"), '回复双方应合并到作者行'
                     click('#forum-post .forum-like');wait("document.querySelector('#forum-post .forum-like').getAttribute('aria-pressed')==='true'")
                     click('#forum-comments > article .forum-like');wait("document.querySelector('#forum-comments > article .forum-like').getAttribute('aria-pressed')==='true'")
                     checks.append('两个账号发布根评论及回复，帖子和评论点赞服务端确认')
@@ -153,11 +154,15 @@ def main():
                         command('Emulation.setDeviceMetricsOverride',{'width':width,'height':844,'deviceScaleFactor':1,'mobile':False})
                         wait("!!document.querySelector('#forum-post article')")
                         assert evaluate('document.documentElement.scrollWidth<=innerWidth'), f'{width}px 页面溢出'
+                        assert evaluate("(()=>{const g=document.querySelector('.forum-replies .forum-identity'),n=[...g.children].map(x=>x.getBoundingClientRect());return n.length===3&&n.every(r=>Math.abs(r.top-n[0].top)<1);})()"), '手机上回复双方也应保持同一行'
+                        if width==320:
+                            assert evaluate("(()=>{const g=document.querySelector('.forum-replies .forum-identity'),a=g.firstElementChild,b=g.lastElementChild,old=[a.textContent,b.textContent];a.textContent='甲乙丙丁戊己庚辛';b.textContent='壬癸子丑寅卯辰巳';const r=[...g.children].map(x=>x.getBoundingClientRect());const ok=r.every(x=>Math.abs(x.top-r[0].top)<1)&&document.documentElement.scrollWidth<=innerWidth&&(a.scrollWidth>a.clientWidth||b.scrollWidth>b.clientWidth);[a.textContent,b.textContent]=old;return ok;})()"), '长姓名应省略而不是折行或横向溢出'
                         shot(f'forum-post-mobile-{width}.png')
                         click('.notification-bell');wait("document.querySelector('#notification-dialog').open")
                         assert evaluate("(()=>{const d=document.querySelector('#notification-dialog');return d.scrollWidth<=d.clientWidth&&d.getBoundingClientRect().right<=innerWidth;})()")
                         shot(f'forum-messages-mobile-{width}.png');click('.notification-close')
                     checks.append('375px/320px 详情和消息无横向溢出')
+                    checks.append('回复双方姓名同排显示，320px长姓名省略且不横向溢出')
                     navigate('forum-post.html?id=999999');wait("document.querySelector('#forum-status')?.textContent.includes('不存在')")
                     navigate('forum-post.html?id=invalid');wait("document.querySelector('#forum-status')?.textContent.includes('无效')")
                     checks.append('不存在和无效帖子有清晰返回入口')
