@@ -67,3 +67,13 @@ test('回复者、回复关系和接收者同属头像旁的一行，正文保�
   assert.equal(card.children.some(node=>node.className==='forum-reply-label'),false);
   assert.equal(card.children.find(node=>node.className==='forum-body').textContent,'正文');
 });
+
+test('主帖与评论标记独立层级，主帖头像比评论大4px',t=>{
+  const original=globalThis.document;t.after(()=>{globalThis.document=original;});
+  globalThis.document={createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag)};
+  const item={id:4,username:'玩家',body:'文字',created_at:'2026-10-21T00:00:00',like_count:0,liked_by_me:false};
+  const post=contentCard(item),comment=contentCard({...item,root_comment_id:1},{kind:'comments'});
+  assert.equal(post.dataset.kind,'posts');assert.equal(comment.dataset.kind,'comments');
+  const image=card=>flatten(card).find(node=>node.tagName==='img');
+  assert.equal(image(post).width-image(comment).width,4);
+});

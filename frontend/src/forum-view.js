@@ -25,6 +25,7 @@ export function actionIcon(name) {
 /** 卡片由服务端确认的数据渲染，只有请求成功才更新点赞计数。 */
 export function contentCard(item,{kind='posts',summary=false,onLike,onReply,onReplies,onComments,commentsId,commentsExpanded=false}={}) {
   const card=node('article','forum-card');card.dataset.id=item.id;
+  card.dataset.kind=kind;
   if(kind==='comments')card.id=`comment-${item.id}`;
   const author=node('div','forum-author'),identity=node('span','forum-identity');
   identity.append(node('span','forum-username',item.username));
@@ -32,7 +33,7 @@ export function contentCard(item,{kind='posts',summary=false,onLike,onReply,onRe
   const label=kind==='comments'&&item.reply_to_username?`${item.username} 回复 ${item.reply_to_username}`:item.username;
   if(kind==='comments'&&item.reply_to_username)identity.append(node('span','forum-relation','回复'),node('span','forum-reply-recipient',item.reply_to_username));
   identity.title=label;identity.setAttribute('aria-label',label);
-  author.append(createAvatarImage(item.avatar_id),identity,timeLabel(item.created_at));card.append(author);
+  author.append(createAvatarImage(item.avatar_id,{size:kind==='posts'?36:32}),identity,timeLabel(item.created_at));card.append(author);
   const text=node('p',summary?'forum-excerpt':'forum-body');
   if(summary&&kind==='posts'){
     // 正文本身作为详情链接，不从正文另造一个标题，也不重复显示摘要。

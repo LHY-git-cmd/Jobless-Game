@@ -1,6 +1,6 @@
 /** 列表帖子下的按需评论与直接回复，复用现有游标和固定负载幂等客户端。 */
 import {validateText} from './forum-client.js';
-import {contentCard,node,actionIcon} from './forum-view.js?v=20261021-reply-line';
+import {contentCard,node,actionIcon} from './forum-view.js?v=20261021-thread-height';
 
 /** 每个帖子拥有独立展开、分页和输入状态；移除后废弃全部晚到回包。 */
 export function createPostThread(item,{client,onLike,onLogin,onEditorOpen=()=>{},onError=()=>{}}) {
@@ -18,7 +18,9 @@ export function createPostThread(item,{client,onLike,onLogin,onEditorOpen=()=>{}
   const path=`posts/${item.id}/comments`;
   const replies=new Map();let alive=true,loaded=false,busy=false,cursor=null,target=null,commentsRequest=null;
   const post=contentCard(item,{summary:true,onLike,onReply:()=>reply(),onComments:()=>toggle(),commentsId:panel.id});
-  panel.append(list,message,more,form);element.append(post,panel);
+  // 评论单独滚动，回复输入留在滚动区外，单帖高度不会随展开页数增长。
+  const scroll=node('div','forum-inline-scroll');scroll.setAttribute('tabindex','0');scroll.setAttribute('role','region');scroll.setAttribute('aria-label','评论列表，可在此滚动');
+  scroll.append(list,message,more);panel.append(scroll,form);element.append(post,panel);
 
   /** 仍在当前页面与当前身份下才允许绘制响应。 */
   function active(epoch){return alive&&epoch===client.epoch;}
@@ -108,6 +110,9 @@ export function createPostThread(item,{client,onLike,onLogin,onEditorOpen=()=>{}
     }
     for(const card of [...list.children].sort((a,b)=>Number(a.dataset.id)-Number(b.dataset.id)))list.append(card);
     message.textContent='';
+    // 新发送的内容只移动评论区域，避免连带拉长帖子或把页面滚离输入框。
+    const created=list.querySelector(`[data-id="${comment.id}"]`);
+    if(created){const rect=created.getBoundingClientRect(),viewport=scroll.getBoundingClientRect();if(rect.top<viewport.top||rect.bottom>viewport.bottom)scroll.scrollTop+=rect.top-viewport.top;}
   }
 
   more.addEventListener('click',()=>void load(loaded));

@@ -1,8 +1,8 @@
 /** 论坛正文列表：有限游标、登录续接发帖、固定负载重试和返回位置恢复。 */
 import { initAuth } from './auth.js?v=20261020-body-only';
 import { ForumClient, validateText } from './forum-client.js';
-import { bindCount, showError } from './forum-view.js?v=20261021-reply-line';
-import { createPostThread } from './forum-discussion.js?v=20261021-reply-line';
+import { bindCount, showError } from './forum-view.js?v=20261021-thread-height';
+import { createPostThread } from './forum-discussion.js?v=20261021-thread-height';
 
 const auth=initAuth(),client=new ForumClient();
 const $=selector=>document.querySelector(selector),list=$('#forum-list'),status=$('#forum-status'),more=$('#forum-more'),retry=$('#forum-retry');

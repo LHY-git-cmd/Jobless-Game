@@ -1,7 +1,7 @@
 /** 独立帖子详情：评论分页、两层回复、通知直接定位与失败保留输入。 */
 import { initAuth } from './auth.js?v=20261020-body-only';
 import { ForumClient, validateText } from './forum-client.js';
-import { contentCard, node, bindCount, showError } from './forum-view.js?v=20261021-reply-line';
+import { contentCard, node, bindCount, showError } from './forum-view.js?v=20261021-thread-height';
 
 const auth=initAuth(),client=new ForumClient(),$=selector=>document.querySelector(selector);
 const params=new URLSearchParams(location.search),raw=params.get('id'),postId=/^[1-9]\d*$/.test(raw||'')?Number(raw):0;

@@ -260,11 +260,14 @@ def main():
                     click(selector+' > .forum-card .forum-count');assert evaluate(f"document.querySelector('{selector} .forum-inline-discussion').hidden")
                     click(selector+' > .forum-card .forum-count');assert evaluate(f"performance.getEntriesByType('resource').filter(r=>r.name.includes('/api/forum/posts/{inline_id}/comments')).length")==reads
                     checks.append('列表评论20条及回复10条有限分页，反复展开不重复请求')
+                    assert evaluate(f"(()=>{{const t=document.querySelector('{selector}'),p=t.querySelector(':scope > .forum-card'),c=t.querySelector('.forum-inline-comments > article'),d=t.querySelector('.forum-replies > article'),s=t.querySelector('.forum-inline-scroll');const font=(e,sel)=>parseFloat(getComputedStyle(e.querySelector(sel)).fontSize);return p.querySelector('.avatar-image').width-c.querySelector('.avatar-image').width===4&&font(p,'.forum-author')-font(c,'.forum-author')===3&&font(p,'.forum-excerpt')-font(c,'.forum-body')===3&&s&&s.scrollHeight>s.clientHeight&&t.getBoundingClientRect().height<=722&&parseFloat(getComputedStyle(d).borderTopWidth)===1&&parseFloat(getComputedStyle(d).borderLeftWidth)===0&&getComputedStyle(d).backgroundColor==='rgba(0, 0, 0, 0)'&&getComputedStyle(d).borderRadius==='0px';}})()"), '主帖应较大、评论区有高度边界且深层回复仅用线分隔'
+                    checks.append('主帖头像大4px/字体大3px，单帖限高且深层回复使用细分隔线')
                     for width in (1280,375,320):
                         command('Emulation.setDeviceMetricsOverride',{'width':width,'height':960,'deviceScaleFactor':1,'mobile':False})
                         evaluate(f"document.querySelector('{selector}').scrollIntoView({{block:'start'}})")
                         wait(f"getComputedStyle(document.querySelector('{selector} .forum-inline-discussion')).opacity==='1'")
                         assert evaluate('document.documentElement.scrollWidth<=innerWidth')
+                        assert evaluate(f"(()=>{{const t=document.querySelector('{selector}'),s=t.querySelector('.forum-inline-scroll');s.scrollTop=s.scrollHeight;return t.getBoundingClientRect().height<=722&&s.scrollTop>0&&s.getAttribute('tabindex')==='0';}})()"), '桌面和手机均应在评论区内滚动而非无限伸长'
                         assert evaluate(f"(()=>{{const c=document.querySelector('{selector} > .forum-card'),n=c.querySelector('.forum-count').getBoundingClientRect(),l=c.querySelector('.forum-like').getBoundingClientRect(),r=c.querySelector('.forum-reply').getBoundingClientRect();return n.left<l.left&&l.left<r.left&&l.height>=44&&r.width>=44&&parseFloat(getComputedStyle(c).paddingLeft)<=16;}})()")
                         shot(f'forum-inline-{width}.png')
                     checks.append('紧凑卡片及左评论右图标布局在桌面/375px/320px可用')
