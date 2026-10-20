@@ -1,4 +1,4 @@
-/** 临时开发验收：仅解当前已解锁关卡；生产开关关闭，不参与正常规则实现，后续可删除。 */
+/** 临时开发验收：仅解当前关卡；生产开关关闭，不参与正常规则实现，后续可删除。 */
 import { SUDOKU_SOLUTION } from "./sudoku.js";
 import { inspectAkari } from "./akari.js";
 

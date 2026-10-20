@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#102b3c" />
     <title>无职游戏</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20261018-island" />
-    <link rel="stylesheet" href="./styles.css?v=20261020-avatars" />
+    <link rel="stylesheet" href="./styles.css?v=20261020-independent" />
   </head>
   <body>
     <div class="world-background" aria-hidden="true"></div>
@@ -35,19 +35,17 @@
               <button type="button" id="records-refresh" class="records-refresh hidden" aria-label="刷新我的通关记录">刷新</button>
             </header>
             <div class="records-tabs" role="tablist" aria-label="选择通关记录类型">
-              <button type="button" id="records-total" role="tab" aria-selected="true" aria-controls="records-panel">整轮</button>
-              <button type="button" id="records-mine" role="tab" aria-selected="false" aria-controls="records-panel" tabindex="-1">扫雷</button>
+              <button type="button" id="records-mine" role="tab" aria-selected="true" aria-controls="records-panel" tabindex="0">扫雷</button>
               <button type="button" id="records-akari" role="tab" aria-selected="false" aria-controls="records-panel" tabindex="-1">照明</button>
               <button type="button" id="records-sudoku" role="tab" aria-selected="false" aria-controls="records-panel" tabindex="-1">数独</button>
             </div>
-            <div class="records-panel" id="records-panel" role="tabpanel" aria-labelledby="records-total" aria-busy="false" tabindex="0">
+            <div class="records-panel" id="records-panel" role="tabpanel" aria-labelledby="records-mine" aria-busy="false" tabindex="0">
               <p id="records-status" class="records-status" role="status">登录后查看</p>
               <button type="button" id="records-login" class="records-login">登录查看记录</button>
               <button type="button" id="records-retry" class="hidden">重新加载</button>
               <div class="records-best hidden" id="records-best">
-                <div class="records-best-heading"><span id="records-best-label">整轮最佳</span><span class="records-best-mark" aria-hidden="true">◇</span></div>
+                <div class="records-best-heading"><span id="records-best-label">扫雷最佳</span><span class="records-best-mark" aria-hidden="true">◇</span></div>
                 <strong id="records-best-time"></strong><span id="records-best-date" class="records-best-date"></span>
-                <p id="records-breakdown" class="records-breakdown hidden"></p>
               </div>
               <section id="records-recent" class="records-recent hidden" aria-labelledby="records-recent-title">
                 <h3 id="records-recent-title">最近三次</h3>
@@ -58,22 +56,22 @@
           </aside>
         </div>
         <div class="level-select" id="level-select">
-          <div class="section-heading"><h2>冒险启程</h2><span>通关后解锁下一关</span></div>
+          <div class="section-heading"><h2>冒险启程</h2><span>三个关卡，自由选择</span></div>
           <div class="level-grid">
             <button type="button" id="start-button" class="level-card mine-card">
               <span class="level-art"><img src="./assets/minesweeper.webp" width="320" height="320" alt="" /></span>
               <span class="level-content"><span class="level-number">第一关 / 01</span><span class="level-title">扫雷</span><span class="level-description">步步推理，避开暗藏的危险。</span><span class="level-meta">10 × 10 棋盘<span>10 颗地雷</span></span></span>
               <span class="level-arrow" id="mine-entry-status" aria-hidden="true">开始游戏</span>
             </button>
-            <button type="button" id="akari-entry" class="level-card light-card" disabled aria-label="第二关照明，通关本轮扫雷后解锁">
+            <button type="button" id="akari-entry" class="level-card light-card" aria-label="第二关照明，开始游戏">
               <span class="level-art"><img src="./assets/bulb.webp" width="320" height="320" alt="" /></span>
               <span class="level-content"><span class="level-number">第二关 / 02</span><span class="level-title">照明</span><span class="level-description">点亮一盏灯，驱散每一处黑暗。</span><span class="level-meta">10 × 10 棋盘<span>光影推理</span></span></span>
-              <span class="level-arrow" id="akari-entry-status" aria-hidden="true">待解锁</span>
+              <span class="level-arrow" id="akari-entry-status" aria-hidden="true">开始游戏</span>
             </button>
-            <button type="button" id="sudoku-entry" class="level-card sudoku-card" disabled aria-label="第三关数独，通关本轮照明后解锁">
+            <button type="button" id="sudoku-entry" class="level-card sudoku-card" aria-label="第三关数独，开始游戏">
               <span class="level-art sudoku-art" aria-hidden="true"><span>1</span><span>2</span><span></span><span></span><span>5</span><span>6</span><span>7</span><span></span><span>9</span></span>
               <span class="level-content"><span class="level-number">第三关 / 03</span><span class="level-title">数独</span><span class="level-description">在九宫格里，发现秩序之美。</span><span class="level-meta">9 × 9 棋盘<span>中等难度</span></span></span>
-              <span class="level-arrow" id="sudoku-entry-status" aria-hidden="true">待解锁</span>
+              <span class="level-arrow" id="sudoku-entry-status" aria-hidden="true">开始游戏</span>
             </button>
           </div>
         </div>
@@ -106,7 +104,7 @@
         </div>
         <div class="game-bottom">
           <p id="game-message" role="status" aria-live="polite"></p>
-          <button type="button" id="mine-next" class="next-level hidden">下一关：照明 →</button>
+          <button type="button" id="mine-next" class="next-level hidden">查看本关结算</button>
         </div>
       </section>
 
@@ -137,7 +135,7 @@
           <button type="button" id="sudoku-clear">清除选中格</button>
           <button type="button" id="sudoku-check">检查进度</button>
         </div>
-        <div class="game-bottom"><button type="button" id="settlement-open" class="next-level hidden">开始结算</button></div>
+        <div class="game-bottom"><button type="button" id="settlement-open" class="next-level hidden">查看本关结算</button></div>
         <p id="sudoku-message" role="status" aria-live="polite"></p>
       </section>
 
@@ -156,7 +154,7 @@
         </div>
         <div class="game-bottom">
           <p id="akari-status">已照亮：0 格</p>
-          <button type="button" id="akari-next" class="next-level hidden">下一关：数独 →</button>
+          <button type="button" id="akari-next" class="next-level hidden">查看本关结算</button>
         </div>
         <p id="akari-message" role="status" aria-live="polite"></p>
       </section>
@@ -223,14 +221,9 @@
     <div class="dialog-backdrop hidden" id="settlement-dialog" role="dialog" aria-modal="true" aria-labelledby="settlement-title">
       <div class="dialog-card settlement-card">
         <p class="eyebrow">冒险记录 / RESULTS</p>
-        <h2 id="settlement-title">本轮结算</h2>
+        <h2 id="settlement-title">通关结算</h2>
         <p id="settlement-note"></p>
-        <ol class="settlement-levels" aria-label="各关通关时间">
-          <li><span><small>第一关</small>扫雷</span><strong id="settlement-mine">—</strong></li>
-          <li><span><small>第二关</small>照明</span><strong id="settlement-akari">—</strong></li>
-          <li><span><small>第三关</small>数独</span><strong id="settlement-sudoku">—</strong></li>
-        </ol>
-        <div class="settlement-total"><span id="settlement-total-label">总共花费时间</span><strong id="settlement-total">00:00</strong></div>
+        <div class="settlement-total"><span>本关通关用时</span><strong id="settlement-time">00:00</strong></div>
         <div class="dialog-actions">
           <button type="button" id="settlement-home">返回首页</button>
           <button type="button" id="settlement-ranking" disabled>查看排行</button>
@@ -238,7 +231,7 @@
       </div>
     </div>
 
-    <script type="module" src="./src/main.js?v=20261019-sudoku-notes"></script>
-    <script type="module" src="./src/auth-game.js?v=20261020-avatars"></script>
+    <script type="module" src="./src/main.js?v=20261020-independent"></script>
+    <script type="module" src="./src/auth-game.js?v=20261020-independent"></script>
   </body>
 </html>

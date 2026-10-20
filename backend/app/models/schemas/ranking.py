@@ -6,7 +6,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 Game = Literal["mine", "akari", "sudoku"]
-Category = Literal["mine", "akari", "sudoku", "total"]
+Category = Game
 
 
 class StartRequest(BaseModel):
@@ -16,13 +16,13 @@ class StartRequest(BaseModel):
 
 
 class RestartRequest(StartRequest):
-    """重开已解锁关卡，版本阻止旧请求清空新进度。"""
+    """重开指定关卡，版本阻止旧请求清空新进度。"""
     category: Game
     revision: int = Field(ge=0, strict=True)
 
 
 class CompleteRequest(BaseModel):
-    """仅接收当前关用时，总用时由服务端汇总。"""
+    """仅接收当前关用时与尝试编号，各关独立保存。"""
     model_config = ConfigDict(extra="forbid")
     category: Game
     revision: int = Field(ge=0, strict=True)
@@ -43,11 +43,11 @@ class ProgressResponse(BaseModel):
     run_id: str
     revision: int
     levels: list[LevelResponse]
-    total_recorded: bool
+    total_recorded: bool  # 保留旧客户端/存档形状；新进度始终不生成整轮成绩。
 
 
 class RecordResponse(BaseModel):
-    """个人通关快照，总榜带三个原轮次用时。"""
+    """个人单关通关快照。"""
     id: int
     duration_seconds: int
     completed_at: datetime

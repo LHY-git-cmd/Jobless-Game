@@ -351,7 +351,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .ranking-heading { padding: 18px 4px 28px; }
 .ranking-heading h1 { margin: 10px 0; color: var(--gold); font-size: clamp(32px, 5vw, 48px); letter-spacing: 4px; font-weight: 500; }
 .ranking-subtitle { margin: 0; color: var(--muted); line-height: 1.6; }
-.ranking-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
+.ranking-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
 .ranking-tabs a { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 8px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: #0b263bc9; text-decoration: none; transition: background-color 160ms, border-color 160ms; }
 .ranking-tabs a:hover { background: var(--surface-raised); color: var(--gold); }
 .ranking-tabs a[aria-current=page] { color: var(--gold-ink); background: var(--gold); border-color: var(--gold); font-weight: 700; }
@@ -409,7 +409,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .records-eyebrow { margin: 0 0 8px; font-size: 10px; letter-spacing: 1.6px; color: var(--gold); }
 .records-header h2 { margin: 0; font-size: 22px; font-weight: 500; letter-spacing: 2px; }
 .records-refresh { flex-shrink: 0; min-height: 44px; padding: 8px 10px; background: transparent; border-color: transparent; color: var(--muted); font-size: 13px; }
-.records-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 18px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: #071e3266; }
+.records-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 18px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: #071e3266; }
 .records-tabs button { min-width: 0; min-height: 44px; padding: 8px 4px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--muted); font-size: 13px; }
 .records-tabs button[aria-selected=true] { color: var(--gold-ink); border-color: var(--gold); background: var(--gold); font-weight: 600; }
 .records-panel { flex: 1; min-width: 0; }

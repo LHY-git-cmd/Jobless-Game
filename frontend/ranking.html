@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="无职游戏三关总榜，查看玩家最佳通关成绩。" />
+    <meta name="description" content="无职游戏扫雷排行，查看玩家最佳通关成绩。" />
     <meta name="theme-color" content="#102b3c" />
-    <title>三关总榜 · 无职游戏</title>
+    <title>扫雷排行 · 无职游戏</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico?v=20261018-island" />
-    <link rel="stylesheet" href="./styles.css?v=20261020-avatars" />
+    <link rel="stylesheet" href="./styles.css?v=20261020-independent" />
   </head>
-  <body data-ranking="total">
+  <body data-ranking="mine">
     <div class="world-background" aria-hidden="true"></div>
     <div class="page destination-page ranking-page">
       <header class="landing-header">
@@ -23,28 +23,27 @@
       <main class="ranking-content" aria-labelledby="ranking-title">
         <section class="ranking-heading">
           <p class="eyebrow">冒险记录 / RANKINGS</p>
-          <h1 id="ranking-title">三关总榜</h1><p class="ranking-subtitle">同一轮，三场解谜。</p>
+          <h1 id="ranking-title">扫雷排行</h1><p class="ranking-subtitle">步步推理，争分夺秒。</p>
         </section>
-        <nav class="ranking-tabs" aria-label="选择排行榜"><a href="./ranking.html" aria-current="page">三关总榜</a>
-<a href="./ranking-mine.html">扫雷排行</a>
+        <nav class="ranking-tabs" aria-label="选择排行榜"><a href="./ranking-mine.html" aria-current="page">扫雷排行</a>
 <a href="./ranking-akari.html">照明排行</a>
 <a href="./ranking-sudoku.html">数独排行</a></nav>
         <section class="ranking-card" aria-labelledby="ranking-title">
-          <div class="ranking-rule"><span class="ranking-rule-mark" aria-hidden="true">◇</span><p>同一轮依次完成扫雷、照明与数独，按最好一轮的总时长排名。</p></div>
+          <div class="ranking-rule"><span class="ranking-rule-mark" aria-hidden="true">◇</span><p>按扫雷历史最短通关时长排名。<small>用时越短，排名越高。同秒并列，后续名次跳号。</small></p></div>
           <div class="ranking-table-wrap">
             <table id="ranking-table" aria-busy="true" aria-describedby="ranking-status">
-              <caption class="sr-only">三关总榜：名次、玩家用户名与最佳通关用时</caption>
-              <thead><tr><th scope="col">名次</th><th scope="col">玩家</th><th scope="col">最佳总用时</th></tr></thead>
+              <caption class="sr-only">扫雷排行：名次、玩家用户名与最佳通关用时</caption>
+              <thead><tr><th scope="col">名次</th><th scope="col">玩家</th><th scope="col">最佳用时</th></tr></thead>
               <tbody id="ranking-rows"></tbody>
             </table>
           </div>
           <div class="ranking-feedback"><p id="ranking-status" role="status">正在读取冒险记录…</p><button type="button" id="ranking-retry" class="hidden">重新加载</button></div>
           <nav class="ranking-pagination" aria-label="榜单分页"><button type="button" id="ranking-prev" disabled>上一页</button><span id="ranking-page" aria-live="polite">1 / 1</span><button type="button" id="ranking-next" disabled>下一页</button></nav>
         </section>
-        <a class="ranking-play" href="./index.html">开始新一轮挑战 <span aria-hidden="true">→</span></a>
+        <a class="ranking-play" href="./index.html">选择关卡挑战 <span aria-hidden="true">→</span></a>
       </main>
-      <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span></footer>
+      <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span><span>扫雷 / 照明 / 数独</span></footer>
     </div>
-    <script type="module" src="./src/ranking-page.js?v=20261020-avatars"></script>
+    <script type="module" src="./src/ranking-page.js?v=20261020-independent"></script>
   </body>
 </html>

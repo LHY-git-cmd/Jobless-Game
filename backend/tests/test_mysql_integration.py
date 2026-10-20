@@ -160,7 +160,7 @@ class MySQLIntegrationTests(TestCase):
                 idx = ranking_service.GAMES.index(category)
                 payload = CompleteRequest(category=category, revision=0, attempt_id=state["levels"][idx]["attempt_id"], duration_seconds=seconds)
                 state = ranking_service.complete_transaction(raw, state["run_id"], payload, db, get_settings())
-            self.assertEqual(ranking_service.records_transaction(raw, "total", db)["best"]["times"], [10, 20, 30])
+            self.assertEqual(db.scalars(select(CompletionRecord).where(CompletionRecord.user_id == user_id, CompletionRecord.category == "total")).all(), [])
 
     def test_pool_exhaustion_returns_bounded_503(self):
         # 占满真实测试库三条连接，API 应在 pool_timeout 后返回 503。

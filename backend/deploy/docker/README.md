@@ -23,7 +23,7 @@ Compose 项目名称为 `jobless-game-local`，数据库名为 `jobless_game_loc
 
 ## 验证与数据持久化
 
-在开发机运行以下脚本，验证 HTML、音频分段读取/缓存、同源限制、登录 Cookie、关卡顺序、三关保存、幂等和四榜。脚本会创建一个随机本地验收账号，使用临时 Cookie 文件；不输出凭据。
+在开发机运行以下脚本，验证 HTML、音频分段读取/缓存、同源限制、登录 Cookie、任意顺序独立通关、幂等和三个单项榜，并确认总榜接口停用。脚本会创建一个随机本地验收账号，使用临时 Cookie 文件；不输出凭据。
 
 ```text
 python backend/deploy/docker/verify_docker.py

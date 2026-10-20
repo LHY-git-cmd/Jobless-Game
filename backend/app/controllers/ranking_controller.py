@@ -38,7 +38,7 @@ async def progress(run_id: UUID, request: Request, db: Session = Depends(get_db)
 
 @router.post("/challenges/{run_id}/restart", response_model=ProgressResponse)
 async def restart(run_id: UUID, payload: RestartRequest, request: Request, db: Session = Depends(get_db)):
-    """重开操作由后端校验本轮的前序进度。"""
+    """重开操作只重置指定关卡的尝试。"""
     enforce_same_origin(request)
     return await service.execute(service.restart_transaction, token(request), str(run_id), payload, db)
 
@@ -58,6 +58,6 @@ async def rankings(category: Category, page: int = Query(default=1, ge=1, le=100
 
 
 @router.get("/records/me", response_model=PersonalRecordsResponse)
-async def records(request: Request, category: Category = "total", db: Session = Depends(get_db)):
+async def records(request: Request, category: Category = "mine", db: Session = Depends(get_db)):
     """个人记录只返回当前 Cookie 账号的数据。"""
     return await service.execute(service.records_transaction, token(request), category, db)

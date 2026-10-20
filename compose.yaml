@@ -94,7 +94,7 @@ services:
     pids_limit: 64
     logging: *logging
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/rankings/total?page_size=1', timeout=4).read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/rankings/mine?page_size=1', timeout=4).read()"]
       interval: 15s
       timeout: 5s
       retries: 4

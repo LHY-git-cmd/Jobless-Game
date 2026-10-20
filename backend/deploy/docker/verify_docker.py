@@ -76,15 +76,14 @@ def main():
         check(current["username"] == name, "Cookie must restore the correct user")
         state, _ = request("/api/challenges/start", {"request_id": str(uuid4())})
         complete_path = f"/api/challenges/{state['run_id']}/complete"
-        request(complete_path, {"category": "sudoku", "revision": state["revision"],
-                               "attempt_id": state["levels"][2]["attempt_id"], "duration_seconds": 30}, expected=409)
-        for index, (category, seconds) in enumerate(zip(["mine", "akari", "sudoku"], [10, 20, 30])):
+        # 从数独开始，验证真实数据库链路不再限制逐关通关。
+        for index, category, seconds in [(2, "sudoku", 30), (0, "mine", 10), (1, "akari", 20)]:
             payload = {"category": category, "revision": state["revision"],
                        "attempt_id": state["levels"][index]["attempt_id"], "duration_seconds": seconds}
             state, _ = request(complete_path, payload)
             repeated, _ = request(complete_path, payload)
             check(state == repeated, "Repeated completion must be idempotent")
-        check(state["total_recorded"] is True, "Three games must create the total snapshot")
+        check(state["total_recorded"] is False, "Independent games must not create a total snapshot")
         cookies.save(ignore_discard=True, ignore_expires=True)
         state_file.write_text(json.dumps({"base": base, "username": name, "user_id": current["id"]}), encoding="utf-8")
     else:
@@ -96,16 +95,16 @@ def main():
         check(current["id"] == saved["user_id"], "The original session must survive container recreation")
         name = saved["username"]
 
-    # 四榜和个人记录必须读取真实 MySQL 中的同一轮数据。
-    for category, duration in [("mine", 10), ("akari", 20), ("sudoku", 30), ("total", 60)]:
+    # 三个单项榜和个人记录必须读取真实 MySQL 中的独立关卡成绩。
+    for category, duration in [("mine", 10), ("akari", 20), ("sudoku", 30)]:
         records, _ = request(f"/api/records/me?category={category}")
         check(records["best"]["duration_seconds"] == duration, "Saved best duration must match")
         check(len(records["recent"]) == 1, "Idempotent retries must not add duplicate records")
         ranking, _ = request(f"/api/rankings/{category}")
         check(any(row["username"] == name and row["duration_seconds"] == duration for row in ranking["entries"]),
               "The local verification account must appear on each leaderboard")
-        if category == "total":
-            check(records["best"]["times"] == [10, 20, 30], "Total snapshot must retain each game's duration")
+    request("/api/rankings/total", expected=422)
+    request("/api/records/me?category=total", expected=422)
     print(f"Docker HTTP verification ({args.phase}): {passed} checks passed, 0 failed")
 
 

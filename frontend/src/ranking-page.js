@@ -1,4 +1,4 @@
-/** 四个排行榜页面共用的分页、空榜、失败重试和快照明细渲染。 */
+/** 三个单关排行榜共用的分页、空榜、失败重试和头像渲染。 */
 import { initAuth } from "./auth.js?v=20261020-avatars";
 import { rankingRequest } from "./ranking-client.js";
 import { formatTime } from "./session.js";
@@ -20,7 +20,7 @@ function cell(text, className = "") {
   return element;
 }
 
-/** 总榜明细始终取最佳轮次的三个秒数，不读取单项历史最佳。 */
+/** 渲染各玩家的单关历史最佳成绩。 */
 function renderRows(entries) {
   const fragment = document.createDocumentFragment();
   for (const entry of entries) {
@@ -39,15 +39,6 @@ function renderRows(entries) {
     const strong = document.createElement("strong");
     strong.textContent = formatTime(entry.duration_seconds);
     result.append(strong);
-    if (category === "total" && Array.isArray(entry.times)) {
-      const details = document.createElement("details");
-      const summary = document.createElement("summary");
-      summary.textContent = "本轮三关用时";
-      const breakdown = document.createElement("p");
-      breakdown.textContent = entry.times.map((seconds, index) => `${["扫雷", "照明", "数独"][index]} ${formatTime(seconds)}`).join(" · ");
-      details.append(summary, breakdown);
-      result.append(details);
-    }
     row.append(result);
     fragment.append(row);
   }

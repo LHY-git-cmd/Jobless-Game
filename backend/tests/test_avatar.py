@@ -85,23 +85,21 @@ class AvatarTests(TestCase):
         self.assertEqual(response.headers["cache-control"], "no-store")
 
     def test_rankings_use_current_avatar_without_rewriting_records(self):
-        """四榜直接读取当前用户头像，成绩快照和时间保持不变。"""
+        """三个单关榜直接读取当前用户头像，成绩快照和时间保持不变。"""
         with self.sessions() as db:
-            for number, category in enumerate(("mine", "akari", "sudoku", "total"), 1):
+            for number, category in enumerate(("mine", "akari", "sudoku"), 1):
                 record = CompletionRecord(id=number, user_id=1, category=category, run_id=str(uuid4()),
-                    attempt_id=str(uuid4()), duration_seconds=30, completed_at=utc_now(),
-                    mine_seconds=10 if category == "total" else None, akari_seconds=10 if category == "total" else None,
-                    sudoku_seconds=10 if category == "total" else None)
+                    attempt_id=str(uuid4()), duration_seconds=30, completed_at=utc_now())
                 db.add(record)
                 db.flush()
                 db.add(LeaderboardEntry(user_id=1, category=category, best_record_id=number, best_duration_seconds=30, achieved_at=utc_now()))
             db.commit()
         self.assertEqual(self.client.put("/api/auth/avatar", json={"avatar_id": 18}).status_code, 200)
-        for category in ("mine", "akari", "sudoku", "total"):
+        for category in ("mine", "akari", "sudoku"):
             row = self.client.get(f"/api/rankings/{category}").json()["entries"][0]
             self.assertEqual((row["avatar_id"], row["duration_seconds"], row["rank"]), (18, 30, 1))
         with self.sessions() as db:
-            self.assertEqual(len(db.scalars(select(CompletionRecord)).all()), 4)
+            self.assertEqual(len(db.scalars(select(CompletionRecord)).all()), 3)
 
 
 class AvatarAssetsTests(TestCase):

@@ -1,6 +1,6 @@
 # 登录后端运行与部署
 
-采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供逐关挑战、通关记录与四个排行榜，论坛仍为占位页面。
+采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供三个独立关卡、通关记录与三个单项排行榜，论坛仍为占位页面。
 
 需要在本机把 MySQL 一并容器化验证时，使用项目根目录 `compose.yaml`，参见 [Docker 部署与验收](./deploy/docker/README.md)。该方案使用独立数据库与数据卷，不读取下面的 `backend/.env`；服务器宝塔复用方案仍按本文执行。
 
@@ -70,7 +70,7 @@ flyway -configFiles=backend/flyway.conf info
 
 登录返回的 user 同样增加 `avatar_id`。头像原图为 `source/imge/avatar/001.png` 至 `025.png`，在开发机安装 Pillow 后执行 `python source/imge/prepare_avatars.py --preview`，生成 `frontend/assets/avatars/v1/` 的25张128px WebP及共用清单。服务器硬盘保存成品，Nginx分发；数据库只存 `TINYINT UNSIGNED NOT NULL DEFAULT 1` 编号，不存图片、Base64或路径。生产 Python 不依赖 Pillow，不在请求中处理图片。图片内容更新时使用新版本资源路径，并同步生成器、清单读取路径和前端资源路径。
 
-头像业务使用独立 Controller/Service、现有用户 Repository和有界数据库执行器，认证和单字段写入在一个工作线程内提交。MySQL 5.7 不依赖 CHECK，严格输入校验按共用清单执行。四榜现有用户关联查询直接带出当前头像，不改变历史成绩快照。清单只缓存编号，不缓存图片内容。
+头像业务使用独立 Controller/Service、现有用户 Repository和有界数据库执行器，认证和单字段写入在一个工作线程内提交。MySQL 5.7 不依赖 CHECK，严格输入校验按共用清单执行。三个单项榜现有用户关联查询直接带出当前头像，不改变历史成绩快照。清单只缓存编号，不缓存图片内容。
 
 上线前备份并执行 V3，再更新后端与前端；用户表 ALTER 的锁表时间需在目标版本和数据量下评估，必要时安排维护窗口。回退旧应用可保留新增列。当前资源打包已递归包含 frontend/assets 和 migrations，无需新增卷或常驻服务。头像完整实现及验收状态见 [实施报告](../docs/avatar-implementation-report.md)。
 
@@ -109,14 +109,14 @@ cd /www/wwwroot/jobless-game
 | --- | --- |
 | `GET /api/challenges/config` | 仅返回开发通关按钮开关，默认关闭 |
 | `POST /api/challenges/start` | 登录后使用 request_id 幂等创建本轮；旧轮次失效 |
-| `POST /api/challenges/{run_id}/restart` | 校验已解锁、revision 和 request_id，重置本关与后续本轮状态 |
-| `POST /api/challenges/{run_id}/complete` | 校验本轮前序关及 attempt_id，单次只保存当前关；三关齐全自动保存总成绩 |
-| `GET /api/rankings/{category}?page=1&page_size=20` | 公开分页；category 为 total/mine/akari/sudoku；单页上限 50 |
-| `GET /api/records/me?category=total` | 登录用户自己的最佳与最近三次，重合使用同一记录 ID |
+| `POST /api/challenges/{run_id}/restart` | 校验 revision 和 request_id，仅重置指定关卡，其他关卡不受影响 |
+| `POST /api/challenges/{run_id}/complete` | 校验当前进度及 attempt_id，可按任意顺序保存单关，不生成总成绩 |
+| `GET /api/rankings/{category}?page=1&page_size=20` | 公开分页；category 为 mine/akari/sudoku；单页上限 50，total 返回 422 |
+| `GET /api/records/me?category=mine` | 默认扫雷，可切换照明/数独，返回本人最佳与最近三次，total 返回 422 |
 
-新增 `challenge_progress`（每人最多一行）、`completion_records`（每人每类最多四条）和 `leaderboard_entries`（每人每类一行）。总成绩自带三项用时快照，不依赖单项历史记录长期存在；写入按用户行锁串行化，在同一事务维护最佳、最新记录和摘要。查询先用索引读取有限页，再统计更快人数得到跨页并列名次，不使用窗口函数或持久化名次。
+沿用 `challenge_progress`（每人最多一行，存储三个独立尝试）、`completion_records`（每人每类最多四条）和 `leaderboard_entries`（每人每类一行）。停止创建和公开整轮成绩，既有总榜字段、数据及已执行迁移保留，本次无需数据库迁移。写入按用户行锁串行化，在同一事务维护单项最佳、最新记录和摘要。查询先用索引读取有限页，再统计更快人数得到跨页并列名次，不使用窗口函数或持久化名次。
 
-`duration_seconds` 必须为 0～604800 的整数；未完成用 null，不能把 0 当作未完成。`revision`、尝试和轮次必须匹配；重复上传相同数据不会追加记录，修改已经接收的成绩返回 409。未登录返回 401、顺序或轮次冲突 409、开发标记未启用 403、校验错误 422；写请求要求同源，实际请求体不超过 4KiB，数据库繁忙沿用 503。
+`duration_seconds` 必须为 0～604800 的整数；未完成用 null，不能把 0 当作未完成。重开要求匹配当前 `revision`，通关要求匹配当前关卡的尝试和进度标识，不接受未来版本；其他关重开导致的版本增长不作废本关待提交成绩。重复上传相同数据不会追加记录，修改已经接收的成绩返回 409。未登录返回 401、尝试或进度冲突 409、开发标记未启用 403、校验错误 422；写请求要求同源，实际请求体不超过 4KiB，数据库繁忙沿用 503。
 
 开发验收在专用开发库设置 `DEV_QUICK_COMPLETE_ENABLED=true` 并重启；前端读取开关后显示“开发验收：一键通关”，每次只完成当前关。默认及正式环境保持 false；关闭时专用开发标记写入被拒绝。后续移除配置、config 响应字段、`dev-quick-complete.js`、按钮和 main 中开发入口，再回归正常通关及结算。
 
@@ -135,9 +135,9 @@ npm test *> ../artifacts/frontend/auth-tests.log
 
 `test_auth.py` 使用真实 Argon2id 与模拟数据库验证规则、安全与资源拒绝；`test_mysql_integration.py` 必须使用真实 MySQL/Flyway，未配置时跳过。后者要求设置 `TEST_DATABASE_URL`（库名以 `jobless_auth_test_` 开头）与 `TEST_FLYWAY_COMMAND`，测试库由管理员预先创建，不可填生产库。测试执行两次 Flyway、检查无 Pending，并验证唯一键竞争、持久化会话及真实连接池耗尽；只删除本用例创建的随机账号。
 
-`artifacts/frontend/verify_login.py` 保留为早期登录验收材料，其数据库替身与自由选关步骤不支持当前挑战接口；当前登录与逐关回归使用下述 `verify_ranking.py`。需要 Chrome、`websocket-client`，可选依赖见 `requirements-browser.txt`。
+`artifacts/frontend/verify_login.py` 保留为早期登录验收材料，其数据库替身不支持当前挑战接口；当前登录与独立关卡回归使用下述 `verify_ranking.py`。需要 Chrome、`websocket-client`，可选依赖见 `requirements-browser.txt`。
 
-`python artifacts/frontend/verify_ranking.py` 使用临时 SQLite 与独立 Chrome 验证真实登录、逐关通关、保存失败重试、完整结算、四榜分页与手机布局，输出摘要并保存截图。临时数据在结束后清理；该验证不替代 MySQL JSON、行锁、外键与 Flyway 验收。`test_mysql_integration.py` 增加真实并发重复通关与总成绩快照验证；没有专用库和 Flyway 时明确跳过。
+`python artifacts/frontend/verify_ranking.py` 使用临时 SQLite 与独立 Chrome 验证真实登录、自由选关、单关重开、保存失败重试、单关结算、三个分榜分页与手机布局，输出摘要并保存截图。临时数据在结束后清理；该验证不替代 MySQL JSON、行锁、外键与 Flyway 验收。`test_mysql_integration.py` 覆盖真实并发重复通关与不生成整轮记录；没有专用库和 Flyway 时明确跳过。
 
 ## 目标服务器资源验收
 

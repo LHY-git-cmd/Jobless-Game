@@ -1,4 +1,4 @@
-"""用独立无头 Chrome 和临时 SQLite 验证真实 API/UI、逐关开发验收及手机榜单。
+"""用独立无头 Chrome 和临时 SQLite 验证真实 API/UI、独立关卡、单关结算及手机榜单。
 
 所有账号与成绩仅存在临时数据库，不连接项目 MySQL；不替代真实 Flyway/InnoDB 验收。
 截图写入 artifacts/frontend，完整日志由调用方重定向；依赖 requirements-browser.txt。
@@ -137,182 +137,144 @@ def main():
                 command("Emulation.setDeviceMetricsOverride", {"width": 1280, "height": 960, "deviceScaleFactor": 1, "mobile": False})
                 navigate("ranking.html")
                 wait("document.querySelector('#ranking-status').textContent.includes('没有记录')")
-                assert evaluate("document.querySelector('#ranking-rows').children.length") == 0
-                checks.append("未登录空榜与四榜导航")
+                assert evaluate("document.body.dataset.ranking==='mine' && document.querySelectorAll('.ranking-tabs a').length===3")
+                assert evaluate("document.body.textContent.includes('三关总榜')") is False
+                checks.append("原排行榜入口默认扫雷分榜，导航只保留三个单项榜")
+
                 navigate("index.html")
-                assert evaluate("document.querySelector('#akari-entry').disabled && document.querySelector('#sudoku-entry').disabled")
-                click("#start-button")
+                assert evaluate("!document.querySelector('#akari-entry').disabled && !document.querySelector('#sudoku-entry').disabled")
+                click("#sudoku-entry")
                 wait("document.querySelector('#auth-dialog').open")
                 evaluate("document.querySelector('#auth-username').value='验收玩家'; document.querySelector('#auth-password').value='test-secret';")
                 click(".auth-submit")
+                wait("!document.querySelector('#sudoku-rules-dialog').classList.contains('hidden')")
+                assert evaluate("document.querySelector('#sudoku-timer').textContent") == "00:00"
+                click("#sudoku-rules-close")
+                click("#sudoku-back")
+                click("#akari-entry")
+                wait("!document.querySelector('#akari-rules-dialog').classList.contains('hidden')")
+                click("#akari-rules-close")
+                click("#akari-board button[data-index='0']")
+                click("#akari-back")
+                checks.append("未登录可任选关卡，登录后直接进入数独和照明")
+                click("#start-button")
                 wait("!document.querySelector('#rules-dialog').classList.contains('hidden')")
                 click("#rules-close")
-                wait("!document.querySelector('audio[data-music=background]').paused && document.querySelector('audio[data-music=background]').currentTime>0")
-                assert evaluate("document.querySelector('audio[data-music=background]').loop")
-                assert evaluate("document.querySelector('audio[data-music=background]').duration>0")
-                checks.append("指定背景MP3真实解码并循环播放")
+                click("#restart-button")
+                wait("!document.querySelector('#rules-dialog').classList.contains('hidden') && !document.querySelector('#rules-close').disabled")
+                click("#rules-close")
+                click("#back-button")
+                click("#akari-entry")
+                wait("!document.querySelector('#akari-screen').classList.contains('hidden')")
+                assert evaluate("document.querySelector('#akari-board button[data-index=\"0\"]').classList.contains('bulb')")
+                checks.append("重开扫雷保留照明原棋盘")
+                click("#akari-back")
+                click("#start-button")
+                wait("!document.querySelector('#game-screen').classList.contains('hidden')")
                 command("Network.setBlockedURLs", {"urls": ["*api/challenges/*/complete*"]})
                 click("#mine-quick")
                 wait("!document.querySelector('#save-retry').classList.contains('hidden')")
                 assert evaluate("document.querySelector('#result-primary').disabled")
                 command("Network.setBlockedURLs", {"urls": []})
                 click("#save-retry")
-                wait("!document.querySelector('#result-primary').disabled")
-                assert evaluate("document.querySelector('#akari-screen').classList.contains('hidden')")
-                checks.append("真实注册登录、逐关锁定、通关保存失败重试")
-                shot("ranking-dev-completion.png")
-                click("#result-primary")
-                click("#akari-rules-close")
-                click("#akari-quick")
-                wait("!document.querySelector('#result-primary').disabled")
-                assert evaluate("document.querySelector('#sudoku-screen').classList.contains('hidden')")
-                click("#result-primary")
-                click("#sudoku-rules-close")
-                click("#sudoku-quick")
-                wait("!document.querySelector('#result-primary').disabled")
-                assert evaluate("document.querySelector('audio[data-music=victory]').paused")
+                wait("!document.querySelector('#result-dialog').classList.contains('hidden') && !document.querySelector('#result-primary').disabled")
                 click("#result-primary")
                 wait("!document.querySelector('#settlement-dialog').classList.contains('hidden')")
-                wait("!document.querySelector('audio[data-music=victory]').paused && document.querySelector('audio[data-music=victory]').currentTime>0")
-                assert evaluate("document.querySelector('audio[data-music=victory]').duration>0")
-                assert evaluate("document.querySelector('audio[data-music=background]').paused")
-                command("Input.dispatchKeyEvent", {"type":"keyDown", "key":"Escape", "code":"Escape", "windowsVirtualKeyCode":27})
-                command("Input.dispatchKeyEvent", {"type":"keyUp", "key":"Escape", "code":"Escape", "windowsVirtualKeyCode":27})
-                wait("document.querySelector('#settlement-dialog').classList.contains('hidden')")
-                assert evaluate("document.querySelector('audio[data-music=victory]').paused")
-                wait("!document.querySelector('audio[data-music=background]').paused")
-                click("#settlement-open")
-                assert evaluate("document.querySelector('audio[data-music=victory]').paused")
-                click("#global-music")
-                assert evaluate("document.querySelector('#global-music').getAttribute('aria-pressed')==='false'")
-                assert evaluate("document.querySelector('audio[data-music=background]').paused")
-                checks.append("真实MP3结算播放、关闭停止、同轮不重播和全局音乐开关")
-                assert evaluate("document.querySelector('#settlement-ranking').disabled") is False
-                assert evaluate("document.querySelector('#settlement-note').textContent.includes('已保存')")
+                assert evaluate("document.querySelector('#settlement-title').textContent") == "扫雷通关结算"
+                assert evaluate("document.querySelector('#settlement-total')===null && document.querySelector('#settlement-mine')===null")
                 shot("ranking-settlement.png")
-                checks.append("开发按钮只完成当前关及完整三关结算")
-                wait("document.querySelector('#records-best-time').textContent !== ''")
+                checks.append("保存失败可重试，扫雷独立结算且无整轮汇总")
+                click("#settlement-home")
+                wait("document.querySelector('#records-best-time').textContent!==''")
+                assert evaluate("document.querySelectorAll('.records-tabs button').length") == 3
+                click("#sudoku-entry")
+                wait("!document.querySelector('#sudoku-screen').classList.contains('hidden')")
+                click("#sudoku-quick")
+                wait("!document.querySelector('#result-dialog').classList.contains('hidden') && !document.querySelector('#result-primary').disabled")
+                click("#result-primary")
+                wait("document.querySelector('#settlement-title').textContent==='数独通关结算'")
+                click("#settlement-home")
+                click("#akari-entry")
+                wait("!document.querySelector('#akari-screen').classList.contains('hidden')")
+                click("#akari-quick")
+                wait("!document.querySelector('#result-dialog').classList.contains('hidden') && !document.querySelector('#result-primary').disabled")
+                click("#result-primary")
+                wait("document.querySelector('#settlement-title').textContent==='照明通关结算'")
+                click("#settlement-home")
+                assert evaluate("Array.from(document.querySelectorAll('.level-arrow')).every(el=>el.textContent==='已通关')")
+                assert evaluate("document.querySelector('#challenge-action-label').textContent") == "选择你的挑战"
+                checks.append("任意顺序通关均单关结算，全部完成后仍保留结果")
+                click("#start-button")
+                wait("!document.querySelector('#result-dialog').classList.contains('hidden')")
+                click("#result-secondary")
+                click("#restart-button")
+                wait("!document.querySelector('#rules-dialog').classList.contains('hidden')")
+                click("#back-button")
+                assert evaluate("document.querySelector('#akari-entry-status').textContent==='已通关' && document.querySelector('#sudoku-entry-status').textContent==='已通关'")
+                navigate("index.html")
+                click("#sudoku-entry")
+                wait("!document.querySelector('#result-dialog').classList.contains('hidden')")
+                checks.append("全通关后可单关重开，刷新仍保留其他关卡成绩")
+                assert evaluate("(async()=>{const r=await fetch('/api/rankings/total');return r.status})()") == 422
+                assert evaluate("(async()=>{const r=await fetch('/api/records/me?category=total');return r.status})()") == 422
                 with sessions() as db:
+                    assert db.query(CompletionRecord).filter_by(category="total").count() == 0
+                    assert db.query(LeaderboardEntry).filter_by(category="total").count() == 0
+                    # 分页仅写入临时验收库的扫雷记录。
                     for index in range(25):
                         user = User(username="测试玩家" + str(index), username_key="seed" + str(index), password_hash="not-a-login-account", created_at=utc_now())
                         db.add(user)
                         db.flush()
-                        record = CompletionRecord(user_id=user.id, category="total", run_id=str(uuid4()), attempt_id=str(uuid4()), duration_seconds=90 + index,
-                                                  mine_seconds=20, akari_seconds=30, sudoku_seconds=40 + index, completed_at=utc_now())
+                        record = CompletionRecord(user_id=user.id, category="mine", run_id=str(uuid4()), attempt_id=str(uuid4()), duration_seconds=90 + index, completed_at=utc_now())
                         db.add(record)
                         db.flush()
-                        db.add(LeaderboardEntry(user_id=user.id, category="total", best_record_id=record.id, best_duration_seconds=record.duration_seconds, achieved_at=record.completed_at))
+                        db.add(LeaderboardEntry(user_id=user.id, category="mine", best_record_id=record.id, best_duration_seconds=record.duration_seconds, achieved_at=record.completed_at))
                     db.commit()
+                checks.append("总榜和整轮记录接口停用，完成三关不产生总榜数据库记录")
+                click("#result-primary")
                 click("#settlement-ranking")
-                wait("!!document.querySelector('#ranking-rows') && document.querySelector('#ranking-rows').children.length===20")
-                assert evaluate("document.querySelector('#global-music').getAttribute('aria-pressed')==='false'")
-                click("#ranking-rows details summary")
+                wait("location.pathname.endsWith('ranking-sudoku.html') && document.querySelector('#ranking-rows')?.children.length===1")
+                checks.append("单关结算跳转对应分榜")
+                navigate("ranking.html")
+                wait("document.querySelector('#ranking-rows').children.length===20")
                 shot("ranking-desktop.png")
                 click("#ranking-next")
                 wait("document.querySelector('#ranking-page').textContent==='2 / 2'")
                 assert evaluate("document.querySelector('#ranking-rows').children.length") == 6
                 assert evaluate("document.querySelector('#ranking-rows tr td').textContent") == "21"
-                checks.append("总榜快照展开、20人分页与跨页名次")
-                command("Emulation.setDeviceMetricsOverride", {"width": 375, "height": 900, "deviceScaleFactor": 1, "mobile": True})
-                navigate("ranking.html")
-                wait("document.querySelector('#ranking-rows').children.length===20")
-                click("#ranking-rows details summary")
-                assert evaluate("document.documentElement.scrollWidth <= innerWidth")
-                shot("ranking-mobile.png")
-                for filename in ["ranking-mine.html", "ranking-akari.html", "ranking-sudoku.html"]:
-                    navigate(filename)
-                    wait("document.querySelector('#ranking-rows').children.length===1")
+                checks.append("单项榜20人分页和跨页名次")
+                for width in [375, 320]:
+                    command("Emulation.setDeviceMetricsOverride", {"width": width, "height": 900, "deviceScaleFactor": 1, "mobile": True})
+                    for filename in ["ranking.html", "ranking-mine.html", "ranking-akari.html", "ranking-sudoku.html"]:
+                        navigate(filename)
+                        wait("document.querySelector('#ranking-rows').children.length>0")
+                        assert evaluate("document.documentElement.scrollWidth <= innerWidth")
+                        assert evaluate("document.querySelectorAll('.ranking-tabs a').length") == 3
+                    if width == 375:
+                        shot("ranking-single-mobile.png")
+                    navigate("index.html")
+                    # 从榜单返回可能恢复数独结果；先返回首页再检查实际可见的个人面板。
+                    evaluate("document.querySelector('#sudoku-back').click()")
+                    wait("!document.querySelector('#landing').classList.contains('hidden')")
+                    wait("document.querySelectorAll('.records-tabs button').length===3")
+                    evaluate("document.querySelector('#personal-records').scrollIntoView({block:'start'})")
                     assert evaluate("document.documentElement.scrollWidth <= innerWidth")
-                    assert evaluate("document.querySelector('.ranking-tabs [aria-current=page]').getAttribute('href')") == "./" + filename
-                    assert evaluate("document.querySelector('#global-music').getAttribute('aria-pressed')==='false'")
-                shot("ranking-single-mobile.png")
-                checks.append("三个独立单项页、登录跨页恢复、375px无横向溢出")
+                    if width == 375:
+                        shot("personal-records-mobile.png")
+                checks.append("375/320px三个榜单与个人记录无横向溢出")
                 command("Network.setBlockedURLs", {"urls": ["*api/rankings/*"]})
                 navigate("ranking.html")
                 wait("!document.querySelector('#ranking-retry').classList.contains('hidden')")
                 command("Network.setBlockedURLs", {"urls": []})
                 click("#ranking-retry")
                 wait("document.querySelector('#ranking-rows').children.length===20")
-                checks.append("榜单加载失败与重新加载")
-                settings.dev_quick_complete_enabled = False
+                checks.append("榜单加载失败后可重试")
                 navigate("index.html")
-                wait("!document.querySelector('.auth-user').classList.contains('hidden')")
-                click("#start-button")
-                wait("!document.querySelector('#rules-dialog').classList.contains('hidden')")
-                assert evaluate("document.querySelector('#mine-quick').classList.contains('hidden')")
-                checks.append("开发开关关闭后正常挑战可用且按钮隐藏")
-                # 首页个人记录沿用真实账号会话，退出必须立即清除私人成绩。
-                navigate("index.html")
-                wait("!!document.querySelector('#records-best-time').textContent")
                 click(".auth-logout")
                 wait("!document.querySelector('#records-login').classList.contains('hidden')")
                 assert evaluate("document.querySelector('#records-best-time').textContent") == ""
                 assert evaluate("document.querySelector('#records-list').children.length") == 0
-                click("#records-login")
-                wait("document.querySelector('#auth-dialog').open")
-                evaluate("document.querySelector('#auth-username').value='记录玩家'; document.querySelector('#auth-password').value='test-secret';")
-                click(".auth-submit")
-                wait("document.querySelector('#records-status').textContent.includes('还没有')")
-                assert evaluate("document.querySelector('#landing').classList.contains('hidden')") is False
-                checks.append("个人窗口退出清空、登录入口与新账号空记录")
-                # 通过真实写接口产生四轮记录，检查最佳在最近三次外也能同时展示。
-                evaluate("""(async () => {
-                  const post = async (path, body) => {
-                    const response = await fetch('/api/' + path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-                    if (!response.ok) throw new Error('记录验收写入失败');
-                    return response.json();
-                  };
-                  for (const times of [[15,30,50],[25,40,65],[30,45,70],[27,42,66]]) {
-                    let state = await post('challenges/start', {request_id:crypto.randomUUID()});
-                    for (let i=0;i<3;i++) state = await post('challenges/' + state.run_id + '/complete', {
-                      category:['mine','akari','sudoku'][i], revision:state.revision,
-                      attempt_id:state.levels[i].attempt_id, duration_seconds:times[i]
-                    });
-                  }
-                })()""")
-                click("#records-refresh")
-                wait("document.querySelector('#records-best-time').textContent==='01:35'")
-                assert evaluate("document.querySelector('#records-list').children.length") == 3
-                assert evaluate("document.querySelector('#records-list li strong').textContent") == "02:15"
-                assert evaluate("document.querySelector('#records-list .records-badge')===null")
-                assert evaluate("document.querySelector('#records-breakdown').textContent.includes('扫雷 00:15')")
-                for category, best in [("mine", "00:15"), ("akari", "00:30"), ("sudoku", "00:50")]:
-                    click("#records-" + category)
-                    wait("document.querySelector('#records-best-time').textContent==='" + best + "'")
-                    assert evaluate("document.querySelector('#records-list').children.length") == 3
-                click("#records-total")
-                wait("document.querySelector('#records-best-time').textContent==='01:35'")
-                checks.append("个人四类真实成绩、最佳与最近三次并集和原轮次明细")
-                command("Network.setBlockedURLs", {"urls": ["*api/records/me*"]})
-                click("#records-refresh")
-                wait("!document.querySelector('#records-retry').classList.contains('hidden')")
-                assert evaluate("document.querySelector('#records-best-time').textContent") == ""
-                command("Network.setBlockedURLs", {"urls": []})
-                click("#records-retry")
-                wait("document.querySelector('#records-best-time').textContent==='01:35'")
-                checks.append("个人记录加载失败清空旧值并可重新加载")
-                command("Emulation.setDeviceMetricsOverride", {"width": 1280, "height": 960, "deviceScaleFactor": 1, "mobile": False})
-                evaluate("window.scrollTo(0,0)")
-                assert evaluate("document.querySelector('#personal-records').getBoundingClientRect().left > document.querySelector('.landing-hero').getBoundingClientRect().right")
-                shot("personal-records-desktop.png")
-                for width in [375, 320]:
-                    command("Emulation.setDeviceMetricsOverride", {"width": width, "height": 900, "deviceScaleFactor": 1, "mobile": True})
-                    evaluate("document.documentElement.style.scrollBehavior='auto'; document.querySelector('#personal-records').scrollIntoView({block:'start'})")
-                    assert evaluate("document.documentElement.scrollWidth <= innerWidth")
-                    assert evaluate("document.querySelector('#personal-records').getBoundingClientRect().top >= document.querySelector('.landing-hero').getBoundingClientRect().bottom")
-                    if width == 375:
-                        shot("personal-records-mobile.png")
-                checks.append("个人窗口桌面位于介绍右侧，375/320px移动端位于介绍下方无溢出")
-                # 跨页恢复背景位置，不保证多文档跳转时音轨无间隙。
-                click("#global-music")
-                wait("!document.querySelector('audio[data-music=background]').paused")
-                evaluate("document.querySelector('audio[data-music=background]').currentTime=12")
-                wait("document.querySelector('audio[data-music=background]').currentTime>=12")
-                navigate("ranking-mine.html")
-                evaluate("document.querySelector('audio[data-music=background]').play()")
-                wait("!document.querySelector('audio[data-music=background]').paused && document.querySelector('audio[data-music=background]').currentTime>=12")
-                assert evaluate("document.querySelector('audio[data-music=background]').currentTime<20")
-                checks.append("全局背景开关、胜利期间暂停恢复及跨页位置续播")
+                checks.append("退出账号立即清空个人记录")
                 assert not errors, "页面有未处理异常"
         finally:
             if connection:

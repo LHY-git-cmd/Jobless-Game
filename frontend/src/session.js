@@ -11,10 +11,9 @@ export function createSession() {
   return { levels: LEVELS.map(() => ({ startedAt: null, seconds: null })) };
 }
 
-/** 当前关卡重开只清空本关及后续成绩，保留已完成的前序关卡。 */
+/** 三个关卡独立计时，重开只清空指定关卡。 */
 export function restartLevel(session, index) {
-  session.levels.splice(index, session.levels.length - index,
-    ...LEVELS.slice(index).map(() => ({ startedAt: null, seconds: null })));
+  session.levels[index] = { startedAt: null, seconds: null };
 }
 
 /** 首次确认开始时启动计时；重看规则或重复确认不会改变起点。 */
@@ -35,12 +34,6 @@ export function completeLevel(session, index, now = Date.now()) {
 export function levelSeconds(session, index, now = Date.now()) {
   const level = session.levels[index];
   return level.seconds ?? (level.startedAt === null ? 0 : Math.max(0, Math.floor((now - level.startedAt) / 1000)));
-}
-
-/** 合计只累加各关展示的整数秒，保证逐项相加与总时长一致。 */
-export function sessionSummary(session) {
-  const times = session.levels.map((level) => level.seconds);
-  return { times, total: times.reduce((sum, seconds) => sum + (seconds ?? 0), 0), complete: times.every((seconds) => seconds !== null) };
 }
 
 /** 计时统一显示为分:秒，超过一小时显示时:分:秒。 */

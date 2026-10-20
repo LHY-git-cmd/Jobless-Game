@@ -23,7 +23,7 @@ from fastapi.testclient import TestClient
 
 
 class RankingTests(TestCase):
-    """通过业务层运行真实查询，覆盖保留集合、顺序、重开和总榜快照。"""
+    """通过业务层运行真实查询，覆盖保留集合、自由选关、独立重开与总榜停用。"""
 
     def setUp(self):
         """创建隔离的内存数据库，不连接项目或生产 MySQL。"""
@@ -54,19 +54,15 @@ class RankingTests(TestCase):
             category=category, revision=state["revision"], attempt_id=state["levels"][index]["attempt_id"],
             duration_seconds=seconds, development=development), self.db, self.config)
 
-    def test_order_and_total_snapshot(self):
-        """拒绝跳关，总榜严格使用本轮三项之和。"""
+    def test_games_complete_in_any_order_without_total(self):
+        """三关直接开放，任意顺序完成也不生成整轮成绩。"""
         state = self.start()
-        with self.assertRaises(AppError):
-            self.complete(state, "sudoku", 1)
-        state = self.complete(state, "mine", 65)
-        self.assertEqual(service.rankings_transaction("total", 1, 20, self.db)["total"], 0)
-        state = self.complete(state, "akari", 130)
         state = self.complete(state, "sudoku", 245)
-        self.assertTrue(state["total_recorded"])
-        row = service.rankings_transaction("total", 1, 20, self.db)["entries"][0]
-        self.assertEqual(row["duration_seconds"], 440)
-        self.assertEqual(row["times"], [65, 130, 245])
+        state = self.complete(state, "mine", 65)
+        state = self.complete(state, "akari", 130)
+        self.assertFalse(state["total_recorded"])
+        self.assertEqual([level["seconds"] for level in state["levels"]], [65, 130, 245])
+        self.assertEqual(self.db.scalars(select(CompletionRecord).where(CompletionRecord.category == "total")).all(), [])
 
     def test_retention_union_and_idempotency(self):
         """保留最佳与最新三次的并集，重复上传不改变最近记录。"""
@@ -81,7 +77,7 @@ class RankingTests(TestCase):
         self.assertEqual(len(self.db.scalars(select(CompletionRecord)).all()), 3)
 
     def test_restart_invalidates_old_attempt_and_new_round_invalidates_old_run(self):
-        """重开幂等且旧尝试不可复活，历史成绩不能解锁新轮次。"""
+        """重开幂等且旧尝试不可复活，新进度使旧请求失效。"""
         state = self.complete(self.start(), "mine", 10)
         payload = RestartRequest(category="mine", revision=state["revision"], request_id=uuid4())
         restarted = service.restart_transaction("token", state["run_id"], payload, self.db)
@@ -89,19 +85,42 @@ class RankingTests(TestCase):
         self.assertEqual(restarted, duplicate)
         with self.assertRaises(AppError):
             self.complete(state, "mine", 10)
-        with self.assertRaises(AppError):
-            self.complete(restarted, "akari", 5)
+        self.assertEqual(self.complete(restarted, "akari", 5)["levels"][1]["seconds"], 5)
         self.start()
         with self.assertRaises(AppError):
             self.complete(restarted, "mine", 5)
 
-    def test_full_round_best_does_not_mix_single_bests(self):
-        """不同轮次的单项最好成绩不能拼成总榜。"""
+    def test_restart_only_changes_selected_game_after_all_completed(self):
+        """全部通关仍可单关重开，其他成绩和尝试编号保持原样。"""
+        state = self.start()
+        for game in service.GAMES:
+            state = self.complete(state, game, 10)
+        # 模拟旧版完整通关存档；原总榜完成标记不得再阻止单关重开。
+        progress = service.repository.progress(self.db, self.user.id)
+        progress.total_recorded = True
+        self.db.commit()
+        restarted = service.restart_transaction("token", state["run_id"], RestartRequest(
+            category="mine", revision=state["revision"], request_id=uuid4()), self.db)
+        self.assertEqual(restarted["levels"][1:], state["levels"][1:])
+        self.assertIsNone(restarted["levels"][0]["seconds"])
+        self.assertNotEqual(restarted["levels"][0]["attempt_id"], state["levels"][0]["attempt_id"])
+
+    def test_other_game_pending_completion_survives_restart(self):
+        """另一关重开增加版本时，不作废本关已冻结的待提交负载。"""
+        state = self.start()
+        service.restart_transaction("token", state["run_id"], RestartRequest(
+            category="mine", revision=state["revision"], request_id=uuid4()), self.db)
+        completed = self.complete(state, "sudoku", 12)
+        self.assertEqual(completed["levels"][2]["seconds"], 12)
+
+    def test_independent_bests(self):
+        """单项最佳分别更新，不生成总榜。"""
         for times in [(1, 100, 100), (100, 1, 100), (100, 100, 1)]:
             state = self.start()
             for game, seconds in zip(service.GAMES, times):
                 state = self.complete(state, game, seconds)
-        self.assertEqual(service.rankings_transaction("total", 1, 20, self.db)["entries"][0]["duration_seconds"], 201)
+        for game in service.GAMES:
+            self.assertEqual(service.records_transaction("token", game, self.db)["best"]["duration_seconds"], 1)
 
     def test_ties_keep_old_best_and_rank_across_pages(self):
         """同秒不覆盖原最佳，跨页并列遵守 1、1、3。"""
@@ -140,16 +159,14 @@ class RankingTests(TestCase):
         state = self.complete(state, "mine", 3)
         self.assertEqual(state["levels"][0]["seconds"], 3)
 
-    def test_total_retention_does_not_depend_on_pruned_single_records(self):
-        """单项旧记录被淘汰后，总榜仍保存原轮次三项快照。"""
+    def test_each_game_retains_only_best_and_recent(self):
+        """独立关卡各自保留最佳及最近三次，无整轮记录。"""
         for times in [(10, 10, 10), (1, 100, 100), (100, 1, 100), (100, 100, 1), (80, 80, 80)]:
             state = self.start()
             for game, seconds in zip(service.GAMES, times):
                 state = self.complete(state, game, seconds)
-        best = service.records_transaction("token", "total", self.db)["best"]
-        self.assertEqual(best["times"], [10, 10, 10])
         self.assertFalse(any(record.duration_seconds == 10 for record in self.db.scalars(select(CompletionRecord).where(CompletionRecord.category == "mine"))))
-        for category in (*service.GAMES, "total"):
+        for category in service.GAMES:
             self.assertLessEqual(len(self.db.scalars(select(CompletionRecord).where(CompletionRecord.category == category)).all()), 4)
 
 
@@ -176,7 +193,9 @@ class RankingAPITests(TestCase):
 
     def test_public_read_and_private_write_contract(self):
         """公开榜单不要求登录，个人记录和写入必须认证及同源。"""
-        self.assertEqual(self.client.get("/api/rankings/total").json()["entries"], [])
+        self.assertEqual(self.client.get("/api/rankings/mine").json()["entries"], [])
+        self.assertEqual(self.client.get("/api/rankings/total").status_code, 422)
+        self.assertEqual(self.client.get("/api/records/me?category=total").status_code, 422)
         self.assertEqual(self.client.get("/api/records/me").status_code, 401)
         body = {"request_id": str(uuid4())}
         self.assertEqual(self.client.post("/api/challenges/start", json=body).status_code, 401)

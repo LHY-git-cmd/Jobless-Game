@@ -1,4 +1,4 @@
-/** 挑战客户端测试：失败重试冻结负载、旧响应隔离与顺序解锁。 */
+/** 挑战客户端测试：失败重试冻结负载、旧响应隔离与三关独立开放。 */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { ChallengeClient, createRequestId, rankingRequest } from "../src/ranking-client.js";
@@ -49,7 +49,7 @@ test("HTTP 环境没有 randomUUID 时默认客户端可创建、重开并复用
   assert.notEqual(calls[0].id, calls[2].id);
 });
 
-test("通关失败后的重试复用冻结负载并只解锁下一关", async () => {
+test("通关失败后的重试复用冻结负载，其他关卡保持开放", async () => {
   const calls = [];
   let fail = true;
   const current = state();
@@ -61,13 +61,30 @@ test("通关失败后的重试复用冻结负载并只解锁下一关", async ()
     return structuredClone(current);
   }, () => "id");
   await client.start();
-  assert.equal(client.canEnter(1), false);
+  assert.equal(client.canEnter(1), true);
+  assert.equal(client.canEnter(2), true);
   await assert.rejects(client.complete(0, 9, true));
   await client.complete(0, 99, false);
   assert.deepEqual(calls[1], calls[2]);
   assert.equal(client.state.levels[0].seconds, 9);
   assert.equal(client.canEnter(1), true);
-  assert.equal(client.canEnter(2), false);
+  assert.equal(client.canEnter(2), true);
+});
+
+test("直接完成数独并重开扫雷，不清除数独待提交负载", async () => {
+  const current = state();
+  const client = new ChallengeClient(async (path) => {
+    if (path.endsWith("complete")) throw new Error("offline");
+    if (path.endsWith("restart")) current.revision++;
+    return structuredClone(current);
+  }, () => "id");
+  await client.start();
+  await assert.rejects(client.complete(2, 12, true), /offline/);
+  const pending = client.pending.get(2);
+  await client.restart(0);
+  assert.deepEqual(client.pending.get(2), pending);
+  assert.equal(client.canEnter(-1), false);
+  assert.equal(client.canEnter(3), false);
 });
 
 test("离开后的旧请求不能覆盖新轮次", async () => {
@@ -105,7 +122,7 @@ test("网络错误与无效响应不能被视为保存成功", async (t) => {
   const original = globalThis.fetch;
   t.after(() => { globalThis.fetch = original; });
   globalThis.fetch = async () => { throw new TypeError("network"); };
-  await assert.rejects(rankingRequest("rankings/total"), /连接失败/);
+  await assert.rejects(rankingRequest("rankings/mine"), /连接失败/);
   globalThis.fetch = async () => ({ ok: true, json: async () => null });
-  await assert.rejects(rankingRequest("rankings/total"), /返回异常/);
+  await assert.rejects(rankingRequest("rankings/mine"), /返回异常/);
 });

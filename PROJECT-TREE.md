@@ -16,7 +16,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── 解密游戏+机器人提示设计.md              # 当前版本游戏规则与早期设计说明
 │
 ├── .tools/                               # 本地辅助工具与临时提交辅助脚本；不纳入版本管理
-├── backend/                              # FastAPI 登录、逐关挑战、排行榜、Flyway 与部署支持
+├── backend/                              # FastAPI 登录、独立关卡、排行榜、Flyway 与部署支持
 │   ├── README.md                         # 本地运行、迁移、宝塔部署及资源验收说明
 │   ├── .env.example                      # 不含真实凭据的应用配置模板
 │   ├── flyway.conf.example               # 不含真实凭据的 Flyway 配置模板
@@ -39,7 +39,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── avatar_service.py         # 有界线程中认证和更新账号头像，管理事务
 │   │   │   ├── auth_rules.py             # 用户名计数、账号键和密码长度规则
 │   │   │   ├── login_limiter.py          # 有界单进程登录频率保护
-│   │   │   └── ranking_service.py        # 逐关资格、幂等、总榜快照与成绩保留事务
+│   │   │   └── ranking_service.py        # 独立关卡重开/通关、幂等与单项成绩保留事务
 │   │   ├── repositories/                # 数据访问层：对应 Mapper，不提交业务事务
 │   │   │   ├── __init__.py               # 数据访问层包标识
 │   │   │   ├── user_repository.py        # 用户查询和保存
@@ -90,9 +90,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   └── logrotate.conf.example        # 可选日志轮转，避免与宝塔重复配置
 │   └── tests/                            # 后端安全、资源及真实数据库联调测试
 │       ├── test_auth.py                  # 真实哈希与数据库替身单元/API 测试
-│       ├── test_avatar.py                # 头像存储、严格编号/来源/体积、账号隔离和四榜跟随
+│       ├── test_avatar.py                # 头像存储、严格编号/来源/体积、账号隔离和三个分榜跟随
 │       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、真实登录与排行并发联调
-│       └── test_ranking.py               # 排名、保留集合、快照、事务及挑战 API 回归
+│       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
@@ -105,7 +105,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── frontend/                             # 可独立预览的网页前端及其测试
 │   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
 │   ├── index.html                        # 游戏入口、三关界面及游戏弹窗
-│   ├── ranking.html                      # 完整三关总榜，可展开最佳轮次明细
+│   ├── ranking.html                      # 排行榜默认入口，展示扫雷分榜及三个单项导航
 │   ├── ranking-mine.html                 # 扫雷历史最佳通关排行
 │   ├── ranking-akari.html                # 照明历史最佳通关排行
 │   ├── ranking-sudoku.html               # 数独历史最佳通关排行
@@ -114,11 +114,11 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── package.json                      # 前端项目元信息与 Node.js 测试命令
 │   │
 │   ├── src/                              # 浏览器运行的 JavaScript 源码
-│   │   ├── main.js                       # 首页逐关入口/重新挑战、原局续玩与结果查看、规则计时和结算
+│   │   ├── main.js                       # 首页自由选关、独立重开/续玩、规则计时与单关结算
 │   │   ├── game.js                       # 扫雷棋盘与规则逻辑
 │   │   ├── akari.js                      # 照明题盘、灯光与通关判断
 │   │   ├── sudoku.js                     # 数独题盘、正式答案/候选笔记、旧存档兼容与通关判断
-│   │   ├── session.js                    # 确认开始后持续计时与结算记录；不是账号登录会话
+│   │   ├── session.js                    # 各关独立开始/冻结/重开计时；不是账号登录会话
 │   │   ├── progress.js                   # 按账号保存棋局/候选笔记、绝对计时起点及待确认请求
 │   │   ├── audio-settings.js             # 音乐/音效独立开关、音量偏好持久化与订阅同步
 │   │   ├── settings.js                   # 共享游戏设置：头像选择、音频开关/滑块和键盘焦点
@@ -127,11 +127,11 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── auth.js                       # 共享登录弹窗、会话恢复、用户名设置入口及退出
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
-│   │   ├── auth-game.js                  # 首页三关及重新挑战的登录拦截与授权续接
+│   │   ├── auth-game.js                  # 首页三个独立关卡的登录拦截与授权续接
 │   │   ├── auth-page.js                  # 排行榜和论坛的登录初始化
 │   │   ├── mine-effects.js               # 扫雷连锁爆炸动画与音效控制
 │   │   ├── ranking-client.js             # 同源请求、HTTP 兼容 UUID、挑战幂等负载及失败重试
-│   │   ├── ranking-page.js               # 四榜共享分页、反馈与原轮次明细渲染
+│   │   ├── ranking-page.js               # 三个单项榜共享分页、反馈与玩家头像渲染
 │   │   ├── personal-records.js           # 首页我的通关记录：分类、最佳/最近三次、账号隔离与刷新
 │   │   ├── music.js                      # 背景/胜利音独立控制、实时音量、手势解锁与播放位置管理
 │   │   └── dev-quick-complete.js          # 可移除的开发验收：只求解当前关合法终盘
@@ -163,7 +163,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── mine-effects.test.js          # 爆炸顺序、动画、实时增益与静音停止测试
 │       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
 │       ├── avatar.test.js                # 头像路径、清单错误、保存重试和退出/换号晚到响应隔离
-│       ├── completion.test.js            # 首页逐关入口、前关结果/后关续玩、规则计时、退出恢复与保存回归
+│       ├── completion.test.js            # 自由选关、单关重开/结算、规则计时、退出恢复与保存回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
 │       └── music.test.js                 # 音轨切换、独立音量/静音、同轮一次、播放拒绝与切页状态
@@ -190,8 +190,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
     ├── backend/                          # 后端测试和可选真实 MySQL/Flyway 日志
     │   └── *.log                         # 完整测试输出；不纳入版本管理
     └── frontend/                         # 前端浏览器验证脚本和验证产物
-        ├── verify_login.py               # 早期登录验收材料；当前逐关回归使用 verify_ranking.py
-        ├── verify_ranking.py             # 临时数据库与真实浏览器：逐关、开发按钮及四榜验收
+        ├── verify_login.py               # 早期登录验收材料；当前关卡回归使用 verify_ranking.py
+        ├── verify_ranking.py             # 临时数据库与真实浏览器：独立关卡/结算、开发按钮及三个分榜
         ├── verify_http_start.py          # 非安全 HTTP 浏览器环境下真实登录、开局重试与重新开始
         ├── verify_akari_completion.py     # 照明通关及结果界面验证脚本
         ├── verify_settlement.py          # 三关完成、祝贺与结算流程验证脚本
