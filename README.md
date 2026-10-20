@@ -8,6 +8,8 @@
 
 完整目录结构与文件夹用途见 [项目目录树](./PROJECT-TREE.md)。后续目录结构、所列文件或用途变更时，必须同步更新该文档。
 
+前端保留多页和原生 ES Module。`main.js` 只创建游戏实例，首页展示、各关棋盘、结果弹窗和存档协调分别管理；公共工具集中 DOM 映射、事件名、生命周期和 HTTP 传输。状态归属、测试及发布回退见 [前端重构实施报告](./docs/frontend-refactor-report.md)。
+
 后端按控制层、业务层、数据访问层、模型层和公共层组织，调用方向为 Controller → Service → Repository。层级职责和扩展约定见 [后端架构说明](./backend/README.md#五层架构)。
 
 顶部导航按“排行榜 / 无职游戏 / 论坛”排列。排行榜只提供扫雷、照明、数独三个独立分榜，原排行榜入口默认展示扫雷分榜。文字论坛只填写正文即可发布帖子，支持评论、评论下回复及各自点赞；游客可读，登录后参与，复用游戏账号和头像。
@@ -56,6 +58,8 @@
 在 `frontend` 目录运行 `npm test`。测试使用 Node.js 内置测试工具，不需安装依赖。
 
 后端使用 `python -m unittest discover -s backend/tests -v`。真实 MySQL/Flyway 测试需单独配置专用测试库，否则明确跳过；当前登录、独立关卡、单关结算与排行榜浏览器验收使用 `python artifacts/frontend/verify_ranking.py`；论坛双账号、消息及手机布局验收使用 `python artifacts/frontend/verify_forum.py`，账号只写临时数据库。完整测试输出应写入日志。
+
+模块化后的缓存验证、跨页与浏览器重启续玩、候选笔记、规则计时和爆炸中卸载恢复使用 `python artifacts/frontend/verify_refactor.py`，同样只使用临时数据库和独立无头浏览器。HTML/JS/CSS 使用 `no-cache`，素材沿用七天缓存；发布时需成套更新模块并合并对应 Nginx 模板。
 
 ## 版本管理
 

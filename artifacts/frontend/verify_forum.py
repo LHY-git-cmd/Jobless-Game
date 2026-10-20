@@ -152,7 +152,8 @@ def main():
                     checks.append('回复也可点赞；全部已读与刷新保持')
                     for width in (375,320):
                         command('Emulation.setDeviceMetricsOverride',{'width':width,'height':844,'deviceScaleFactor':1,'mobile':False})
-                        wait("!!document.querySelector('#forum-post article')")
+                        # 帖子先于评论/通知定位返回，布局断言需等待被测回复也已渲染。
+                        wait("!!document.querySelector('#forum-post article') && !!document.querySelector('.forum-replies .forum-identity')")
                         assert evaluate('document.documentElement.scrollWidth<=innerWidth'), f'{width}px 页面溢出'
                         assert evaluate("(()=>{const g=document.querySelector('.forum-replies .forum-identity'),n=[...g.children].map(x=>x.getBoundingClientRect());return n.length===3&&n.every(r=>Math.abs(r.top-n[0].top)<1);})()"), '手机上回复双方也应保持同一行'
                         if width==320:
@@ -275,7 +276,8 @@ def main():
                     wait(f"!!document.querySelector('{selector} .forum-count')");click(selector+' > .forum-card .forum-reply')
                     wait("document.querySelector('#auth-dialog').open")
                     evaluate("document.querySelector('#auth-username').value='论坛乙';document.querySelector('#auth-password').value='forum-secret';")
-                    click('.auth-submit');wait(f"!document.querySelector('{selector} .forum-inline-form').hidden && document.activeElement===document.querySelector('{selector} textarea')")
+                    # 换号会先重建列表；等待新表单出现后再检查可见性和焦点。
+                    click('.auth-submit');wait(f"document.querySelector('{selector} .forum-inline-form')?.hidden === false && document.activeElement===document.querySelector('{selector} textarea')")
                     checks.append('游客点击列表回复，登录后续接新卡片的正文输入')
                     for width in (1280,375,320):
                         command('Emulation.setDeviceMetricsOverride',{'width':width,'height':844,'deviceScaleFactor':1,'mobile':False})

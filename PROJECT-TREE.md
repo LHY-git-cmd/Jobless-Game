@@ -104,6 +104,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
 │   ├── frontend-refactor-plan.md          # 已确认的多页前端模块化、缓存与请求层重构计划
+│   ├── frontend-refactor-report.md        # 重构产出、测试统计、环境待验收及发布回退说明
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
@@ -239,6 +240,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_audio_settings.py      # 用户名设置入口、真实音频音量、跨页偏好与手机/键盘验证
         ├── verify_avatars.py             # 真实临时API/Chrome：25图、保存/失败、棋局保持、四榜及窄屏
         ├── verify_forum.py               # 双账号真实论坛/消息、键盘/手机、跨浏览器及游戏续玩
+        ├── verify_refactor.py            # 真实HTTP缓存/304/206、跨页/重启续玩、计时及爆炸卸载恢复
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料
