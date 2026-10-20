@@ -3,7 +3,14 @@ root /www/wwwroot/jobless-game/frontend;
 index index.html;
 
 location / {
+    add_header Cache-Control no-cache always;
     try_files $uri $uri/ =404;
+}
+
+# 素材沿用七天缓存；页面、模块与样式通过上方规则每次验证。
+location /assets/ {
+    expires 7d;
+    try_files $uri =404;
 }
 
 # API location 共用同一代理配置，Origin 和 Cookie 始终使用站点同源地址。

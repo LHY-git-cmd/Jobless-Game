@@ -1,5 +1,5 @@
 /** 论坛共享纯文本渲染：公开作者、码点输入提示、点赞及两层评论卡片。 */
-import { createAvatarImage } from './avatar.js?v=20261020-avatars';
+import { createAvatarImage } from './avatar.js';
 
 /** 通过 textContent 创建节点，用户文字不会进入 HTML 解析器。 */
 export function node(tag,className,text='') {

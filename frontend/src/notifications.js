@@ -1,6 +1,6 @@
 /** 全站站内消息：可见且登录才轮询，消息失败不影响游戏，账号切换废弃旧响应。 */
 import { forumRequest } from './forum-client.js';
-import { createAvatarImage } from './avatar.js?v=20261020-avatars';
+import { createAvatarImage } from './avatar.js';
 
 export class NotificationController {
   /** 可注入时钟与调度器，方便验证完成后调度、冷却和过载退避。 */

@@ -1,6 +1,6 @@
 /** 用户名打开的游戏设置弹窗：独立音乐/音效开关和音量，调节即时生效并自动保存。 */
 import { getAudioSettings } from "./audio-settings.js";
-import { initAvatarPicker } from "./avatar-picker.js?v=20261020-avatars";
+import { initAvatarPicker } from "./avatar-picker.js";
 
 /** 复用原生 dialog 的模态焦点隔离，所有带账号页共用同一设置入口。 */
 export function initGameSettings({ dom = document, settings = getAudioSettings(), onAvatarSaved, onUnauthorized } = {}) {

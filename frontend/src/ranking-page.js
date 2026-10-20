@@ -1,8 +1,8 @@
 /** 三个单关排行榜共用的分页、空榜、失败重试和头像渲染。 */
-import { initAuth } from "./auth.js?v=20261020-avatars";
+import { initAuth } from "./auth.js";
 import { rankingRequest } from "./ranking-client.js";
 import { formatTime } from "./session.js";
-import { createAvatarImage, updateAvatarImage } from "./avatar.js?v=20261020-avatars";
+import { createAvatarImage, updateAvatarImage } from "./avatar.js";
 
 const $ = (id) => document.getElementById(id);
 const category = document.body.dataset.ranking;

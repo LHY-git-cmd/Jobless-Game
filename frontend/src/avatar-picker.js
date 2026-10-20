@@ -1,5 +1,5 @@
 /** 游戏设置中的头像选择器：展开后才加载网格，明确保存，支持键盘、重试和账号隔离。 */
-import { createAvatarImage, createAvatarSelection, loadAvatarCatalog, updateAvatarImage } from "./avatar.js?v=20261020-avatars";
+import { createAvatarImage, createAvatarSelection, loadAvatarCatalog, updateAvatarImage } from "./avatar.js";
 
 /** 复用现有设置弹窗，选择区独立滚动，音频设置仍可按原方式使用。 */
 export function initAvatarPicker(host, { dom = document, onSaved, onUnauthorized } = {}) {

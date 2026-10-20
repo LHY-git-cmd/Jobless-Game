@@ -1,6 +1,23 @@
 """公共 HTTP 中间件：论坛独立32KiB、既有写接口4KiB和 API 安全响应头。"""
 
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+
+class RevalidatingStaticFiles(StaticFiles):
+    """本地静态服务与 Nginx 对齐：代码验证更新，素材缓存七天。"""
+
+    async def get_response(self, path, scope):
+        """保留 StaticFiles 的 ETag/304 行为，仅补充静态资源缓存策略。"""
+        response = await super().get_response(path, scope)
+        if scope["path"].startswith("/api/"):
+            return response
+        if path.replace("\\", "/").startswith("assets/"):
+            # 七天与生产素材缓存一致；版本化头像路径继续保持原样。
+            response.headers["Cache-Control"] = "public, max-age=604800"
+        elif path in ("", ".") or path.endswith((".html", ".js", ".css")):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 class LoginBodyLimit:

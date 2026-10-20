@@ -1,5 +1,5 @@
 /** 预设头像公共能力：固定站内图片路径、清单读取和按账号隔离的保存状态，不保存图片数据。 */
-import { authRequest } from "./auth-client.js?v=20261020-avatars";
+import { authRequest } from "./auth-client.js";
 
 const BASE = "/assets/avatars/v1/";
 

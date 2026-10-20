@@ -1,10 +1,10 @@
 /** 三页复用的登录弹窗、会话恢复和关卡登录拦截；不改变关卡计时与规则。 */
-import { authRequest } from "./auth-client.js?v=20261020-avatars";
+import { authRequest } from "./auth-client.js";
 import { usernameUnits, validateUsername, validatePassword } from "./auth-validation.js";
-import { initMusic } from "./music.js?v=20261019-audio-settings";
-import { initGameSettings } from "./settings.js?v=20261020-avatars";
-import { createAvatarImage, updateAvatarImage } from "./avatar.js?v=20261020-avatars";
-import { initNotifications } from "./notifications.js?v=20261020-body-only";
+import { initMusic } from "./music.js";
+import { initGameSettings } from "./settings.js";
+import { createAvatarImage, updateAvatarImage } from "./avatar.js";
+import { initNotifications } from "./notifications.js";
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
 export function initAuth() {

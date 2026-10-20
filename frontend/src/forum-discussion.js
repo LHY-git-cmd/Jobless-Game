@@ -1,6 +1,6 @@
 /** 列表帖子下的按需评论与直接回复，复用现有游标和固定负载幂等客户端。 */
 import {validateText} from './forum-client.js';
-import {contentCard,node,actionIcon} from './forum-view.js?v=20261021-thread-height';
+import {contentCard,node,actionIcon} from './forum-view.js';
 
 /** 每个帖子拥有独立展开、分页和输入状态；移除后废弃全部晚到回包。 */
 export function createPostThread(item,{client,onLike,onLogin,onEditorOpen=()=>{},onError=()=>{}}) {

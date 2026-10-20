@@ -69,7 +69,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │       ├── database.py               # 实体基类、有界连接池和会话生命周期
 │   │       ├── security.py               # Argon2id、token 摘要与 UTC 时间工具
 │   │       ├── exceptions.py             # 公共业务异常及统一 HTTP 异常处理
-│   │       ├── middleware.py             # 请求体上限及 API 安全响应头
+│   │       ├── middleware.py             # 请求体上限、API安全响应头及本地静态缓存验证
 │   │       └── concurrency.py            # 有界执行槽、线程池和取消时的资源保护
 │   ├── migrations/                       # Flyway 版本化 SQL，执行后不可直接修改
 │   │   ├── V1__create_auth_tables.sql     # 用户、会话与相关唯一/到期索引
@@ -95,6 +95,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── jobless-auth.service.example  # 可选单 worker systemd 服务
 │   │   └── logrotate.conf.example        # 可选日志轮转，避免与宝塔重复配置
 │   └── tests/                            # 后端安全、资源及真实数据库联调测试
+│       ├── test_static_cache.py          # 页面/模块/样式缓存验证、304及两套Nginx策略契约
 │       ├── test_auth.py                  # 真实哈希与数据库替身单元/API 测试
 │       ├── test_avatar.py                # 头像存储、严格编号/来源/体积、账号隔离和三个分榜跟随
 │       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、登录/排行/论坛V4并发和外键联调
@@ -102,6 +103,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
+│   ├── frontend-refactor-plan.md          # 已确认的多页前端模块化、缓存与请求层重构计划
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划

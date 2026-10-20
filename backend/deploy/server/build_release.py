@@ -43,7 +43,6 @@ def main():
         site = (deploy / "nginx-site.conf.example").read_text(encoding="utf-8")
         site = site.replace("HTTPS server {}", "HTTP 或 HTTPS server {}")
         site = site.replace("/backend/deploy/nginx-proxy.conf", "/nginx-proxy.conf")
-        site = site.replace("location / {", "location /assets/ {\n    expires 7d;\n    try_files $uri =404;\n}\n\nlocation / {")
         (staging / "nginx-site.conf.example").write_text(site, encoding="utf-8")
         # 临时 ZIP 写完后再替换正式产物，避免失败时留下半个部署包。
         pending = output / "jobless-game-server.pending.zip"

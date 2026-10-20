@@ -4,13 +4,13 @@
  */
 
 import { createGame, revealSelected, selectCell, toggleFlag } from "./game.js";
-import { createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote, sudokuConflicts, checkSudoku } from "./sudoku.js?v=20261019-sudoku-notes";
+import { createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote, sudokuConflicts, checkSudoku } from "./sudoku.js";
 import { AKARI_SIZE, akariCell, createAkari, inspectAkari, toggleBulb } from "./akari.js";
-import { createExplosionSequence, createExplosionSound, explosionOrder } from "./mine-effects.js?v=20261019-audio-settings";
+import { createExplosionSequence, createExplosionSound, explosionOrder } from "./mine-effects.js";
 import { getAudioSettings } from "./audio-settings.js";
-import { createSession, restartLevel, startLevel, completeLevel, levelSeconds, formatTime } from "./session.js?v=20261020-independent";
-import { ChallengeClient, rankingRequest } from "./ranking-client.js?v=20261020-independent";
-import { loadProgress, saveProgress, clearProgress } from "./progress.js?v=20261019-sudoku-notes";
+import { createSession, restartLevel, startLevel, completeLevel, levelSeconds, formatTime } from "./session.js";
+import { ChallengeClient, rankingRequest } from "./ranking-client.js";
+import { loadProgress, saveProgress, clearProgress } from "./progress.js";
 
 const $ = (id) => document.getElementById(id);
 const ui = {
