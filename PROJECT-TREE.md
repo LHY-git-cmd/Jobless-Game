@@ -107,7 +107,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
 │   ├── ranking-implementation-report.md   # 排行榜实际产出、测试与待完成环境验收
 │   ├── avatar-implementation-plan.md      # 用户确认的25张硬盘预设头像、账号及四榜实施计划
-│   └── avatar-implementation-report.md    # 头像实际行为、资源、测试及待完成MySQL/服务器验收
+│   ├── avatar-implementation-report.md    # 头像实际行为、资源、测试及待完成MySQL/服务器验收
+│   └── forum-implementation-report.md     # 论坛实际产出、测试统计与MySQL/服务器待验收项
 │
 ├── frontend/                             # 可独立预览的网页前端及其测试
 │   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标

@@ -1,6 +1,6 @@
 # 登录后端运行与部署
 
-采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供三个独立关卡、通关记录与三个单项排行榜，论坛仍为占位页面。
+采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供三个独立关卡、通关记录、三个单项排行榜以及文字论坛和站内消息。
 
 需要在本机把 MySQL 一并容器化验证时，使用项目根目录 `compose.yaml`，参见 [Docker 部署与验收](./deploy/docker/README.md)。该方案使用独立数据库与数据卷，不读取下面的 `backend/.env`；服务器宝塔复用方案仍按本文执行。
 
@@ -53,7 +53,7 @@ flyway -configFiles=backend/flyway.conf migrate
 flyway -configFiles=backend/flyway.conf info
 ```
 
-确认目标库名、备份和维护窗口。新库依次执行 `V1__create_auth_tables.sql`、`V2__create_ranking_tables.sql` 和 `V3__add_user_avatar.sql`；已有库只执行尚未应用的版本，已有 V2 的库新增 V3。再次 migrate 不应有待执行迁移。配置禁止 `clean` 和自动 baseline；禁止直接修改已执行 SQL，后续变更新增 V4 等新版本。
+确认目标库名、备份和维护窗口。新库依次执行 V1～V4，V3 为头像，`V4__create_forum_tables.sql` 为论坛五张表；已有库只执行尚未应用的版本。再次 migrate 不应有待执行迁移。配置禁止 `clean` 和自动 baseline；禁止直接修改已执行 SQL，后续变更新增 V5 等新版本。用户外键沿用现有 `INT UNSIGNED`，论坛内容编号采用 `BIGINT UNSIGNED`；兼容 MySQL 5.7，不依赖 CHECK 或窗口函数。
 
 2 核/2GB 与宝塔共存时先检查 `MemAvailable` 和现有服务占用；必要时停止本项目 Python，再单次执行迁移，完成后退出并启动 Python。`JAVA_ARGS=-Xms32m -Xmx256m` 仅为评估起点，不能视为 Flyway 全进程内存上限。
 
@@ -138,6 +138,20 @@ npm test *> ../artifacts/frontend/auth-tests.log
 `artifacts/frontend/verify_login.py` 保留为早期登录验收材料，其数据库替身不支持当前挑战接口；当前登录与独立关卡回归使用下述 `verify_ranking.py`。需要 Chrome、`websocket-client`，可选依赖见 `requirements-browser.txt`。
 
 `python artifacts/frontend/verify_ranking.py` 使用临时 SQLite 与独立 Chrome 验证真实登录、自由选关、单关重开、保存失败重试、单关结算、三个分榜分页与手机布局，输出摘要并保存截图。临时数据在结束后清理；该验证不替代 MySQL JSON、行锁、外键与 Flyway 验收。`test_mysql_integration.py` 覆盖真实并发重复通关与不生成整轮记录；没有专用库和 Flyway 时明确跳过。
+
+## 文字论坛与站内消息
+
+所有接口位于 `/api/forum/`：公开读取帖子摘要/详情、顶层评论、根评论下回复及目标评论上下文；写入须登录且同源。接口完整清单和规则见 [论坛实施报告](../docs/forum-implementation-report.md)。请求不能指定作者或根评论；回复根归属由服务端验证。文字仅按纯文本显示，标题80、正文2000、评论/回复500个 Unicode 码点，先去除首尾空白。
+
+`POST /posts`、`POST /posts/{id}/comments` 需要 UUID `request_id`。同账号同编号同负载返回原内容，改负载409；先确认幂等再检查发布间隔。`FORUM_POST_INTERVAL_SECONDS=60`、`FORUM_COMMENT_INTERVAL_SECONDS=3` 可配置，评论与回复共用间隔，超限429携带 Retry-After。帖子及评论的点赞使用 PUT/DELETE `/posts/{id}/like`、`/comments/{id}/like`，重复调用不重复计数。用户、帖子、评论按固定顺序加锁，内容、计数和通知统一提交或回滚。
+
+`GET /notifications/unread-count` 只返回本人未读数（最多100）和最新编号；`GET /notifications` 返回有限页和 `through_id`。单条已读使用 `PUT /notifications/{id}/read`，全部已读使用 `POST /notifications/read-all` 和 `{through_id}`，不处理边界之后到达的新消息。自己互动不通知；回复只提醒直接被回复作者；首次点赞通知以固定事件键去重，取消和重新点赞不追加或重置已读。
+
+帖子和消息按 ID 倒序，评论和回复正序；`cursor` 可选，`limit` 默认20（回复10），最大50。响应包含 `items` 与可空的 `next_cursor`。列表只含160字符摘要，完整正文由详情返回；作者、当前头像和点赞状态使用批量关联，不逐条查库。上下文接口 `/posts/{post_id}/comments/{comment_id}` 返回 `target` 和 `root` 供通知直接定位。
+
+应用与两种 Nginx 模板为论坛写请求单独设置32KiB，按实际字节计数并覆盖无 Content-Length 请求；原登录、头像、挑战仍4KiB。沿用四槽同步数据库执行器、现有连接池和单 Uvicorn worker。页面可见且登录时，前一次检查结束后安排60秒下一轮；隐藏或退出停止，503遵循 Retry-After 退避。
+
+本地回归运行 `python artifacts/frontend/verify_forum.py`，完整输出重定向到日志。该脚本使用独立 Chrome、临时 SQLite 和两个真实 Cookie 账号验证发布/回复/点赞、消息定位、跨浏览器已读、手机布局和棋局恢复。真实 V4/Flyway、外键及并发测试在 `test_mysql_integration.py`，只允许配置的 `jobless_auth_test_` 专用库；缺少环境时明确跳过，不能将 SQLite 当作 MySQL 验收。
 
 ## 目标服务器资源验收
 

@@ -10,7 +10,9 @@
 
 后端按控制层、业务层、数据访问层、模型层和公共层组织，调用方向为 Controller → Service → Repository。层级职责和扩展约定见 [后端架构说明](./backend/README.md#五层架构)。
 
-顶部导航按“排行榜 / 无职游戏 / 论坛”排列。排行榜只提供扫雷、照明、数独三个独立分榜，原排行榜入口默认展示扫雷分榜；论坛仍为占位页面。
+顶部导航按“排行榜 / 无职游戏 / 论坛”排列。排行榜只提供扫雷、照明、数独三个独立分榜，原排行榜入口默认展示扫雷分榜。文字论坛支持主题、评论、评论下回复及各自点赞；游客可读，登录后参与，复用游戏账号和头像。
+
+登录后全站铃铛显示站内互动提醒，游戏中也可主动打开。消息按账号保存已读，点击可直接定位讨论，全部已读保留之后到达的新消息。登录且页面可见时每60秒检查一次未读数，隐藏页面或退出时停止。上线前须先执行 Flyway V4 并合并独立的 `/api/forum/` 32KiB Nginx 配置。实际测试与环境限制见 [论坛实施报告](./docs/forum-implementation-report.md)。
 
 - 第一关：10 × 10 扫雷，10 颗雷。进入游戏时显示规则弹窗，先点选格子，再按“标记”或“排雷”。
   踩雷后按距离依次显示、引爆全部地雷，播放裁剪后的爆炸音效；连锁结束再显示结果。可关闭音效，重新开始或返回首页会停止动画与声音。音效从 `source/audio/爆炸声.flac` 的 0.045～1.445 秒裁剪，保留起爆与短尾音并淡出，处理脚本为 `source/audio/prepare_explosion.py`。
@@ -47,7 +49,7 @@
 
 在 `frontend` 目录运行 `npm test`。测试使用 Node.js 内置测试工具，不需安装依赖。
 
-后端使用 `python -m unittest discover -s backend/tests -v`。真实 MySQL/Flyway 测试需单独配置专用测试库，否则明确跳过；当前登录、独立关卡、单关结算与排行榜浏览器验收使用 `python artifacts/frontend/verify_ranking.py`。完整测试输出应写入日志。
+后端使用 `python -m unittest discover -s backend/tests -v`。真实 MySQL/Flyway 测试需单独配置专用测试库，否则明确跳过；当前登录、独立关卡、单关结算与排行榜浏览器验收使用 `python artifacts/frontend/verify_ranking.py`；论坛双账号、消息及手机布局验收使用 `python artifacts/frontend/verify_forum.py`，账号只写临时数据库。完整测试输出应写入日志。
 
 ## 版本管理
 

@@ -6,13 +6,20 @@ location / {
     try_files $uri $uri/ =404;
 }
 
-# 两个 API location 共用同一代理配置，Origin 和 Cookie 始终使用站点同源地址。
+# API location 共用同一代理配置，Origin 和 Cookie 始终使用站点同源地址。
 location = /api/auth/login {
     limit_req zone=jobless_login burst=5 nodelay;
     limit_req_status 429;
     client_max_body_size 4k;
     client_body_timeout 10s;
     error_page 429 = @jobless_login_busy;
+    include /www/wwwroot/jobless-game/backend/deploy/nginx-proxy.conf;
+}
+
+# 论坛额度独立，不扩大登录、头像或挑战接口的体积上限。
+location /api/forum/ {
+    client_max_body_size 32k;
+    client_body_timeout 10s;
     include /www/wwwroot/jobless-game/backend/deploy/nginx-proxy.conf;
 }
 
