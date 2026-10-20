@@ -50,10 +50,12 @@ test("登录后加载个人记录，切换类别后展示对应最佳和最近�
   await panel.setUser({ id: 7 });
   assert.deepEqual(calls, ["records/me?category=mine"]);
   assert.equal(nodes["records-best-time"].textContent, "01:15");
+  assert.equal(nodes["records-best-label"].textContent, "最佳");
   assert.equal(nodes["records-list"].children.length, 1);
   await nodes["records-akari"].listeners.click();
   assert.equal(calls.at(-1), "records/me?category=akari");
   assert.equal(nodes["records-akari"].attributes["aria-selected"], "true");
+  assert.equal(nodes["records-best-label"].textContent, "最佳");
 });
 
 test("空记录不显示虚构零秒，真实零秒成绩正常显示", async () => {

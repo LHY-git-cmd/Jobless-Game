@@ -54,7 +54,7 @@ export function initPersonalRecords({ request = rankingRequest, onLogin, dom = d
     }
     $("records-status").textContent = "";
     if (data.best) {
-      $("records-best-label").textContent = `${LABELS[category]}最佳`;
+      $("records-best-label").textContent = "最佳";
       $("records-best-time").textContent = formatTime(data.best.duration_seconds);
       $("records-best-date").textContent = recordDate(data.best.completed_at);
       $("records-best").classList.remove("hidden");

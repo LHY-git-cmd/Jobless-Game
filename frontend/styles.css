@@ -347,6 +347,13 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 
 /* 排行榜：海岛背景上的深蓝玻璃面板，手机优先，数字与用户名独立布局。 */
 .ranking-page { max-width: 1120px; }
+/* 排行榜移除左侧品牌后，桌面导航仍居中，账号入口保留在右侧。 */
+.ranking-page .site-nav { grid-column: 2; grid-row: 1; }
+.ranking-page .auth-controls { grid-column: 3; grid-row: 1; }
+@media (max-width: 850px) {
+  .ranking-page .site-nav { grid-column: 1 / -1; grid-row: 2; }
+  .ranking-page .auth-controls { grid-column: 2; grid-row: 1; }
+}
 .ranking-content { flex: 1; width: min(100%, 920px); margin: 24px auto 44px; }
 .ranking-heading { padding: 18px 4px 28px; }
 .ranking-heading h1 { margin: 10px 0; color: var(--gold); font-size: clamp(32px, 5vw, 48px); letter-spacing: 4px; font-weight: 500; }
