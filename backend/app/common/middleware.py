@@ -1,4 +1,4 @@
-"""公共 HTTP 中间件：登录、挑战和头像写入请求体上限与 API 安全响应头。"""
+"""公共 HTTP 中间件：论坛独立32KiB、既有写接口4KiB和 API 安全响应头。"""
 
 from fastapi.responses import JSONResponse
 
@@ -12,6 +12,7 @@ class LoginBodyLimit:
         self.max_body_bytes = max_body_bytes
 
     async def __call__(self, scope, receive, send):
+        """先接收至有界缓冲，再交给 JSON 解析；分块请求也不能绕过上限。"""
         original_send = send
         async def secure_send(message):
             if message["type"] == "http.response.start":
@@ -19,7 +20,8 @@ class LoginBodyLimit:
             await original_send(message)
         if scope["type"] == "http" and scope["path"].startswith("/api/"):
             send = secure_send
-        if scope["type"] != "http" or not (scope["path"] == "/api/auth/login" or
+        forum_write = scope["type"] == "http" and scope["path"].startswith("/api/forum/") and scope.get("method") in ("POST", "PUT", "DELETE")
+        if scope["type"] != "http" or not (forum_write or scope["path"] == "/api/auth/login" or
                 (scope["path"] == "/api/auth/avatar" and scope.get("method") == "PUT") or
                 (scope["path"].startswith("/api/challenges/") and scope.get("method") == "POST")):
             return await self.app(scope, receive, send)
@@ -28,9 +30,11 @@ class LoginBodyLimit:
             message = await receive()
             if message["type"] == "http.disconnect":
                 return
-            body.extend(message.get("body", b""))
-            if len(body) > self.max_body_bytes:
+            chunk = message.get("body", b"")
+            # 拒绝前不复制超大分块，使中间件自身缓冲始终受所选上限约束。
+            if len(body) + len(chunk) > (32768 if forum_write else self.max_body_bytes):
                 return await JSONResponse(status_code=413, content={"detail": "请求体过大。"})(scope, receive, send)
+            body.extend(chunk)
             if not message.get("more_body", False):
                 break
         consumed = False

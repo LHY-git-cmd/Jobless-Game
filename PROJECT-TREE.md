@@ -32,11 +32,13 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── __init__.py               # 控制层包标识
 │   │   │   ├── auth_controller.py        # 登录、当前用户、注销路由及同源校验
 │   │   │   ├── avatar_controller.py      # 当前登录账号更换预设头像的同源接口
+│   │   │   ├── forum_controller.py       # 论坛公开读取、同源写入及账号消息路由
 │   │   │   └── ranking_controller.py     # 挑战创建/重开/通关、个人记录与公开排行榜路由
 │   │   ├── services/                    # 业务层：流程、事务与登录专属资源限制
 │   │   │   ├── __init__.py               # 业务层包标识
 │   │   │   ├── auth_service.py           # 注册/验证密码、会话业务及事务控制
 │   │   │   ├── avatar_service.py         # 有界线程中认证和更新账号头像，管理事务
+│   │   │   ├── forum_service.py          # 论坛幂等、频率、归属、点赞与通知原子事务
 │   │   │   ├── auth_rules.py             # 用户名计数、账号键和密码长度规则
 │   │   │   ├── login_limiter.py          # 有界单进程登录频率保护
 │   │   │   └── ranking_service.py        # 独立关卡重开/通关、幂等与单项成绩保留事务
@@ -44,18 +46,21 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── __init__.py               # 数据访问层包标识
 │   │   │   ├── user_repository.py        # 用户查询和保存
 │   │   │   ├── session_repository.py     # 会话查询、保存、注销与过期分批删除
+│   │   │   ├── forum_repository.py       # 当前锁定读、有限游标、作者/点赞关联及通知SQL
 │   │   │   └── ranking_repository.py     # 用户行锁、进度/成绩读写、保留与榜单分页 SQL
 │   │   ├── models/                      # 模型层：数据库实体和接口数据结构
 │   │   │   ├── __init__.py               # 模型层包标识
 │   │   │   ├── entities/                # ORM 数据库实体，不自动建表
-│   │   │   │   ├── __init__.py           # 注册用户、会话和排行榜实体关系映射
+│   │   │   │   ├── __init__.py           # 注册用户、会话、排行榜及论坛实体映射
 │   │   │   │   ├── user.py               # 用户实体
 │   │   │   │   ├── auth_session.py       # 账号会话实体
+│   │   │   │   ├── forum.py              # 帖子、评论、两类点赞与站内通知五表实体
 │   │   │   │   └── ranking.py            # 当前轮次、不可变通关快照与最佳摘要实体
 │   │   │   └── schemas/                 # 请求 DTO 与脱敏响应模型
 │   │   │       ├── __init__.py           # 接口模型包标识
 │   │   │       ├── auth.py               # 登录输入、用户输出及登录结果
 │   │   │       ├── avatar.py             # 仅接收清单有效编号的严格头像写入请求
+│   │   │       ├── forum.py              # 文字长度/作者隔离、UUID幂等及已读边界DTO
 │   │   │       └── ranking.py            # 严格挑战请求 DTO 和脱敏成绩/榜单响应模型
 │   │   └── common/                      # 公共层：跨业务基础设施，不反向依赖业务
 │   │       ├── __init__.py               # 公共层包标识
@@ -69,7 +74,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── migrations/                       # Flyway 版本化 SQL，执行后不可直接修改
 │   │   ├── V1__create_auth_tables.sql     # 用户、会话与相关唯一/到期索引
 │   │   ├── V2__create_ranking_tables.sql  # 当前轮次、成绩、最佳摘要及排序/去重索引
-│   │   └── V3__add_user_avatar.sql       # 用户预设头像编号，新老账号默认001
+│   │   ├── V3__add_user_avatar.sql       # 用户预设头像编号，新老账号默认001
+│   │   └── V4__create_forum_tables.sql   # 文字论坛、点赞、站内通知及外键/去重/分页索引
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -91,7 +97,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   └── tests/                            # 后端安全、资源及真实数据库联调测试
 │       ├── test_auth.py                  # 真实哈希与数据库替身单元/API 测试
 │       ├── test_avatar.py                # 头像存储、严格编号/来源/体积、账号隔离和三个分榜跟随
-│       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、真实登录与排行并发联调
+│       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、登录/排行/论坛V4并发和外键联调
+│       ├── test_forum.py                 # 论坛权限、文字/请求体、幂等、归属、通知及事务回滚
 │       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
