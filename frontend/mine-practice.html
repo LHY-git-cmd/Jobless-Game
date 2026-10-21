@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="扫雷多关卡练习：三个雷数档位，独立存档，随时续玩。" />
+    <meta name="theme-color" content="#102b3c" />
+    <title>扫雷练习 · 无职游戏</title>
+    <link rel="icon" href="./favicon.ico" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./mine-practice.css" />
+  </head>
+  <body>
+    <div class="world-background" aria-hidden="true"></div>
+    <div class="page practice-page">
+      <header class="landing-header">
+        <a class="brand practice-brand" href="./index.html"><span class="brand-mark" aria-hidden="true">◇</span> 无职游戏</a>
+        <nav class="site-nav" aria-label="主导航"><a href="./index.html">返回首页</a><a href="./mine-practice.html" aria-current="page">扫雷练习</a></nav>
+        <div class="auth-controls" aria-label="账号"></div>
+      </header>
+      <main>
+        <section class="practice-intro" aria-labelledby="practice-title">
+          <div>
+            <p class="eyebrow">岛屿试炼 / MINESWEEPER</p>
+            <h1 id="practice-title">同一片海，三种挑战。</h1>
+            <p class="practice-description">从浅滩到礁石，按自己的节奏出发。<br />每一关都替你留着进度，随时回来继续。</p>
+          </div>
+          <div class="practice-note"><span class="practice-badge">多关卡体验版</span><p id="practice-owner">正在读取练习进度…</p><p>成绩保存在本浏览器，不计入正式排行。</p></div>
+        </section>
+        <section aria-labelledby="practice-levels-title" class="practice-selection">
+          <div class="section-heading"><h2 id="practice-levels-title">选择你的落脚点</h2><span>10 × 10 · 三关独立续玩</span></div>
+          <div id="practice-levels" class="practice-levels" aria-label="扫雷练习关卡"></div>
+        </section>
+        <div class="practice-layout">
+          <aside class="practice-guide" aria-labelledby="practice-guide-title">
+            <p class="eyebrow">一点小提示</p><h2 id="practice-guide-title">让数字为你指路。</h2>
+            <ol><li>点击一个格子，再选择排雷或标记。</li><li>数字表示周围八格的地雷总数。</li><li>排开全部安全格即可通关。</li></ol>
+            <p>首次排雷也可能踩雷。切换关卡或离开页面后，已开始的计时会继续。</p>
+            <a href="./index.html">回首页玩正式挑战 <span aria-hidden="true">↗</span></a>
+          </aside>
+          <section id="practice-game" class="game-panel practice-game" aria-labelledby="practice-game-title" hidden>
+            <div class="top-row"><span id="practice-game-kicker" class="eyebrow"></span><div class="practice-top-actions"><button id="practice-change" type="button">切换关卡</button><button id="practice-restart" type="button">重新开始本关</button></div></div>
+            <div class="game-heading"><img src="./assets/minesweeper.webp" width="56" height="56" alt="" /><div><h2 id="practice-game-title">扫雷</h2><p id="practice-game-description"></p></div></div>
+            <div class="game-tools"><button id="practice-rules" type="button" aria-haspopup="dialog" aria-controls="practice-rules-dialog">规则</button><button id="practice-sound" type="button" aria-pressed="false">音效：开</button></div>
+            <div class="stats" aria-label="当前关卡数据"><span>待标记 <strong id="practice-mines">0</strong></span><span>已排查 <strong id="practice-cleared">0</strong><span id="practice-safe-total"></span></span><span>用时 <strong id="practice-timer">00:00</strong></span></div>
+            <p id="practice-caption">选择关卡后开始。</p>
+            <div id="practice-viewport" class="board-viewport" tabindex="0" aria-label="扫雷棋盘，可左右滑动"><div id="practice-board" class="board" role="group" aria-label="扫雷格子"></div></div>
+            <div class="controls"><p id="practice-selection">尚未选择格子</p><div class="action-buttons"><button id="practice-flag" type="button" disabled>标记</button><button id="practice-reveal" class="practice-primary" type="button" disabled>排雷</button></div></div>
+            <p id="practice-message" role="status" aria-live="polite"></p>
+            <div id="practice-outcome" class="practice-outcome" hidden tabindex="-1" aria-labelledby="practice-outcome-title"><span class="eyebrow">本关结果</span><h3 id="practice-outcome-title"></h3><p id="practice-outcome-description"></p><button id="practice-next" type="button">试试下一关</button></div>
+          </section>
+          <section id="practice-empty" class="practice-empty" aria-labelledby="practice-empty-title"><span class="practice-compass" aria-hidden="true">◇</span><p class="eyebrow">你的下一步</p><h2 id="practice-empty-title">先选一处，再慢慢探索。</h2><p>三个档位随时可玩，无需依次解锁。<br />选择上方任意关卡，就能开启自己的棋局。</p></section>
+        </div>
+        <p id="practice-storage-status" role="status" class="practice-storage-status"></p>
+      </main>
+      <footer class="landing-footer"><span>每一次判断，都是一次新的发现。</span><span>本地练习 · 自由选关</span></footer>
+    </div>
+    <dialog id="practice-rules-dialog" class="practice-rules" aria-labelledby="practice-rules-title" aria-describedby="practice-rules-description">
+      <p class="eyebrow">出发之前</p><h2 id="practice-rules-title">看懂线索，再迈出第一步。</h2>
+      <p id="practice-rules-description"></p><ol><li>先点击格子，再按“排雷”揭开，或按“标记”插旗。</li><li>数字代表周围八格中的地雷数，排开全部安全格即通关。</li><li>首次排雷也可能踩雷。重看规则、切关或离开期间计时继续。</li></ol>
+      <p id="practice-rules-timing"></p><button id="practice-start" class="practice-primary" type="button">开始本关</button>
+    </dialog>
+    <script type="module" src="./src/pages/mine-practice.js"></script>
+  </body>
+</html>

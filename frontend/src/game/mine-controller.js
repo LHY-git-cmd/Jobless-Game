@@ -24,13 +24,13 @@ export function createMineController({ ui, dom, settings, canPlay, onChange, onC
       const cell = ui.board.children[index];
       cell.classList.remove("cell-flagged", "cell-selected");
       cell.classList.add("cell-mine");
-      cell.setAttribute("aria-label", `第 ${Math.floor(index / 10) + 1} 行第 ${index % 10 + 1} 列，地雷`);
+      cell.setAttribute("aria-label", `第 ${Math.floor(index / game.level.cols) + 1} 行第 ${index % game.level.cols + 1} 列，地雷`);
     },
     /** step 决定音调变化，所有声音共用已解锁的音频上下文。 */
     explode(index, step) {
       mineExplosion.exploded.add(index);
       ui.board.children[index].classList.add("cell-exploded", "cell-blasting");
-      ui.board.children[index].setAttribute("aria-label", `第 ${Math.floor(index / 10) + 1} 行第 ${index % 10 + 1} 列，地雷已爆炸`);
+      ui.board.children[index].setAttribute("aria-label", `第 ${Math.floor(index / game.level.cols) + 1} 行第 ${index % game.level.cols + 1} 列，地雷已爆炸`);
       void explosionSound.play(step);
     },
     /** 每颗雷结束后保留终盘标记并移除瞬时爆炸样式。 */
@@ -43,7 +43,7 @@ export function createMineController({ ui, dom, settings, canPlay, onChange, onC
     finish() {
       mineExplosion.running = false;
       ui.caption.textContent = "连锁爆炸结束。全部地雷已显示。";
-      ui.message.textContent = "10 颗地雷已引爆。";
+      ui.message.textContent = `${game.level.mineCount} 颗地雷已引爆。`;
       onComplete("lost");
     },
   });
@@ -59,9 +59,10 @@ export function createMineController({ ui, dom, settings, canPlay, onChange, onC
   /** 未揭开的扫雷格子不展示雷或数字。 */
   function renderMineBoard() {
     const fragment = dom.createDocumentFragment();
+    ui.board.style?.setProperty('--mine-cols', String(game.level.cols));
     game.cells.forEach((cell, index) => {
-      const row = Math.floor(index / 10) + 1;
-      const col = index % 10 + 1;
+      const row = Math.floor(index / game.level.cols) + 1;
+      const col = index % game.level.cols + 1;
       const button = dom.createElement("button");
       button.type = "button";
       button.className = "cell";
@@ -114,7 +115,7 @@ export function createMineController({ ui, dom, settings, canPlay, onChange, onC
     ui.reveal.disabled = !active || game.cells[selected]?.flagged;
     ui.flag.textContent = active && game.cells[selected].flagged ? "取消标记" : "标记";
     ui.selection.textContent = active
-      ? `已选第 ${Math.floor(selected / 10) + 1} 行，第 ${selected % 10 + 1} 列`
+      ? `已选第 ${Math.floor(selected / game.level.cols) + 1} 行，第 ${selected % game.level.cols + 1} 列`
       : "尚未选择格子";
     ui.caption.textContent = game.status === "won" ? "你赢了。" : game.status === "lost"
       ? "碰到地雷了。" : "点选一个格子，再选择操作。棋盘可左右滑动。";
@@ -167,8 +168,8 @@ export function createMineController({ ui, dom, settings, canPlay, onChange, onC
     /** 爆炸期间阻止共享规则按钮操作。 */
     get busy() { return Boolean(mineExplosion?.running); },
     /** 新棋盘不修改共享计时，外层确认服务端重开后调用。 */
-    reset() {
-      cancelMineExplosion(); game = createGame();
+    reset(config) {
+      cancelMineExplosion(); game = createGame(Math.random, config);
       ui.message.textContent = ''; ui.viewport.scrollTo(0, 0);
       renderMine();
     },

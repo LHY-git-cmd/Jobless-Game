@@ -105,6 +105,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── docs/                                 # 实施计划、设计说明等项目文档
 │   ├── frontend-refactor-plan.md          # 已确认的多页前端模块化、缓存与请求层重构计划
 │   ├── frontend-refactor-report.md        # 重构产出、测试统计、环境待验收及发布回退说明
+│   ├── mine-multilevel-mvp-plan.md         # 已授权扫雷三档MVP范围、身份/存档隔离与验收计划
+│   ├── mine-multilevel-mvp-report.md       # MVP实际效果、测试统计、预览地址与边界说明
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
@@ -117,6 +119,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── frontend/                             # 可独立预览的网页前端及其测试
 │   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
 │   ├── index.html                        # 游戏入口、三关界面及游戏弹窗
+│   ├── mine-practice.html                # 扫雷三档练习页，独立续玩与本地成绩体验
+│   ├── mine-practice.css                 # 练习选关卡、棋盘、规则与窄屏布局
 │   ├── ranking.html                      # 排行榜默认入口，展示扫雷分榜及三个单项导航
 │   ├── ranking-mine.html                 # 扫雷历史最佳通关排行
 │   ├── ranking-akari.html                # 照明历史最佳通关排行
@@ -133,17 +137,23 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── http.js                   # 同源Cookie、独立超时、JSON/204及HTTP错误元数据
 │   │   │   └── lifecycle.js              # 实例监听/订阅/定时器清理与异步回调保护
 │   │   ├── pages/                        # 页面展示入口，业务流程通过回调连接
-│   │   │   └── home.js                   # 首页选关事件与开始/继续/已通关状态展示
+│   │   │   ├── home.js                   # 首页选关事件与开始/继续/已通关状态展示
+│   │   │   └── mine-practice.js          # 练习页等待身份后创建实例，游客无需登录
+│   │   ├── games/                        # 游戏关卡数据与独立进度模型
+│   │   │   └── mine/                     # 扫雷练习稳定关卡标识和版本化存档
+│   │   │       ├── levels.js             # 10×10/10、15、20颗雷的三个练习档位
+│   │   │       └── practice-store.js     # 按账号/游客、关卡保存棋盘与绝对计时
 │   │   ├── game/                         # 游戏控制器与页面协调，不包含规则算法
 │   │   │   ├── game-controller.js        # 账号/轮次、选关/重开、规则计时与通关协调
 │   │   │   ├── game-ui.js                # 游戏固定节点语义映射，避免控制器散落ID
 │   │   │   ├── mine-controller.js        # 扫雷独立棋盘、事件、连锁爆炸与音效
+│   │   │   ├── mine-practice-controller.js # 多关选取、规则确认、进度恢复与本地结果展示
 │   │   │   ├── sudoku-controller.js      # 数独独立棋盘、笔记、输入与检查
 │   │   │   ├── akari-controller.js       # 照明独立棋盘、灯光/数字墙提示与点击
 │   │   │   ├── progress-coordinator.js  # 当前账号快照收集/保存及恢复期间写入保护
 │   │   │   └── result-dialog.js          # 结果/单关结算展示、按钮回调及焦点管理
 │   │   ├── main.js                       # 显式创建游戏控制器实例的启动入口
-│   │   ├── game.js                       # 扫雷棋盘与规则逻辑
+│   │   ├── game.js                       # 支持尺寸/雷数配置的扫雷规则，默认仍为10×10/10雷
 │   │   ├── akari.js                      # 照明题盘、灯光与通关判断
 │   │   ├── sudoku.js                     # 数独题盘、正式答案/候选笔记、旧存档兼容与通关判断
 │   │   ├── session.js                    # 各关独立开始/冻结/重开计时；不是账号登录会话
@@ -191,6 +201,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── dom-events.test.js            # 固定节点语义映射、局部查询及事件取消订阅契约
 │       ├── controller-contracts.test.js  # 无副作用导入、独立棋盘、存档协调及实例资源清理
 │       ├── http.test.js                  # 共享传输超时隔离、清理、204与业务错误兼容契约
+│       ├── mine-levels.test.js           # 参数化规则、独立续玩/计时、身份隔离及损坏存档降级
 │       ├── game.test.js                  # 扫雷规则测试
 │       ├── akari.test.js                 # 照明规则测试
 │       ├── sudoku.test.js                # 数独规则、候选笔记独立性、编辑保护与旧存档兼容
@@ -241,6 +252,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_avatars.py             # 真实临时API/Chrome：25图、保存/失败、棋局保持、四榜及窄屏
         ├── verify_forum.py               # 双账号真实论坛/消息、键盘/手机、跨浏览器及游戏续玩
         ├── verify_refactor.py            # 真实HTTP缓存/304/206、跨页/重启续玩、计时及爆炸卸载恢复
+        ├── verify_mine_practice.py        # 三档布雷/续玩/计时/身份隔离、窄屏及正式成绩不受影响
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料

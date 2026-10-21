@@ -102,6 +102,8 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .sudoku-art { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 1px; padding: 5px; border: 1px solid #d9bc83; border-radius: 10px; background: #dcc89e; color: #31475a; }
 .sudoku-art > span { display: grid; place-items: center; background: #fff5de; font: 600 17px Georgia, serif; }
 .landing-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 24px 0; color: #bdcdd8; font-size: 11px; letter-spacing: 1px; }
+.mine-practice-entry { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; color: var(--gold); font-size: 14px; text-decoration: none; }
+.mine-practice-entry:hover { text-decoration: underline; }
 
 /* 关卡保持原有操作方式；固定大小格子只在棋盘容器内滚动。 */
 .game-panel { width: min(100%, 640px); margin: 32px auto; padding: 28px 36px; border: 1px solid var(--line); border-radius: 18px; background: #102b3cf5; box-shadow: 0 24px 80px #06162466; }
