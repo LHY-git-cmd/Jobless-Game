@@ -8,6 +8,10 @@ import { availableMineStars, paintMineStars, createStarCollection } from './mine
 
 const DIFFICULTIES=[['tutorial','入门','从零学会'],['easy','简单','轻松起步'],['medium','中等','多想一步'],['hard','困难','步步推理'],['hell','地狱','极限挑战']];
 const FLAG='<img src="./assets/minesweeper/v2/flag.webp" width="24" height="24" alt="">';
+// 顶部操作图标统一线宽，文字保留为按钮名称，图形仅作辅助提示。
+const RESTART_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M19 12a7 7 0 0 0-12-5L4 10m1 2a7 7 0 0 0 12 5l3-3"/></svg>';
+const BOOK_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v15m0-15C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></svg>';
+const SOUND_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 4-5 4H2v8h4l5 4V4Z"/><path class="mine-sound-wave" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="mine-sound-muted" d="m16 9 6 6m0-6-6 6"/></svg>';
 
 /** 秒数向下显示，星级仍按服务端毫秒判定。 */
 export function mineTime(ms){const seconds=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;}
@@ -29,7 +33,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       <div class="mine-start-row"><p id="mine-reward-note">正在加载难度…</p><button id="mine-start" class="journey-primary" type="button" disabled>开始游戏 <span aria-hidden="true">→</span></button></div>
     </div>
     <section id="mine-play" class="mine-play" aria-label="扫雷游戏" hidden>
-      <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><button id="mine-restart" type="button">重新开始</button><div class="mine-play-secondary"><div class="mine-game-brand"><img src="./assets/minesweeper/v2/theme.webp" width="36" height="34" alt=""><h2>扫雷</h2></div><div class="journey-actions"><button id="mine-rules" type="button">规则</button><button id="mine-sound" type="button">音效：开</button></div></div></div>
+      <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><button id="mine-restart" type="button">${RESTART_ICON}重新开始</button><div class="mine-play-secondary"><div class="mine-game-brand"><img src="./assets/minesweeper/v2/theme.webp" width="104" height="99" alt="扫雷"></div><div class="journey-actions"><button id="mine-rules" type="button">${BOOK_ICON}规则</button><button id="mine-sound" type="button">${SOUND_ICON}<span class="mine-sound-label">音效：开</span></button></div></div></div>
       <div class="mine-stats"><div><span>剩余雷标记</span><strong id="mine-left">0</strong></div><div><span>可得星数</span><span id="mine-available-stars" class="mine-rating mine-stat-stars" aria-live="polite"></span></div><div><span id="mine-clock-label">本局用时</span><strong id="mine-clock">00:00</strong></div></div>
       <div id="mine-tutorial" class="mine-tutorial" hidden><span id="mine-tutorial-count" class="eyebrow"></span><h3 id="mine-tutorial-title"></h3><p id="mine-tutorial-text"></p><button id="mine-understood" type="button" class="journey-primary" hidden>明白了，试试标记 →</button></div>
       <div id="mine-viewport" class="mine-viewport" tabindex="0" role="region" aria-label="扫雷棋盘，可上下左右滚动"><div id="mine-board" class="mine-board" role="group" aria-label="扫雷棋盘"></div></div>
@@ -275,7 +279,8 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
   scope.listen($('mine-sound'),'click',()=>{settings.update({effectsEnabled:!settings.state.effectsEnabled});sound.unlock();});
   scope.add(settings.subscribe(value=>{
     sound.setMuted(!value.effectsEnabled);sound.setVolume(value.effectsVolume);
-    $('mine-sound').textContent=`音效：${value.effectsEnabled?'开':'关'}`;$('mine-sound').setAttribute('aria-pressed',String(!value.effectsEnabled));
+    $('mine-sound').querySelector('.mine-sound-label').textContent=`音效：${value.effectsEnabled?'开':'关'}`;
+    $('mine-sound').classList.toggle('is-muted',!value.effectsEnabled);$('mine-sound').setAttribute('aria-pressed',String(!value.effectsEnabled));
   }));
   const timer=setInterval(renderTiming,250);
   scope.add(()=>clearInterval(timer));
