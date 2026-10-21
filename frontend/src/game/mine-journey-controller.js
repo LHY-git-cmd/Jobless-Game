@@ -28,8 +28,8 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       <div id="mine-specs" class="mine-specs" role="group" aria-labelledby="mine-options-title"></div>
       <div class="mine-start-row"><p id="mine-reward-note">正在加载难度…</p><button id="mine-start" class="journey-primary" type="button" disabled>开始游戏 <span aria-hidden="true">→</span></button></div>
     </div>
-    <section id="mine-play" class="mine-play" aria-labelledby="mine-play-title" hidden>
-      <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><div><p id="mine-play-kicker" class="eyebrow"></p><h2 id="mine-play-title"></h2></div><div class="journey-actions"><button id="mine-rules" type="button">规则</button><button id="mine-sound" type="button">音效：开</button><button id="mine-restart" type="button">重新开始</button></div></div>
+    <section id="mine-play" class="mine-play" aria-label="扫雷游戏" hidden>
+      <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><div class="journey-actions"><button id="mine-rules" type="button">规则</button><button id="mine-sound" type="button">音效：开</button><button id="mine-restart" type="button">重新开始</button></div></div>
       <div class="mine-stats"><div><span>剩余雷标记</span><strong id="mine-left">0</strong></div><div><span>可得星数</span><span id="mine-available-stars" class="mine-rating mine-stat-stars" aria-live="polite"></span></div><div><span id="mine-clock-label">本局用时</span><strong id="mine-clock">00:00</strong></div></div>
       <div id="mine-tutorial" class="mine-tutorial" hidden><span id="mine-tutorial-count" class="eyebrow"></span><h3 id="mine-tutorial-title"></h3><p id="mine-tutorial-text"></p><button id="mine-understood" type="button" class="journey-primary" hidden>明白了，试试标记 →</button></div>
       <div id="mine-viewport" class="mine-viewport" tabindex="0" role="region" aria-label="扫雷棋盘，可上下左右滚动"><div id="mine-board" class="mine-board" role="group" aria-label="扫雷棋盘"></div></div>
@@ -191,8 +191,6 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       const animate=playing&&board.outcome==='lost'&&lastOutcome==='active'&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
       if(animate){animation={visible:new Set(),exploded:new Set(),settled:new Set()};finished=false;}
       lastOutcome=board.outcome;
-      const level=state.levels.find(v=>v.level_id===attempt.level_id);
-      $('mine-play-title').textContent=level?.name||'扫雷';$('mine-play-kicker').textContent=`${attempt.puzzle.cols} × ${attempt.puzzle.rows} · ${attempt.puzzle.mine_count} 颗地雷`;
       $('mine-left').textContent=attempt.puzzle.mine_count-state.flags.length;
       renderTiming();
       const active=board.outcome==='active'&&!state.busy&&!state.paused&&finished;
