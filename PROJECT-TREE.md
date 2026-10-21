@@ -155,13 +155,13 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │
 ├── frontend/                             # 可独立预览的网页前端及其测试
 │   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
-│   ├── index.html                        # 游戏入口、三关界面及游戏弹窗
-│   ├── journey.html                      # 照明十关、成长、正式三游戏资格与主题页面
+│   ├── index.html                        # 扫雷/照明/数独三卡分别链接新版选关，旧单关已移除
+│   ├── journey.html                      # 三游戏新版选关框架、重制空状态、成长/资格/主题
 │   ├── pk.html                           # 房间/匹配、准备/倒计时/竞速/结果与重连页面
 │   ├── journey.css                       # 沿用海岛风格、语义主题、正式棋盘与窄屏布局
 │   ├── navigation.css                    # 首页与新版入口跨页淡入/轻移、背景保留及减少动画适配
-│   ├── mine-practice.html                # 扫雷三尺寸九关练习页，独立续玩与本地成绩体验
-│   ├── mine-practice.css                 # 练习选关卡、棋盘、规则与窄屏布局
+│   ├── mine-practice.html                # 旧练习地址兼容跳转新版扫雷选关，不再展示旧题
+│   ├── mine-practice.css                 # 保留的旧练习样式，当前入口已停用
 │   ├── ranking.html                      # 排行榜默认入口，展示扫雷分榜及三个单项导航
 │   ├── ranking-mine.html                 # 扫雷历史最佳通关排行
 │   ├── ranking-akari.html                # 照明历史最佳通关排行
@@ -178,12 +178,13 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── http.js                   # 同源Cookie、独立超时、JSON/204及HTTP错误元数据
 │   │   │   └── lifecycle.js              # 实例监听/订阅/定时器清理与异步回调保护
 │   │   ├── pages/                        # 页面展示入口，业务流程通过回调连接
-│   │   │   ├── home.js                   # 首页选关事件与开始/继续/已通关状态展示
-│   │   │   ├── journey.js                # 服务器正式成长、规则开始、草稿与冻结重试装配
+│   │   │   ├── home.js                   # 旧单关首页展示工厂，当前首页不再装配
+│   │   │   ├── journey.js                # 按game_id展示新版空目录及成长，不恢复旧棋盘
 │   │   │   ├── pk.js                     # REST写入、SSE通知、双人竞速和身份销毁装配
-│   │   │   └── mine-practice.js          # 练习页等待身份后创建实例，游客无需登录
+│   │   │   └── mine-practice.js          # 保留的旧练习装配，当前兼容跳转页不加载
 │   │   ├── games/                        # 游戏关卡数据与独立进度模型
 │   │   │   ├── formal-board.js           # 照明实例、数独输入及仅显示权威揭格的正式棋盘
+│   │   │   ├── catalog.js                # 三游戏新版目录元数据、稳定链接及旧参数兼容
 │   │   │   └── mine/                     # 扫雷练习稳定关卡标识和版本化存档
 │   │   │       ├── levels.js             # 10×10/15×15/20×20三尺寸各三难度，兼容原关卡ID
 │   │   │       └── practice-store.js     # 按账号/游客、关卡保存棋盘与绝对计时
@@ -201,7 +202,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── akari-controller.js       # 照明独立棋盘、灯光/数字墙提示与点击
 │   │   │   ├── progress-coordinator.js  # 当前账号快照收集/保存及恢复期间写入保护
 │   │   │   └── result-dialog.js          # 结果/单关结算展示、按钮回调及焦点管理
-│   │   ├── main.js                       # 显式创建游戏控制器实例的启动入口
+│   │   ├── main.js                       # 首页账号/记录/滚动装配，不再启动旧单关控制器
 │   │   ├── game.js                       # 支持尺寸/雷数配置的扫雷规则，默认仍为10×10/10雷
 │   │   ├── akari.js                      # 照明题盘、灯光与通关判断
 │   │   ├── sudoku.js                     # 数独题盘、正式答案/候选笔记、旧存档兼容与通关判断
@@ -215,7 +216,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── player-profile.js             # 首页70px头像、绿色经验环、底部等级牌与右侧用户名/星数
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
-│   │   ├── auth-game.js                  # 首页三个独立关卡的登录拦截与授权续接
+│   │   ├── auth-game.js                  # 旧单关登录续接，当前首页已停用
 │   │   ├── auth-page.js                  # 排行榜共享登录及站内消息初始化
 │   │   ├── forum-client.js               # 同源请求、码点校验、固定重试负载和账号响应隔离
 │   │   ├── forum-view.js                 # 紧凑纯文本卡片、左评论数/右图标、红色拇指点赞及输入计数
@@ -265,6 +266,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── notifications.test.js         # 浏览器计时器、登录/可见性、账号隔离及已读边界
 │       ├── avatar.test.js                # 头像路径、清单错误、保存重试和退出/换号晚到响应隔离
 │       ├── player-profile.test.js        # 成长读取换号隔离、不可用状态及同账号头像更新不重复请求
+│       ├── game-catalog.test.js          # 三游戏独立选关地址、非法参数与旧深链接兼容
 │       ├── completion.test.js            # 自由选关/计时/存档/保存及销毁重建和旧响应回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
@@ -306,6 +308,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_forum.py               # 双账号真实论坛/消息、键盘/手机、跨浏览器及游戏续玩
         ├── verify_refactor.py            # 真实HTTP缓存/304/206、跨页/重启续玩、计时及爆炸卸载恢复
         ├── verify_game_progression.py     # 双Chrome正式成长/三项资格/主题/房间SSE与匹配验收
+        ├── verify_game_catalog.py         # 新版三卡/空目录/成长/旧关卡下线/过渡及窄屏验收
         ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
