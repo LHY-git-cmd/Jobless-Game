@@ -22,7 +22,10 @@ def prepare_theme():
         # 无数字的已揭格采用数字格内的同色灰底，不生成新的美术风格。
         Image.new('RGB',(96,96),image.getpixel((350,85))).save(output/'open.webp','WEBP',lossless=True,method=6)
         image.resize((256,244),Image.Resampling.LANCZOS).save(output/'theme.webp','WEBP',lossless=True,method=6)
-    print('扫雷主题：9张版本化WebP已生成')
+    # 游戏顶部图标单独使用用户指定的JPEG，保持正方形原比例。
+    with Image.open(source/'扫雷.jpeg') as image:
+        image.convert('RGB').resize((256,256),Image.Resampling.LANCZOS).save(output.parent/'source-icon.webp','WEBP',quality=95,method=6)
+    print('扫雷主题：9张版本化WebP与JPEG来源图标已生成')
 
 
 if __name__=='__main__':
