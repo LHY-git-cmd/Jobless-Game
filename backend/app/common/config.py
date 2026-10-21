@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     forum_comment_interval_seconds: int = Field(default=3, ge=0, le=60)
     # 一键通关默认关闭，仅在开发环境显式配置 DEV_QUICK_COMPLETE_ENABLED=true 时开启。
     dev_quick_complete_enabled: bool = False
+    # 新能力独立关闭；正式开启前需迁移及容量验收，单机边界维持不变。
+    progression_enabled: bool = False
+    cosmetics_enabled: bool = False
+    pk_rooms_enabled: bool = False
+    matchmaking_enabled: bool = False
+    pk_room_limit: int = Field(default=4, ge=1, le=4)
+    pk_ticket_limit: int = Field(default=8, ge=1, le=8)
+    pk_sse_limit: int = Field(default=16, ge=1, le=16)
 
     model_config = SettingsConfigDict(env_file=Path(__file__).resolve().parents[2] / ".env", env_prefix="", extra="ignore", hide_input_in_errors=True)
 
