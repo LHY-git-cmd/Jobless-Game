@@ -11,11 +11,12 @@ export function availableMineStars(level,elapsedMs,outcome='active',confirmed=nu
   return duration<=level.t3_ms?3:duration<=level.t2_ms?2:1;
 }
 
-/** 固定三颗空心轮廓，按成绩填色；只在数量或读屏描述变化时更新。 */
-export function paintMineStars(host,count,label=`${count}颗星，共3颗`){
-  const value=Math.max(0,Math.min(3,Math.trunc(count)||0));
-  if(host.dataset.stars===String(value)&&host.getAttribute('aria-label')===label)return;
-  if(host.children.length!==3)host.innerHTML=STAR_ICON.repeat(3);
+/** 按关卡上限绘制轮廓：入门一颗，其余三颗；只在数量或描述变化时更新。 */
+export function paintMineStars(host,count,label=`${count}颗星`,maxStars=3){
+  const total=maxStars===1?1:3;
+  const value=Math.max(0,Math.min(total,Math.trunc(count)||0));
+  if(host.dataset.stars===String(value)&&host.getAttribute('aria-label')===label&&host.children.length===total)return;
+  if(host.children.length!==total)host.innerHTML=STAR_ICON.repeat(total);
   [...host.children].forEach((star,index)=>star.classList.toggle('is-lit',index<value));
   host.dataset.stars=String(value);host.setAttribute('role','img');host.setAttribute('aria-label',label);
 }

@@ -104,7 +104,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       rating.className='mine-spec-reward';rating.textContent=item.difficulty==='tutorial'?'完成得 1 星 · 2 经验':`三星 ${mineTime(item.t3_ms)} 内 · ${item.star_xp.at(-1)} 经验`;
       const progress=state.progress.find(v=>v.level_id===item.level_id);
       best.textContent=progress?.best_stars?'已通关':progress?.current_attempt?'有进行中的棋局':'尚未通关';
-      paintMineStars(stars,progress?.best_stars||0,`历史最高${progress?.best_stars||0}星${item.max_stars===1?'，入门教学最高1星':''}`);
+      paintMineStars(stars,progress?.best_stars||0,`历史最高${progress?.best_stars||0}星${item.max_stars===1?'，入门教学最高1星':''}`,item.max_stars);
       footer.append(best,stars);button.append(size,caption,rating,footer);$('mine-specs').append(button);
     }
     const progress=state.progress.find(v=>v.level_id===level.level_id);
@@ -165,7 +165,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     $('mine-result-kicker').textContent=lost?'下一次，再近一点':state.result?'本关成绩已保存':'通关成功';
     $('mine-result-title').textContent=lost?'碰到地雷了，再试一次吧。':state.result?'安全格全部找到！':'正在保存奖励…';
     $('mine-result-stars').hidden=!state.result;
-    if(state.result)paintMineStars($('mine-result-stars'),state.result.stars,`本局获得${state.result.stars}星`);
+    if(state.result)paintMineStars($('mine-result-stars'),state.result.stars,`本局获得${state.result.stars}星`,state.attempt.puzzle.tutorial?1:3);
     $('mine-result-description').textContent=lost?'雷区已显示。重新开始会生成新棋盘，其他关卡的进度会保留。':state.result
       ?`用时 ${mineTime(state.result.duration_ms)} · 历史最高 ${state.result.best_stars} 星 · 本次新增 ${state.result.awarded_stars} 星、${state.result.awarded_xp} 经验。`
       :'终盘和用时已保留。若网络失败，点击重试保存奖励。';
@@ -176,7 +176,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     const level=state.levels.find(item=>item.level_id===attempt.level_id),elapsed=model.elapsed();
     $('mine-clock').textContent=mineTime(elapsed);
     const count=availableMineStars(level,elapsed,attempt.board.outcome,state.result?.stars);
-    paintMineStars($('mine-available-stars'),count,attempt.puzzle.tutorial?'入门教学固定可得1星':`本局可得${count}星`);
+    paintMineStars($('mine-available-stars'),count,attempt.puzzle.tutorial?'入门教学固定可得1星':`本局可得${count}星`,level?.max_stars);
   }
   /** 只有服务端状态变化才重建棋盘；计时显示由独立低频定时器更新。 */
   function render(state){

@@ -107,7 +107,7 @@ def main():
                 assert ev("document.querySelector('.player-stars strong').textContent==='0'")
                 wait("document.querySelector('.player-stars strong').textContent==='1' && !document.querySelector('.mine-flying-star')")
                 click('#mine-back')
-                assert ev("document.querySelector('.mine-spec .mine-rating').dataset.stars==='1' && document.querySelectorAll('.mine-spec .mine-rating svg').length===3")
+                assert ev("document.querySelector('.mine-spec .mine-rating').dataset.stars==='1' && document.querySelectorAll('.mine-spec .mine-rating svg').length===1 && document.querySelectorAll('#mine-available-stars svg').length===1 && document.querySelectorAll('#mine-result-stars svg').length===1")
                 assert ev("getComputedStyle(document.querySelector('.mine-spec .mine-rating')).color===getComputedStyle(document.querySelector('.player-stars')).color")
                 checks.append('教学固定一星、实得一星汇入顶部后更新、历史星与顶部同色')
                 choose('mine-v2-easy-10');wait("document.getElementById('mine-available-stars').dataset.stars==='3'")
