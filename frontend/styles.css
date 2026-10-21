@@ -12,6 +12,7 @@
   --line: #a8c6d333;
   --paper: #f4f0e6;
   --ink: #243b4b;
+  --star-color: #66d9ba;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -324,7 +325,7 @@ button:disabled { cursor: not-allowed; opacity: .48; }
 .player-ring-fill { stroke: #55d3af; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 400ms ease; }
 .player-level { position: absolute; z-index: 1; bottom: -3px; left: 50%; transform: translateX(-50%); min-width: 38px; padding: 2px 6px; color: #ecdfbd; border: 2px solid #788b7f; border-radius: 999px; background: #142622; box-shadow: 0 1px 4px #04150fcc; font: 700 12px/1.2 system-ui, sans-serif; text-align: center; white-space: nowrap; }
 .player-profile .auth-username { grid-column: 2; grid-row: 1; align-self: end; min-width: 0; max-width: 110px; overflow: hidden; color: #f2f5ed; font-size: 16px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.player-stars { display: flex; align-items: center; align-self: start; gap: 6px; grid-column: 2; grid-row: 2; color: #66d9ba; white-space: nowrap; }
+.player-stars { display: flex; align-items: center; align-self: start; gap: 6px; grid-column: 2; grid-row: 2; color: var(--star-color); white-space: nowrap; }
 .player-stars svg { width: 18px; height: 18px; fill: currentColor; }
 .player-stars strong { font: 600 18px/1.3 system-ui, sans-serif; }
 .player-stars > span { font-size: 12px; }

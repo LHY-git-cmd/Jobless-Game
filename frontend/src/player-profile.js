@@ -36,6 +36,11 @@ export function createProfileProgress({ request = () => requestJson('/api/v1/me/
       if (next !== null) void refresh();
     },
     refresh,
+    /** 只接受当前账号的服务端结算快照，同时失效较早发出的成长读取。 */
+    accept(uid,value) {
+      if(uid!==userId||userId===null||!valid(value))return false;
+      epoch++;busy=false;publish('ready',value);return true;
+    },
     /** 页面销毁使所有尚未返回的读取失效。 */
     destroy() { epoch++; userId = null; busy = false; },
   };
@@ -82,10 +87,14 @@ export function initPlayerProfile({ host, userButton, openButton, avatarImage, u
   function visible() { if (!document.hidden) void model.refresh(); }
   document.addEventListener('visibilitychange', visible);
   document.addEventListener(Events.RECORDS_UPDATED, visible);
+  /** 汇聚结束后使用服务端总数，旧身份的迟到动画不能修改当前账号。 */
+  function confirmed(event){model.accept(event.detail?.userId,event.detail?.progression);}
+  document.addEventListener(Events.PROGRESSION_CONFIRMED,confirmed);
   window.addEventListener('pageshow', visible);
   window.addEventListener('pagehide', event => {
     if (event.persisted) return;
     model.destroy(); document.removeEventListener('visibilitychange', visible); document.removeEventListener(Events.RECORDS_UPDATED, visible);
+    document.removeEventListener(Events.PROGRESSION_CONFIRMED,confirmed);
     window.removeEventListener('pageshow', visible);
   }, { once: true });
   return model;

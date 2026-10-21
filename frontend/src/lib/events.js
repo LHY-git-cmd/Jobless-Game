@@ -4,6 +4,7 @@ export const Events = Object.freeze({
   AUTH_EXPIRED: 'auth-expired',
   AUTHORIZED_START: 'authorized-start',
   RECORDS_UPDATED: 'records-updated',
+  PROGRESSION_CONFIRMED: 'progression-confirmed',
   SETTLEMENT_OPENED: 'settlement-opened',
   SETTLEMENT_CLOSED: 'settlement-closed',
   USER_PROFILE_UPDATED: 'user-profile-updated',

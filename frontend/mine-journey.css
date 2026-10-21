@@ -20,7 +20,12 @@
 .mine-spec strong { font: 600 26px/1.3 Georgia,"Microsoft YaHei",sans-serif; }
 .mine-spec > span,.mine-spec small { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .mine-spec .mine-spec-reward { color: var(--gold); }
-.mine-spec small { border-top: 1px solid var(--line); width: 100%; padding-top: 12px; margin-top: auto; }
+.mine-spec .mine-spec-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--line); width: 100%; padding-top: 12px; margin-top: auto; }
+.mine-spec .mine-rating { flex: none; }
+.mine-rating { display: inline-flex; align-items: center; gap: 4px; color: var(--star-color); }
+.mine-rating svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; opacity: .65; transition: fill 160ms ease,opacity 160ms ease; }
+.mine-rating svg.is-lit { fill: currentColor; opacity: 1; }
+.mine-spec .mine-rating { color: var(--star-color); }
 .mine-start-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 24px; border-top: 1px solid var(--line); padding-top: 24px; }
 .mine-start-row p { color: var(--muted); font-size: 13px; line-height: 1.9; margin: 0; max-width: 660px; }
 .mine-start-row button { flex: none; min-width: 160px; padding: 14px 24px; }
@@ -33,6 +38,8 @@
 .mine-stats > div { display: flex; flex-direction: column; gap: 8px; padding: 20px 8px; text-align: center; }
 .mine-stats span { font-size: 13px; color: var(--muted); }
 .mine-stats strong { font: 500 28px/1.2 Georgia,serif; font-variant-numeric: tabular-nums; color: var(--gold); }
+.mine-stats .mine-stat-stars { align-self: center; min-height: 34px; color: var(--star-color); }
+.mine-stat-stars svg { width: 24px; height: 24px; }
 .mine-viewport { min-width: 0; max-width: 100%; max-height: min(65svh,660px); overflow: auto; overscroll-behavior: contain; padding: 12px 4px; margin: 16px 0; scrollbar-color: var(--gold) var(--surface); }
 .mine-board { display: grid; grid-template-columns: repeat(var(--mine-cols),44px); gap: 0; width: max-content; padding: 0; margin-inline: auto; border: 4px ridge #9b9b9b; border-radius: 0; background: #bfbfbf; }
 /* 直接使用用户原图切片；数字1～3已在素材中，4～8以同灰底文字补齐。 */
@@ -59,11 +66,22 @@
 .mine-tutorial h3 { font-size: 18px; margin: 8px 0; }.mine-tutorial p:not(.eyebrow) { color: var(--muted); line-height: 1.8; margin: 8px 0; }
 .mine-result { margin-top: 24px; border: 1px solid var(--gold); border-radius: 12px; padding: 24px; background: color-mix(in srgb,var(--gold) 6%,var(--surface)); }
 .mine-result h3 { margin: 8px 0; font-size: 23px; }.mine-result p:last-of-type { color: var(--muted); line-height: 1.9; }
-.mine-result-stars { color: var(--gold); font-size: 28px; letter-spacing: 6px; }
+.mine-result-stars { margin-block: 14px; gap: 8px; }.mine-result-stars svg { width: 30px; height: 30px; }
+.mine-star-collection { position: fixed; inset: 0; z-index: 10020; pointer-events: none; color: var(--star-color); }
+.mine-flying-star { position: fixed; left: 0; top: 0; width: 24px; height: 24px; filter: drop-shadow(0 0 8px #66d9ba99); }
+.mine-flying-star svg,.mine-star-total svg { width: 24px; height: 24px; fill: currentColor; }
+.mine-star-total { position: fixed; right: 16px; top: max(16px,env(safe-area-inset-top)); display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 104px; padding: 10px 12px; border: 1px solid var(--star-color); border-radius: 28px; background: var(--surface); box-shadow: 0 8px 24px #061b2966; }
+.mine-star-total span { display: flex; }.mine-star-total strong { font: 600 20px/1.3 system-ui,sans-serif; }
 .mine-feedback { padding: 0 clamp(20px,3.6vw,44px); }.mine-feedback p { color: var(--gold); line-height: 1.8; margin: 0; }
 .mine-feedback:not(:has(p:empty)) { padding-bottom: 20px; }.mine-feedback button { margin-top: 12px; }
 @keyframes mine-blast { 0% { box-shadow: 0 0 0 3px #f0d49a; background: #ed9167; } 100% { box-shadow: 0 0 0 9px transparent; } }
 @media(max-width:700px) {
+  .mine-play { display: flex; flex-direction: column; }
+  .mine-play-heading { order: 0; }.mine-stats { order: 1; }.mine-tutorial { order: 2; }
+  .mine-operation { order: 3; position: sticky; top: 8px; z-index: 4; background: var(--surface); padding-block: 8px; border-bottom: 1px solid var(--line); }
+  .mine-operation p { margin: 4px 0; }.mine-viewport { order: 4; max-height: 55svh; }.mine-help { order: 5; }.mine-result { order: 6; }
+  .mine-keyboard-hint { display: none; }
+  .mine-stat-stars { gap: 2px; }.mine-stat-stars svg { width: 18px; height: 18px; }
   .mine-intro { gap: 12px; margin-bottom: 24px; }.mine-intro img { width: 56px; height: 56px; }.mine-intro .eyebrow { font-size: 10px; letter-spacing: 1px; }
   .mine-difficulties { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }.mine-difficulties button { padding: 16px 10px; }.mine-difficulties strong { font-size: 18px; }.mine-difficulties span { font-size: 12px; }
   .mine-start-row { flex-direction: column; align-items: stretch; gap: 16px; }.mine-start-row button { width: 100%; }
@@ -71,4 +89,4 @@
   .mine-play-heading > button { padding-inline: 10px; }.mine-play-heading h2 { font-size: 20px; }.mine-stats strong { font-size: 24px; }
   .mine-operation .journey-actions { width: 100%; }.mine-operation button { flex: 1; }.mine-tutorial { padding-inline: 12px; }
 }
-@media(prefers-reduced-motion:reduce) { .mine-square.mine-blasting { animation: none; } }
+@media(prefers-reduced-motion:reduce) { .mine-square.mine-blasting { animation: none; }.mine-rating svg { transition: none; } }

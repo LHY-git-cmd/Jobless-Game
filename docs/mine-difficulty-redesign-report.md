@@ -82,3 +82,17 @@ python artifacts/frontend/verify_mine_redesign.py --preview --port 8002
 真实Chrome/临时SQLite共11组通过、0未捕获脚本异常，覆盖十二个普通关全部通关及精确总奖励、每档三张卡片、实际CSS背景加载原图覆盖/数字/旗帜/爆炸、终盘不褪色、刷新/换号/断网重试、320/375px及减少动画。截图 `mine-original-theme-tutorial.png`、`mine-original-theme-lost.png`、`mine-medium-three-boards.png` 已视觉检查。新增专项日志为 `artifacts/frontend/mine-expansion-green.log`、`mine-theme-unit.log`、`mine-theme-expansion-browser.log` 和MySQL日志。
 
 原8002隔离预览已重启加载新目录，SQLite账号和棋局保留；只读HTTP与真实页面核对十三项以及四档各三种棋盘通过。访问地址不变，刷新页面即可。生产发布需要新增Flyway V11，仍未对业务库执行迁移或部署生产；原全量回归的历史问题见上文，本轮没有重复运行无关测试。
+
+## 三颗星、实时星级与手机操作追加（2026-10-22）
+
+按用户圈选位置，规格卡片右下角改为固定三颗SVG轮廓，未通关全部空心，按该关历史最高星数点亮。颜色与顶部总数共用 `--star-color: #66d9ba`；教学仍最多点亮一颗。卡片左侧保留尚未通关、进行中或已通关状态。
+
+游戏中间统计由“已揭安全格”改为“可得星数”，用三颗星显示：普通关按原三星/二星时限递减为3→2→1，边界含等号；教学不随时间降星，失败0星。刷新继续使用原起点，终盘时间冻结，结算返回后以服务端星数为准。
+
+成功结算仅把 `awarded_stars` 确认的本次新增数量汇聚到总数，使用原生Web Animations API、transform/opacity；一星提升到三星只飞两颗，重复成绩无飞行。顶部不在视口内时使用临时总数接收位置，不为汇聚跳动页面。动画结束同步完整服务端成长快照，较早读取或旧身份事件不可覆盖；返回/重开立即落实已确认显示，退出/换号清理旧效果，减少动画偏好直接同步。
+
+手机端把标记/排雷移到棋盘上方，滚动时保持可见，按钮至少44px；棋盘继续在自身区域双向滚动，隐藏桌面键盘提示。显式开始/重开后定位到游戏顶部，避免选关面板收起后留在页面底部；汇聚和普通揭格不改变页面滚动位置。
+
+专项单元测试先观察缺少新模块及权威快照接收方法失败，再实现。最终相关20项单元/控制器/事件测试通过；真实Chrome/临时SQLite共8组通过、0未捕获脚本异常，覆盖空星/历史点亮、实际75/150秒跨级、教学固定、1→3补两颗、重复与刷新不重播、减少动画、320/375px及横屏、手机开局定位/操作触达、飞行期间换号隔离。日志 `mine-stars-red.log`、`mine-stars-unit.log`、`mine-stars-browser.log`，截图 `mine-stars-empty-cards.png`、`mine-stars-mobile-flight.png`、`mine-stars-mobile-earned.png` 及 `mine-stars-*-board.png`。
+
+完整前端回归116项中115通过，唯一失败仍为前文已在修改前复现的旧首页 `completion.test.js`，本轮未恢复旧页面或修复无关测试，日志 `mine-stars-all-frontend.log`。本轮没有后端或数据库变更，未重复运行数据库测试；8002已通过只读HTTP与真实页面核对新模块及桌面/手机空星，刷新现有页面即可。

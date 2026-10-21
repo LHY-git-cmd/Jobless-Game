@@ -206,6 +206,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── game-ui.js                # 游戏固定节点语义映射，避免控制器散落ID
 │   │   │   ├── mine-controller.js        # 扫雷独立棋盘、事件、连锁爆炸与音效
 │   │   │   ├── mine-journey-controller.js # 五档选关/四步教学/权威棋盘、音效及账号状态销毁
+│   │   │   ├── mine-stars.js             # 三颗星展示、按时限降星及权威新增星数汇聚/取消
 │   │   │   ├── mine-practice-controller.js # 多关选取、规则确认、进度恢复与本地结果展示
 │   │   │   ├── sudoku-controller.js      # 数独独立棋盘、笔记、输入与检查
 │   │   │   ├── akari-controller.js       # 照明独立棋盘、灯光/数字墙提示与点击
@@ -265,6 +266,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── http.test.js                  # 共享传输超时隔离、清理、204与业务错误兼容契约
 │       ├── mine-levels.test.js           # 九关参数化规则、跨尺寸续玩/重开与旧存档/身份隔离
 │       ├── mine-session.test.js          # 正式扫雷显式开始、权威揭格、教学、续玩与断网重试
+│       ├── mine-stars.test.js            # 星级时间边界、动画差额/防重/取消、减少动画及手机回退
 │       ├── game.test.js                  # 扫雷规则测试
 │       ├── akari.test.js                 # 照明规则测试
 │       ├── sudoku.test.js                # 数独规则、候选笔记独立性、编辑保护与旧存档兼容
@@ -277,7 +279,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── forum-body.test.js            # 正文表单/链接、旧标题隐藏、左评论按钮及右侧图标交互
 │       ├── notifications.test.js         # 浏览器计时器、登录/可见性、账号隔离及已读边界
 │       ├── avatar.test.js                # 头像路径、清单错误、保存重试和退出/换号晚到响应隔离
-│       ├── player-profile.test.js        # 成长读取换号隔离、不可用状态及同账号头像更新不重复请求
+│       ├── player-profile.test.js        # 成长/权威结算接收、换号及旧读取隔离、不可用状态
 │       ├── game-catalog.test.js          # 三游戏独立选关地址、非法参数与旧深链接兼容
 │       ├── completion.test.js            # 自由选关/计时/存档/保存及销毁重建和旧响应回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
@@ -324,6 +326,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_game_progression.py     # 双Chrome正式成长/三项资格/主题/房间SSE与匹配验收
         ├── verify_game_catalog.py         # 新版三卡/空目录/成长/旧关卡下线/过渡及窄屏验收
         ├── verify_mine_redesign.py       # 五档扫雷真实浏览器/临时SQLite及隔离本地预览
+        ├── verify_mine_stars.py          # 三颗星/时间降星/汇聚/手机操作及换号取消专项浏览器验收
         ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志

@@ -37,3 +37,16 @@ test('非法成长数据不作为经验或星数展示，认证失效触发身�
   unauthorized.setUser({ id: 1 }); await Promise.resolve();
   assert.equal(expired, 1);
 });
+
+test('接收结算权威成长后，较早读取不得覆盖总数，旧账号事件也不得写回',async()=>{
+  const pending=[],states=[];
+  const model=createProfileProgress({request:()=>new Promise(resolve=>pending.push(resolve)),onChange:state=>states.push(state)});
+  model.setUser({id:1});
+  const confirmed={xp:6,level:1,total_stars:3,next_level_xp:90};
+  assert.equal(model.accept(1,confirmed),true);
+  pending[0]({xp:0,level:1,total_stars:0,next_level_xp:90});await Promise.resolve();
+  assert.equal(states.at(-1).progression.total_stars,3);
+  model.setUser({id:2});assert.equal(model.accept(1,confirmed),false);
+  assert.equal(states.at(-1).progression,null);
+  assert.equal(model.accept(2,{...confirmed,xp:-1}),false);
+});
