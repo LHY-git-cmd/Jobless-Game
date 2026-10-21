@@ -83,12 +83,13 @@ try:
                 ev(f"document.querySelector('.level-card[data-game=\"{game}\"]').click()")
                 wait(f"document.body.dataset.game==='{game}' && document.getElementById('catalog-empty-title').textContent.includes('{name}') && window.catalogDone")
                 assert ev('window.catalogAnimated===true')
-                wait("document.getElementById('journey-summary').textContent.includes('160 经验')")
+                wait("document.querySelector('.player-level').textContent==='Lv.2'")
+                assert ev("!document.querySelector('.journey-intro,.journey-summary,#catalog-games,#catalog-description')")
                 assert ev("!document.querySelector('#formal-board,#journey-levels,[data-level]')")
                 assert ev("localStorage.getItem('jobless-progress-v1:1')==='legacy-snapshot-kept'")
                 if game == 'mine':
                     shot('mine-new-catalog.png')
-                    cmd('Page.reload'); wait("document.body.dataset.game==='mine' && document.getElementById('journey-level').textContent==='Lv.2'")
+                    cmd('Page.reload'); wait("document.body.dataset.game==='mine' && document.querySelector('.player-level').textContent==='Lv.2'")
                 ev("document.querySelector('a[href=\"./index.html\"]').click()")
                 wait("location.pathname==='/index.html' && window.catalogDone && document.querySelectorAll('.level-card').length===3")
             cmd('Page.navigate',{'url':base+'journey.html?level=sudoku-beginner-001'})
@@ -102,12 +103,14 @@ try:
                 if width == 375:
                     shot('catalog-mobile.png')
             cmd('Emulation.setEmulatedMedia',{'features':[{'name':'prefers-reduced-motion','value':'reduce'}]})
-            ev("document.querySelector('#catalog-games [data-game=\"akari\"]').click()")
+            ev("document.querySelector('a[href=\"./index.html\"]').click()")
+            wait("location.pathname==='/index.html' && window.catalogDone")
+            ev("document.querySelector('.level-card[data-game=\"akari\"]').click()")
             wait("document.body.dataset.game==='akari' && window.catalogDone")
             assert ev('window.catalogAnimated===false')
             Handler.progression_enabled = False
             cmd('Page.reload')
-            wait("document.body.dataset.game==='akari' && document.getElementById('journey-summary').textContent==='经验与星数暂不可用'")
+            wait("document.body.dataset.game==='akari' && document.getElementById('journey-status').textContent==='账号资料暂不可用。'")
             assert ev("document.getElementById('catalog-empty').getClientRects().length>0")
             assert not Handler.writes, Handler.writes
             assert not any('/attempts' in path or path.endswith('/levels') or path.startswith('/api/challenges/') for path in Handler.reads), Handler.reads

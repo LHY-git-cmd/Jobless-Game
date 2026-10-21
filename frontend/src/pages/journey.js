@@ -1,4 +1,4 @@
-/** 三游戏新版选关页：只展示当前游戏、真实成长与主题，关卡重制期间不加载旧题/旧存档。 */
+/** 简洁选关页：直接展示当前游戏关卡，账号成长集中在顶部头像，不加载旧题/旧存档。 */
 import { initAuth } from '../auth.js';
 import { Events } from '../lib/events.js';
 import { api } from '../progression/client.js';
@@ -13,16 +13,9 @@ let uid, epoch = 0, readVersion = 0, cosmetics = [], equipped = 'default', theme
 function renderGame() {
   document.title = `${game.name}选关 · 无职游戏`;
   document.body.dataset.game = game.id;
-  $('catalog-eyebrow').textContent = `${game.name} / ${game.english}`;
-  $('journey-title').textContent = game.title;
-  $('catalog-description').textContent = game.description;
   $('levels-title').textContent = `${game.name}关卡`;
   document.querySelector('.site-nav [aria-current="page"]').href = gameLink(game.id);
   $('catalog-empty-title').textContent = `${game.name}关卡重新设计中`;
-  for (const link of $('catalog-games').querySelectorAll('[data-game]')) {
-    link.toggleAttribute('aria-current', link.dataset.game === game.id);
-    if (link.dataset.game === game.id) link.setAttribute('aria-current', 'page');
-  }
   if (game.art) {
     const image = document.createElement('img'); image.src = `./assets/${game.art}`; image.alt = ''; image.width = image.height = 96;
     $('catalog-art').append(image);
@@ -31,20 +24,6 @@ function renderGame() {
     for (const digit of ['1', '2', '', '', '5', '6', '7', '', '9']) { const cell = document.createElement('span'); cell.textContent = digit; grid.append(cell); }
     $('catalog-art').append(grid);
   }
-}
-
-/** 未读取时显示未知，避免把暂不可用误报为0星/零经验。 */
-function clearSummary(loading = false) {
-  $('journey-level').textContent = 'Lv.—'; $('journey-summary').textContent = uid ? loading ? '正在同步经验与星数…' : '经验与星数暂不可用' : '登录后同步经验与星数';
-  $('journey-xp').max = 1; $('journey-xp').value = 0; $('journey-next').textContent = '已有成长会继续保留。';
-}
-
-/** 只展示服务器累计成长，目录空状态不会修改或清空正式成果。 */
-function renderSummary(value) {
-  $('journey-level').textContent = `Lv.${value.level}`;
-  $('journey-summary').textContent = `${value.xp} 经验 · ${value.total_stars} 颗星`;
-  $('journey-xp').max = value.next_level_xp || Math.max(1, value.xp); $('journey-xp').value = value.xp;
-  $('journey-next').textContent = value.next_level_xp ? `距离下一级还需 ${value.next_level_xp - value.xp} 经验` : '已达到当前最高等级。';
 }
 
 /** 旧资格链接进入对应游戏空目录，不以稳定关卡ID自动打开旧棋盘。 */
@@ -74,7 +53,7 @@ function showError(error) {
   if (error.status === 401) document.dispatchEvent(new CustomEvent(Events.AUTH_EXPIRED));
 }
 
-/** 仅查询成长/资格/主题，无题目、尝试、计时或关卡列表请求。 */
+/** 页面只查询资格/主题；顶部头像独立读取成长，避免重复请求。 */
 async function refresh() {
   const stamp = epoch, version = ++readVersion;
   const current = () => stamp === epoch && version === readVersion;
@@ -82,13 +61,13 @@ async function refresh() {
     const features = (await api('features')).data;
     if (!current()) return;
     if (uid && features.progression) {
-      const [summary, qualification] = await Promise.all([api('me/progression'), api('me/pk-eligibility')]);
+      const qualification = await api('me/pk-eligibility');
       if (!current()) return;
-      renderSummary(summary.data); renderQualifications(qualification.data);
-      $('journey-status').textContent = '成长已同步，新关卡正在准备。';
+      renderQualifications(qualification.data);
+      $('journey-status').textContent = '账号资料已同步。';
     } else {
-      clearSummary(); $('journey-qualifications').textContent = '新的资格关卡正在准备。';
-      $('journey-status').textContent = uid ? '成长暂未开放，新关卡正在准备。' : '登录后可查看账号成长，新关卡正在准备。';
+      $('journey-qualifications').textContent = '新的资格关卡正在准备。';
+      $('journey-status').textContent = uid ? '账号资料暂不可用。' : '登录后可查看账号资料。';
     }
     if (features.cosmetics) {
       try {
@@ -100,8 +79,7 @@ async function refresh() {
     } else { cosmetics = []; renderCosmetics(); $('theme-message').textContent = '主题暂未开放。'; }
   } catch (error) {
     if (!current()) return;
-    clearSummary();
-    if (error.status === 404) $('journey-status').textContent = '账号成长暂未开放，新关卡正在准备。';
+    if (error.status === 404) $('journey-status').textContent = '账号资料暂不可用。';
     else showError(error);
   }
 }
@@ -131,7 +109,7 @@ async function identityChanged() {
   if (uid === next) return;
   uid = next; epoch++; readVersion++; themeBusy = false; cosmetics = []; equipped = 'default';
   document.documentElement.dataset.theme = 'default'; $('journey-login').hidden = Boolean(uid); $('theme-preview-reset').hidden = true;
-  $('journey-qualifications').replaceChildren(); clearSummary(true); renderCosmetics(); await refresh();
+  $('journey-qualifications').replaceChildren(); renderCosmetics(); await refresh();
 }
 
 renderGame();

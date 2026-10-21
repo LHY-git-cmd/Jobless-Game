@@ -8,7 +8,7 @@
 
 完整目录结构与文件夹用途见 [项目目录树](./PROJECT-TREE.md)。后续目录结构、所列文件或用途变更时，必须同步更新该文档。
 
-前端保留多页和原生 ES Module。`main.js`只装配首页账号、历史记录和入口滚动，不再装配或恢复旧三关。三卡分别链接 `journey.html?game_id=mine`、`journey.html?game_id=akari`、`journey.html?game_id=sudoku`；新版页保留成长、资格及主题，关卡区域先展示重制空状态。页面使用原生跨页过渡，保留背景并淡入新内容，减少动画设置下关闭过渡。
+前端保留多页和原生 ES Module。`main.js`只装配首页账号、历史记录和入口滚动，不再装配或恢复旧三关。三卡分别链接 `journey.html?game_id=mine`、`journey.html?game_id=akari`、`journey.html?game_id=sudoku`；选关页直接显示当前游戏的关卡区，去掉大段介绍、独立成长面板与跨游戏切换。成长集中在顶部头像，关卡区域先展示重制空状态，资格及主题区域保留。页面使用原生跨页过渡，保留背景并淡入新内容，减少动画设置下关闭过渡。
 
 旧的 [扫雷练习地址](./frontend/mine-practice.html) 兼容跳转新版扫雷选关，不再展示原九关。旧本地存档与服务器成长保留，页面不会自动启动旧尝试。当前浏览器回归使用 `python artifacts/frontend/verify_game_catalog.py`，仅用临时静态站点和隔离读取数据，不访问项目数据库；原MVP背景见 [历史实施报告](./docs/mine-multilevel-mvp-report.md)。
 

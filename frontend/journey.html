@@ -15,22 +15,15 @@
     </header>
     <main>
       <a class="journey-link" href="./index.html">← 返回游戏首页</a>
-      <section class="journey-intro" aria-labelledby="journey-title">
-        <div><p id="catalog-eyebrow" class="eyebrow">新的旅程 / YOUR JOURNEY</p><h1 id="journey-title">选择你的下一段旅程。</h1><p id="catalog-description">新的关卡正在准备，从这里继续你的成长。</p></div>
-        <aside class="journey-summary" aria-label="账号成长"><span>我的成长</span><strong id="journey-level">Lv.—</strong><p id="journey-summary">登录后同步经验与星数</p><progress id="journey-xp" value="0" max="1" aria-label="累计经验"></progress><p id="journey-next">已有成长会继续保留。</p></aside>
-      </section>
-      <nav id="catalog-games" class="catalog-games" aria-label="选择游戏">
-        <a data-game="mine" href="./journey.html?game_id=mine">扫雷</a><a data-game="akari" href="./journey.html?game_id=akari">照明</a><a data-game="sudoku" href="./journey.html?game_id=sudoku">数独</a>
-      </nav>
       <section class="journey-section" aria-labelledby="levels-title">
-        <div class="section-heading"><h2 id="levels-title">选择关卡</h2><span>新的挑战，正在准备</span></div>
+        <div class="section-heading"><h1 id="levels-title">选择关卡</h1></div>
         <div id="catalog-empty" class="catalog-empty">
           <div id="catalog-art" class="catalog-art" aria-hidden="true"></div><p class="eyebrow">下一段旅程</p>
           <h2 id="catalog-empty-title">关卡重新设计中</h2><p>原有关卡已暂时下线。<br>新关卡准备好后，会在这里开放选择。</p><a class="journey-link" href="./index.html">回到首页 →</a>
         </div>
       </section>
-      <div class="journey-actions"><button type="button" id="journey-refresh">刷新成长</button><button type="button" id="journey-login">登录查看成长</button></div>
-      <p id="journey-status" class="journey-status" role="status">正在同步账号成长…</p>
+      <div class="journey-actions"><button type="button" id="journey-refresh">刷新资料</button><button type="button" id="journey-login">登录</button></div>
+      <p id="journey-status" class="journey-status" role="status">正在同步账号资料…</p>
       <div class="journey-bottom">
         <section class="journey-panel" aria-labelledby="eligibility-title"><p class="eyebrow">一起探索</p><h2 id="eligibility-title">双人竞速</h2><p>正式资格与已有通关成果会继续保留，新的资格关卡开放后可在对应游戏中挑战。</p><div id="journey-qualifications" class="qualification-list"></div><a class="journey-link" href="./pk.html">前往双人竞速 →</a></section>
         <section class="journey-panel" aria-labelledby="themes-title"><p class="eyebrow">给旅程一点颜色</p><h2 id="themes-title">我的主题</h2><p>已解锁的主题与星数继续保留。</p><div id="journey-cosmetics" class="journey-actions"></div><button type="button" id="theme-preview-reset" hidden>结束预览，恢复已装备主题</button><p id="theme-message" role="status"></p></section>
