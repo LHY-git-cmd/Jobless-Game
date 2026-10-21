@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b3c"><title>双人竞速 · 无职游戏</title>
+  <link rel="icon" href="./favicon.ico"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./journey.css">
+</head>
+<body>
+  <div class="world-background" aria-hidden="true"></div>
+  <div class="page journey-page">
+    <header class="landing-header"><a class="brand" href="./index.html">◇ 无职游戏</a><div class="auth-controls" aria-label="账号"></div><nav class="site-nav" aria-label="主导航"><a href="./index.html">首页</a><a href="./journey.html">灯塔之旅</a><a href="./pk.html" aria-current="page">双人竞速</a></nav></header>
+    <main>
+      <section class="journey-intro"><div><p class="eyebrow">两束光 / ONE CHALLENGE</p><h1>同一座灯塔，一起点亮。</h1><p>邀请朋友，或等待一位同行者。<br>同题照明，十分钟娱乐竞速。</p></div><aside class="journey-summary"><span>竞速约定</span><p>双方准备后倒计时5秒。<br>一秒内先后完成，记为平局。<br>对局不发放成长奖励。</p></aside></section>
+      <p id="pk-message" class="journey-status" role="status" tabindex="-1">正在确认竞速资格…</p><p id="pk-connection" role="status"></p>
+      <div class="journey-actions"><button type="button" id="pk-login">登录并继续</button><button type="button" id="pk-refresh">刷新状态</button></div>
+      <section id="pk-locked" class="journey-panel" aria-labelledby="pk-unlock-title" hidden><h2 id="pk-unlock-title">先完成三项正式挑战</h2><div id="pk-requirements" class="qualification-list"></div><a class="journey-link" href="./journey.html">前往灯塔之旅 →</a></section>
+      <section id="pk-lobby" class="journey-bottom" aria-label="创建或加入竞速" hidden>
+        <div class="journey-panel"><p class="eyebrow">与朋友同行</p><h2>双人房间</h2><button type="button" id="pk-create" class="journey-primary">创建房间</button><form id="pk-join-form" class="pk-join"><label for="pk-code">朋友的房间码</label><div class="journey-actions"><input id="pk-code" name="code" maxlength="6" minlength="6" autocomplete="off" autocapitalize="characters" pattern="[A-Za-z2-9]{6}" required aria-describedby="pk-code-error"><button type="submit">加入房间</button></div><p id="pk-code-error" role="status"></p></form></div>
+        <div class="journey-panel"><p class="eyebrow">遇见同行者</p><h2>自动匹配</h2><p>照明普通池，按到达顺序配对。<br>等待最多60秒，可随时取消。</p><button type="button" id="pk-match" class="journey-primary">开始匹配</button></div>
+      </section>
+      <section id="pk-waiting" class="journey-panel" aria-labelledby="pk-waiting-title" hidden><h2 id="pk-waiting-title">正在等待同行者</h2><p id="pk-ticket-status"></p><button type="button" id="pk-cancel">取消匹配</button></section>
+      <section id="pk-room" class="journey-panel" aria-labelledby="pk-room-title" hidden>
+        <div class="top-row"><div><p class="eyebrow">双人照明竞速</p><h2 id="pk-room-title">房间 <span id="pk-room-code"></span></h2></div><button type="button" id="pk-leave">离开房间</button></div>
+        <p id="pk-room-status" role="status"></p><div id="pk-members" class="pk-members"></div><p id="pk-countdown" class="pk-clock" aria-live="off"></p>
+        <button type="button" id="pk-ready" class="journey-primary">我准备好了</button>
+        <p>照明规则：灯光沿行列传播，墙格挡光；灯泡不可互照，数字墙格的相邻灯数须恰好符合，照亮全部白格后提交。</p>
+        <p>进行中主动退出判负；断线宽限30秒。双方离线或服务重启，对局作废。</p>
+        <div id="pk-board" class="formal-viewport" tabindex="0" aria-label="竞速棋盘，超宽时可滚动"></div>
+        <button type="button" id="pk-submit" class="journey-primary" hidden>提交解答</button><div id="pk-result" class="formal-result" hidden tabindex="-1"></div>
+      </section>
+    </main>
+    <footer class="landing-footer"><a href="./journey.html">回到自己的旅程 ↗</a><span>光影之间，各有精彩。</span></footer>
+  </div>
+  <script type="module" src="./src/pages/pk.js"></script>
+</body>
+</html>

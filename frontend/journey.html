@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b3c"><title>灯塔之旅 · 无职游戏</title>
+  <link rel="icon" href="./favicon.ico"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./journey.css">
+</head>
+<body>
+  <div class="world-background" aria-hidden="true"></div>
+  <div class="page journey-page">
+    <header class="landing-header">
+      <a class="brand" href="./index.html">◇ 无职游戏</a><div class="auth-controls" aria-label="账号"></div>
+      <nav class="site-nav" aria-label="主导航"><a href="./index.html">首页</a><a href="./journey.html" aria-current="page">灯塔之旅</a><a href="./pk.html">双人竞速</a></nav>
+    </header>
+    <main>
+      <section class="journey-intro" aria-labelledby="journey-title">
+        <div><p class="eyebrow">光影之间 / YOUR JOURNEY</p><h1 id="journey-title">点亮一关，向远方一步。</h1><p>十座灯塔，循着线索慢慢探索。<br>每一颗新星，都记得你的进步。</p></div>
+        <aside class="journey-summary" aria-label="账号成长"><span>我的旅程</span><strong id="journey-level">Lv.1</strong><p id="journey-summary">登录后保存经验与星数</p><progress id="journey-xp" value="0" max="90" aria-label="等级经验"></progress><p id="journey-next">首次通关和提高星级获得一次性经验。</p></aside>
+      </section>
+      <p id="journey-status" class="journey-status" role="status" tabindex="-1">正在读取关卡…</p>
+      <div class="journey-actions"><button type="button" id="journey-refresh">刷新进度</button><button type="button" id="journey-login">登录并保存旅程</button></div>
+      <section class="journey-section" aria-labelledby="levels-title"><div class="section-heading"><h2 id="levels-title">循光而行</h2><span>最高星级永久保留 · 星星不消耗</span></div><div id="journey-levels" class="journey-levels" aria-label="照明十关"></div></section>
+      <section id="formal-play" class="journey-panel" aria-labelledby="formal-title" hidden>
+        <div class="top-row"><h2 id="formal-title">照明</h2><div class="journey-actions"><button type="button" id="formal-rules">规则</button><button type="button" id="formal-restart">重新开始本关</button><button type="button" id="formal-close">回到目录</button></div></div>
+        <div class="stats"><span>用时 <strong id="formal-timer">00:00</strong></span><span id="formal-threshold"></span></div>
+        <p id="formal-instruction"></p><p>开始后，重看规则、离开或断网期间继续计时。</p>
+        <div id="formal-board" class="formal-viewport" tabindex="0" aria-label="棋盘区域，超宽时可滚动"></div>
+        <div class="journey-actions"><button type="button" id="formal-submit" class="journey-primary">提交通关</button><button type="button" id="formal-restore">从服务器恢复</button></div>
+        <p id="formal-message" role="status"></p><div id="formal-result" class="formal-result" hidden tabindex="-1"></div>
+      </section>
+      <div class="journey-bottom">
+        <section class="journey-panel" aria-labelledby="eligibility-title"><p class="eyebrow">出发前的三束光</p><h2 id="eligibility-title">解锁双人竞速</h2><p>正式通过以下三关，即可与朋友同题竞速。</p><div id="journey-qualifications" class="qualification-list"></div><a class="journey-link" href="./pk.html">前往双人竞速 →</a></section>
+        <section class="journey-panel" aria-labelledby="themes-title"><p class="eyebrow">给旅程一点颜色</p><h2 id="themes-title">我的主题</h2><p>累计10星解锁星光主题，星星不会扣除。</p><div id="journey-cosmetics" class="journey-actions"></div><button type="button" id="theme-preview-reset" hidden>结束预览，恢复已装备主题</button><p id="theme-message" role="status"></p></section>
+      </div>
+    </main>
+    <footer class="landing-footer"><a href="./mine-practice.html">自由练习：扫雷九关 ↗</a><span>慢一点，光会找到你。</span></footer>
+  </div>
+  <dialog id="journey-rules" class="journey-rules" aria-labelledby="journey-rules-title">
+    <p class="eyebrow">出发之前</p><h2 id="journey-rules-title">照明规则</h2><p id="journey-rules-body"></p><p id="journey-rules-timing"></p>
+    <div class="journey-actions"><button type="button" id="journey-rules-start" class="journey-primary">开始本关</button><button type="button" id="journey-rules-cancel">返回</button></div>
+  </dialog>
+  <script type="module" src="./src/pages/journey.js"></script>
+</body>
+</html>
