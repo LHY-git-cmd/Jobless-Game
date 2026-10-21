@@ -103,6 +103,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
+│   # 成长实施新增：backend/content/game-catalog-v1.json（冻结题库与参数）、backend/content_check.py（离线唯一解工具）
+│   # backend/app/common/game_catalog.py（目录元数据）、services/game_rules.py（有界判题与星级经验规则）
+│   # backend/tests/test_game_content.py、frontend/test/akari-instance.test.js（题库与矩形实例验收）
 │   ├── game-progression-pk-plan.md         # RESTful关卡成长/主题/房间匹配方案、数据契约及2核2GB验收
 │   ├── frontend-refactor-plan.md          # 已确认的多页前端模块化、缓存与请求层重构计划
 │   ├── frontend-refactor-report.md        # 重构产出、测试统计、环境待验收及发布回退说明
