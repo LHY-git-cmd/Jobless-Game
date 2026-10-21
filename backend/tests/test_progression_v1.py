@@ -239,7 +239,8 @@ class ProgressionAPI(TestCase):
             if not cursor:
                 break
         self.assertEqual(len(all_ids), len(set(all_ids)))
-        self.assertEqual(len(all_ids), 12)
+        from backend.app.common.game_catalog import published_levels
+        self.assertEqual(len(all_ids), len(published_levels()))
         self.settings.progression_enabled = False
         response = self.client.get('/api/v1/me/progression')
         self.assertEqual((response.status_code, response.json()['code']), (404, 'feature_disabled'))

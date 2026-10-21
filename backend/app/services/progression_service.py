@@ -3,7 +3,7 @@
 from collections import OrderedDict, deque
 from copy import deepcopy
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta
 import hashlib
 import json
 import secrets
@@ -11,7 +11,7 @@ from threading import Lock
 from time import monotonic
 from uuid import UUID, uuid4
 from ..common.config import get_settings
-from ..common.game_catalog import LEVELS, POLICY, QUALIFICATIONS, metadata
+from ..common.game_catalog import LEVELS, POLICY, QUALIFICATIONS, metadata, published_levels
 from ..common.exceptions import AppError
 from ..common.security import utc_now
 from ..models.entities.progression import (GameLevelVersion, PlayerProgression, PlayerLevelProgress,
@@ -19,7 +19,7 @@ from ..models.entities.progression import (GameLevelVersion, PlayerProgression, 
 from ..models.entities.cosmetic import PlayerCosmetic, PlayerAppearance
 from ..repositories import progression_repository as repo
 from . import auth_service
-from .game_rules import validate_akari, validate_sudoku, stars_for, elapsed_ms
+from .game_rules import validate_akari, validate_sudoku, stars_for, elapsed_ms, reward_milestones
 
 DEFAULT_APPEARANCE = {key: 'default' for key in ('theme_id', 'mine_skin_id', 'akari_skin_id', 'sudoku_skin_id')}
 COSMETICS = [{'cosmetic_id': 'default', 'name': '海岛', 'kind': 'theme', 'required_stars': 0, 'asset_version': 1},
@@ -173,18 +173,20 @@ def level_definition(db, level_id, version=1):
     return row.definition
 
 
-def mine_neighbors(index):
-    """正式扫雷固定10×10，8邻域不跨边界。"""
-    r, c = divmod(index, 10)
-    return [a*10+b for a in range(max(0, r-1), min(10, r+2))
-            for b in range(max(0, c-1), min(10, c+2)) if (a, b) != (r, c)]
+def mine_neighbors(index, rows=10, cols=10):
+    """按尝试绑定的行列计算八邻域，默认值兼容旧10×10棋局。"""
+    r, c = divmod(index, cols)
+    return [a*cols+b for a in range(max(0, r-1), min(rows, r+2))
+            for b in range(max(0, c-1), min(cols, c+2)) if (a, b) != (r, c)]
 
 
 def mine_public(board):
     """只返回已揭格；失败后才公开雷，胜利不需要发隐藏布局。"""
     mines = set(board['mine_indices'])
-    visible = [{'index': i, 'value': -1 if i in mines else sum(j in mines for j in mine_neighbors(i))} for i in board['revealed']]
-    return {'revealed': visible, 'outcome': board['outcome'], **({'mines': sorted(mines)} if board['outcome'] == 'lost' else {})}
+    visible = [{'index': i, 'value': -1 if i in mines else sum(j in mines for j in mine_neighbors(i, board.get('rows',10), board.get('cols',10)))} for i in board['revealed']]
+    return {'revealed': visible, 'outcome': board['outcome'],
+            **({'tutorial_step': board['tutorial_step']} if 'tutorial_step' in board else {}),
+            **({'mines': sorted(mines)} if board['outcome'] == 'lost' else {})}
 
 
 def attempt_resource(db, attempt, status=200):
@@ -236,7 +238,15 @@ def create_attempt(db, uid, data, key, **_):
             fail(409, 'attempt_active', '本关已有正在进行的尝试。', links={'attempt': '/api/v1/attempts/' + attempt.attempt_id})
     if sum(a.status == 'active' for a in active) >= 10:
         fail(409, 'attempt_limit', '正式活跃关卡已达上限。')
-    board = {'mine_indices': secrets.SystemRandom().sample(range(100), 10), 'revealed': [], 'requested': [], 'outcome': 'active'} if level['game_id'] == 'mine' else {}
+    board = {}
+    if level['game_id'] == 'mine':
+        puzzle = level['puzzle']
+        rows, cols, count = puzzle['rows'], puzzle['cols'], puzzle.get('mine_count', 10)
+        board = {'rows': rows, 'cols': cols,
+                 'mine_indices': [6,18,24] if puzzle.get('tutorial') else secrets.SystemRandom().sample(range(rows*cols), count),
+                 'revealed': [], 'requested': [], 'outcome': 'active'}
+        if puzzle.get('tutorial'):
+            board['tutorial_step'] = 0
     attempt = GameAttempt(attempt_id=str(uuid4()), user_id=uid, level_id=level['level_id'], level_version=level['level_version'],
               game_id=level['game_id'], mode=data['mode'], status='active', revision=0, started_at=now,
               expires_at=now + timedelta(days=POLICY['attempt_days']), board=board)
@@ -264,21 +274,33 @@ def abandon_attempt(db, uid, rid, match, **_):
     return attempt_resource(db, attempt)
 
 
-def reveal(db, uid, rid, index, **_):
+def reveal(db, uid, rid, index, received_at=None, **_):
     """用户锁串行揭格，重放已处理索引不会再次展开或恢复lost棋局。"""
     attempt = owned_attempt(db, uid, rid)
-    if attempt.game_id != 'mine' or not 0 <= index < 100:
+    level = level_definition(db, attempt.level_id, attempt.level_version)
+    puzzle = level['puzzle']
+    rows, cols = puzzle['rows'], puzzle['cols']
+    if attempt.game_id != 'mine' or not 0 <= index < rows*cols:
         fail(422, 'invalid_cell', '揭格位置不合法。')
     board = deepcopy(attempt.board)
     if index in board['requested'] or index in board['revealed']:
         return attempt_resource(db, attempt)
     if attempt.status != 'active' or board['outcome'] != 'active':
         fail(409, 'attempt_terminal', '本次扫雷已结束。')
+    if puzzle.get('tutorial'):
+        step = board['tutorial_step']
+        if step in (1,2) or (step == 0 and index != 0) or index in board['mine_indices']:
+            fail(409, 'tutorial_step', '请按教学提示完成当前步骤。')
+    # 仅新版本启用首击安全；旧尝试的随机布局和规则保持绑定版本。
+    if puzzle.get('first_safe') and not board['requested'] and index in board['mine_indices']:
+        available = sorted(set(range(rows*cols))-set(board['mine_indices'])-{index})
+        board['mine_indices'].remove(index)
+        board['mine_indices'].append(secrets.choice(available))
     board['requested'].append(index)
     mines, revealed = set(board['mine_indices']), set(board['revealed'])
     if index in mines:
         revealed.add(index)
-        board['outcome'], attempt.status, attempt.ended_at = 'lost', 'lost', utc_now()
+        board['outcome'], attempt.status, attempt.ended_at = 'lost', 'lost', received_at or utc_now()
     else:
         pending = [index]
         while pending:
@@ -286,17 +308,42 @@ def reveal(db, uid, rid, index, **_):
             if cell in revealed or cell in mines:
                 continue
             revealed.add(cell)
-            neighbors = mine_neighbors(cell)
+            neighbors = mine_neighbors(cell, rows, cols)
             if not mines.intersection(neighbors):
                 pending.extend(n for n in neighbors if n not in revealed)
-        if len(revealed) == 90:
+        if len(revealed) == rows*cols-len(mines):
             board['outcome'] = 'won'
+            if level.get('rules_version', 1) >= 2:
+                # JSON中只存ISO终盘时刻，结算重试无需依赖客户端或等待时间。
+                board['finished_at'] = (received_at or utc_now()).isoformat()
+                attempt.ended_at = received_at or utc_now()
+        if puzzle.get('tutorial') and board['tutorial_step'] == 0:
+            board['tutorial_step'] = 1
     board['revealed'] = sorted(revealed)
     attempt.board = board
     attempt.revision += 1
     result = attempt_resource(db, attempt, 201)
     result.headers['Location'] = f'/api/v1/attempts/{rid}/reveals/{index}'
     return result
+
+
+def tutorial_action(db, uid, rid, tutorial_action, **_):
+    """教学动作按顺序推进；重试已经完成的动作返回相同进度。"""
+    attempt = owned_attempt(db, uid, rid)
+    action = tutorial_action
+    level = level_definition(db, attempt.level_id, attempt.level_version)
+    if not level['puzzle'].get('tutorial') or action not in ('number','flag'):
+        fail(422, 'invalid_tutorial_action', '教学动作不合法。')
+    target = {'number': 2, 'flag': 3}[action]
+    board = deepcopy(attempt.board)
+    if board['tutorial_step'] >= target:
+        return attempt_resource(db, attempt)
+    if attempt.status != 'active' or board['tutorial_step'] != target-1:
+        fail(409, 'tutorial_step', '请先完成当前教学步骤。')
+    board['tutorial_step'] = target
+    attempt.board = board
+    attempt.revision += 1
+    return attempt_resource(db, attempt)
 
 
 def grant_cosmetics(db, uid, summary):
@@ -327,7 +374,8 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
              attempt.game_id == 'mine' and not data and attempt.board['outcome'] == 'won')
     if not valid:
         fail(422, 'invalid_completion', '终盘尚未满足全部规则。')
-    duration = elapsed_ms(attempt.started_at, received_at)
+    terminal_at = datetime.fromisoformat(attempt.board['finished_at']) if attempt.game_id == 'mine' and attempt.board.get('finished_at') else received_at
+    duration = elapsed_ms(attempt.started_at, terminal_at)
     current = stars_for(level, duration) if attempt.mode == 'campaign' else 0
     summary = repo.get(db, PlayerProgression, uid)
     if summary is None:
@@ -346,8 +394,7 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
     else:
         progress.best_duration_ms = min(progress.best_duration_ms, duration)
     awarded_xp = 0
-    rewards = POLICY['milestone_xp']
-    milestones = [('completion', rewards['completion'])] + [(f'star-{star}', rewards['star'] + (rewards['three_star_bonus'] if star == 3 else 0)) for star in range(1, current+1)]
+    milestones = reward_milestones(level, current)
     if attempt.mode == 'campaign':
         for milestone, amount in milestones:
             if not repo.get(db, ProgressionGrant, (uid, attempt.level_id, milestone)):
@@ -361,11 +408,12 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
     summary.xp += awarded_xp
     summary.total_stars += progress.best_stars - previous
     summary.revision += 1
-    if attempt.level_id in QUALIFICATIONS and not repo.get(db, PlayerQualification, (uid, attempt.level_id)):
-        db.add(PlayerQualification(user_id=uid, requirement_id=attempt.level_id, level_version=attempt.level_version,
+    qualification_id = 'mine-beginner-001' if attempt.level_id == 'mine-v2-easy-10' else attempt.level_id
+    if qualification_id in QUALIFICATIONS and not repo.get(db, PlayerQualification, (uid, qualification_id)):
+        db.add(PlayerQualification(user_id=uid, requirement_id=qualification_id, level_version=attempt.level_version,
                attempt_id=rid, completed_at=received_at))
     newly_cosmetics = grant_cosmetics(db, uid, summary)
-    attempt.status, attempt.ended_at = 'completed', received_at
+    attempt.status, attempt.ended_at = 'completed', terminal_at
     attempt.revision += 1
     db.flush()
     updated = progression(db, uid, True)
@@ -398,7 +446,7 @@ def list_progress(db, uid, game_id=None, cursor=None, limit=20, **_):
     attempts = repo.rows(db, GameAttempt, GameAttempt.user_id == uid, GameAttempt.status == 'active',
                          GameAttempt.expires_at > utc_now(), lock=False, limit=10)
     active = {a.level_id: a for a in attempts}
-    candidates = [item for key, item in sorted(LEVELS.items()) if (not game_id or item['game_id'] == game_id) and (not cursor or key > cursor)]
+    candidates = [item for item in sorted(published_levels(), key=lambda v: v['level_id']) if (not game_id or item['game_id'] == game_id) and (not cursor or item['level_id'] > cursor)]
     items = []
     for item in candidates[:limit]:
         key = item['level_id']
@@ -440,7 +488,7 @@ def cosmetics(db, uid, **_):
 
 
 ACTIONS = {'attempt_create': create_attempt, 'attempt_get': get_attempt, 'attempt_abandon': abandon_attempt,
-           'reveal': reveal, 'completion_put': complete_attempt, 'completion_get': get_completion,
+           'reveal': reveal, 'tutorial_action': tutorial_action, 'completion_put': complete_attempt, 'completion_get': get_completion,
            'level_progress': list_progress, 'appearance_get': appearance, 'appearance_put': put_appearance,
            'cosmetics': cosmetics}
 READ_ACTIONS = {'attempt_get', 'completion_get', 'level_progress', 'appearance_get', 'cosmetics', 'progression', 'eligibility'}

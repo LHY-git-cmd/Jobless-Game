@@ -42,7 +42,9 @@ with (output / 'progression-mysql57.log').open('w', encoding='utf-8') as log:
             raise RuntimeError('隔离MySQL未就绪')
         env.update(TEST_DATABASE_URL=f'mysql+pymysql://root:{password}@127.0.0.1:{port}/jobless_auth_test_progression?charset=utf8mb4',
                    TEST_FLYWAY_COMMAND=str(wrapper))
-        result = subprocess.run([sys.executable, '-m', 'unittest', 'backend.tests.test_mysql_integration'], cwd=root, env=env, stdout=log, stderr=log)
+        # 可指定测试名，只复验有变更或尚未覆盖的功能，避免重复运行整套联调。
+        targets = sys.argv[1:] or ['backend.tests.test_mysql_integration']
+        result = subprocess.run([sys.executable, '-m', 'unittest', *targets], cwd=root, env=env, stdout=log, stderr=log)
         print('MySQL5.7/Flyway integration: ' + ('PASS' if result.returncode == 0 else 'FAIL (see artifacts/backend/progression-mysql57.log)'))
         sys.exit(result.returncode)
     finally:

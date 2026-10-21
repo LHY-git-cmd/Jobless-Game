@@ -60,7 +60,21 @@ def validate_sudoku(puzzle, values):
 
 def stars_for(level, duration_ms):
     """按题目自身的有序毫秒门槛计算星级。"""
+    if level.get('max_stars') == 1:
+        return 1
     return 3 if duration_ms <= level['t3_ms'] else 2 if duration_ms <= level['t2_ms'] else 1
+
+
+def reward_milestones(level, current):
+    """新扫雷按累计经验拆成逐星增量，旧版本继续使用原有里程碑。"""
+    if 'star_xp' in level:
+        amounts = [0] + level['star_xp']
+        return [(f'star-{star}', amounts[star]-amounts[star-1]) for star in range(1, current+1)]
+    from ..common.game_catalog import POLICY
+    rewards = POLICY['milestone_xp']
+    return [('completion', rewards['completion'])] + [
+        (f'star-{star}', rewards['star'] + (rewards['three_star_bonus'] if star == 3 else 0))
+        for star in range(1, current+1)]
 
 
 def elapsed_ms(started_at, received_at):

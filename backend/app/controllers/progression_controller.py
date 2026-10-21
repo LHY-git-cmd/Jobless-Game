@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..common.config import get_settings
 from ..common.database import get_db
 from ..common.concurrency import bounded_db_call
-from ..common.game_catalog import LEVELS, metadata
+from ..common.game_catalog import LEVELS, metadata, published_levels
 from ..common.security import utc_now
 from ..models.schemas.progression import AttemptCreate, AttemptPatch, CompletionPut, AppearancePut, EmptyDTO
 from ..services import progression_service as service
@@ -56,8 +56,9 @@ async def games():
 @router.get('/levels')
 async def levels(game_id: str | None = Query(None, max_length=16)):
     """公开元数据，不创建计时凭据或发放题目。"""
-    enabled()
-    return {'items': [metadata(level) for level in LEVELS.values() if not game_id or level['game_id'] == game_id]}
+    if game_id != 'mine':
+        enabled()
+    return {'items': [metadata(level) for level in published_levels() if not game_id or level['game_id'] == game_id]}
 
 
 @router.get('/levels/{level_id}')
@@ -109,7 +110,14 @@ async def abandon(attempt_id: str, payload: AttemptPatch, request: Request, db: 
 @router.put('/attempts/{attempt_id}/reveals/{cell_index}', status_code=201)
 async def reveal(attempt_id: str, cell_index: int, payload: EmptyDTO, request: Request, db: Session = Depends(get_db)):
     """扫雷逐格动作，只接受空体，索引重放幂等。"""
-    return await run(request, db, 'reveal', rid=attempt_id, index=cell_index)
+    return await run(request, db, 'reveal', rid=attempt_id, index=cell_index,
+                     received_at=getattr(request.state, 'received_at', utc_now()))
+
+
+@router.put('/attempts/{attempt_id}/tutorial-actions/{action}')
+async def tutorial_action(attempt_id: str, action: str, payload: EmptyDTO, request: Request, db: Session = Depends(get_db)):
+    """教学的理解数字/标记动作按服务器步骤验证，重放不重复推进。"""
+    return await run(request, db, 'tutorial_action', rid=attempt_id, tutorial_action=action)
 
 
 @router.put('/attempts/{attempt_id}/completion', status_code=201)

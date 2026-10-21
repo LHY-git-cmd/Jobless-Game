@@ -293,6 +293,40 @@ class MySQLIntegrationTests(TestCase):
         self.assertEqual(results[0].data, results[1].data)
         self.assertEqual(results[0].headers, results[1].headers)
 
+    def test_v10_mine_catalog_and_concurrent_reward(self):
+        """真实V10定义与源文件一致，同一新扫雷终盘并发重试只授予6经验。"""
+        from backend.app.services import progression_service as service
+        from backend.app.common.game_catalog import MINE_LEVELS
+        from threading import Barrier
+        from copy import deepcopy
+        self.client.post('/api/auth/login', json={'username': self.new_name(), 'password': 'mine-v10-test'})
+        raw = self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            for definition in MINE_LEVELS:
+                self.assertEqual(db.get(progression.GameLevelVersion, (definition['level_id'], 1)).definition, definition)
+            attempt = service.dispatch(raw, db, 'attempt_create', data={
+                'level_id': 'mine-v2-easy-10', 'level_version': 1, 'mode': 'campaign'}, key=str(uuid4())).data
+            row = db.get(progression.GameAttempt, attempt['attempt_id'])
+            uid = row.user_id
+            board = deepcopy(row.board)
+            board['revealed'] = sorted(set(range(100))-set(board['mine_indices']))
+            board['outcome'] = 'won'
+            board['finished_at'] = utc_now().isoformat()
+            row.board = board
+            db.commit()
+        barrier = Barrier(2)
+        def complete(_):
+            """各请求用独立连接竞争同一账号锁及不可变结算资源。"""
+            with self.sessions() as db:
+                barrier.wait(timeout=10)
+                return service.dispatch(raw, db, 'completion_put', rid=attempt['attempt_id'], data={}, received_at=utc_now()).data
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(complete, range(2)))
+        self.assertEqual(results[0], results[1])
+        with self.sessions() as db:
+            self.assertEqual((db.get(progression.PlayerProgression, uid).xp, db.get(progression.PlayerProgression, uid).total_stars), (6,3))
+            self.assertEqual(len(db.scalars(select(progression.ProgressionGrant).where(progression.ProgressionGrant.user_id==uid)).all()), 3)
+
     def test_v7_v8_cancel_pair_competition_has_one_outcome(self):
         """真实MySQL上竞争取消/配对：只能取消成功或配对成功，不能双重占用。"""
         from backend.app.services import pk_service as service

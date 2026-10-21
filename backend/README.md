@@ -179,6 +179,14 @@ npm test *> ../artifacts/frontend/auth-tests.log
 
 本地回归运行 `python artifacts/frontend/verify_forum.py`，完整输出重定向到日志。该脚本使用独立 Chrome、临时 SQLite 和两个真实 Cookie 账号验证发布/回复/点赞、消息定位、跨浏览器已读、手机布局和棋局恢复。真实 V4/Flyway、外键及并发测试在 `test_mysql_integration.py`，只允许配置的 `jobless_auth_test_` 专用库；缺少环境时明确跳过，不能将 SQLite 当作 MySQL 验收。
 
+## 扫雷五档关卡
+
+新版扫雷选关入口为 `journey.html?game_id=mine`。关卡与逐星经验配置来自 `backend/content/mine-catalog-v2.json`，通过新增 `V10__publish_mine_difficulties.sql` 发布七项不可变定义；现有数据库只执行尚未执行的迁移，不修改V1～V9。正式开局和结算依旧要求 `PROGRESSION_ENABLED=true` 及登录。
+
+`GET /api/v1/levels?game_id=mine` 在成长开关关闭时也允许公开读取七项难度元数据，避免无法浏览选择；创建尝试仍受开关保护。教学动作使用 `PUT /api/v1/attempts/{id}/tutorial-actions/number` 和 `/flag`，请求空体、严格顺序、重放幂等；普通扫雷继续使用已有reveals与completion资源。新普通关首次揭格安全，矩形索引按绑定行列计算；终盘持久化时间，结算重试不会降低星级。奖励配置和教学固定1星规则按版本读取，历史资格及旧关定义保留。
+
+`python artifacts/frontend/verify_mine_redesign.py` 运行隔离浏览器验收；加 `--preview --port 8002` 启动独立SQLite本地预览，可真实注册和领取测试成长，数据仅在忽略的artifacts目录。发布前在专用MySQL上完成Flyway V10及对应API验证。`python backend/verify_progression_mysql.py backend.tests.test_mysql_integration.MySQLIntegrationTests.test_v10_mine_catalog_and_concurrent_reward` 可创建一次性MySQL5.7容器验证七项定义与并发奖励防重，结束删除本脚本容器。
+
 ## 目标服务器资源验收
 
 未提供目标机器访问凭据，不能将开发机运行成功视为服务器验收。记录启动前后 `free -m`、`/proc/meminfo` 的 `MemAvailable`、`ps -eo pid,comm,rss,%cpu`、MySQL 连接数，以及迁移全进程峰值。系统/宝塔和其他服务、MySQL、Python、Nginx 分别计入，尽量保留至少 350MiB 可用内存。
