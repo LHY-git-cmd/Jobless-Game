@@ -60,6 +60,7 @@ export function createMineController({ ui, dom, settings, canPlay, onChange, onC
   function renderMineBoard() {
     const fragment = dom.createDocumentFragment();
     ui.board.style?.setProperty('--mine-cols', String(game.level.cols));
+    ui.board.style?.setProperty('--mine-rows', String(game.level.rows));
     game.cells.forEach((cell, index) => {
       const row = Math.floor(index / game.level.cols) + 1;
       const col = index % game.level.cols + 1;
@@ -118,7 +119,7 @@ export function createMineController({ ui, dom, settings, canPlay, onChange, onC
       ? `已选第 ${Math.floor(selected / game.level.cols) + 1} 行，第 ${selected % game.level.cols + 1} 列`
       : "尚未选择格子";
     ui.caption.textContent = game.status === "won" ? "你赢了。" : game.status === "lost"
-      ? "碰到地雷了。" : "点选一个格子，再选择操作。棋盘可左右滑动。";
+      ? "碰到地雷了。" : "点选一个格子，再选择操作。棋盘可上下左右滑动。";
     ui.minesLeft.textContent = String(game.level.mineCount - game.flaggedCount);
     ui.cleared.textContent = String(game.revealedCount);
     onChange();

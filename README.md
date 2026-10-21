@@ -10,7 +10,7 @@
 
 前端保留多页和原生 ES Module。`main.js` 只创建游戏实例，首页展示、各关棋盘、结果弹窗和存档协调分别管理；公共工具集中 DOM 映射、事件名、生命周期和 HTTP 传输。状态归属、测试及发布回退见 [前端重构实施报告](./docs/frontend-refactor-report.md)。
 
-扫雷多关卡 MVP 位于 [扫雷练习页](./frontend/mine-practice.html)，提供10×10的10/15/20雷三个档位。游客可直接体验，各关独立续玩、计时与重开，账号和游客进度分开保存在本浏览器；练习不写正式排行。范围与验收见 [MVP实施报告](./docs/mine-multilevel-mvp-report.md)。真实浏览器回归运行 `python artifacts/frontend/verify_mine_practice.py`，仅使用临时数据库与测试浏览器。
+扫雷多关卡 MVP 位于 [扫雷练习页](./frontend/mine-practice.html)，提供10×10、15×15、20×20三种尺寸，每种三个难度，共九关；雷数分别为10/15/20、23/34/45、40/60/80。游客可直接体验，各关独立续玩、计时与重开，账号和游客进度分开保存在本浏览器；练习不写正式排行。范围与验收见 [MVP实施报告](./docs/mine-multilevel-mvp-report.md)。真实浏览器回归运行 `python artifacts/frontend/verify_mine_practice.py`，仅使用临时数据库与测试浏览器。
 
 后端按控制层、业务层、数据访问层、模型层和公共层组织，调用方向为 Controller → Service → Repository。层级职责和扩展约定见 [后端架构说明](./backend/README.md#五层架构)。
 

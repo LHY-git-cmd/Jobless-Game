@@ -4,14 +4,14 @@ import { Events } from '../lib/events.js';
 import { createScope } from '../lib/lifecycle.js';
 import { getAudioSettings } from '../audio-settings.js';
 import { formatTime } from '../session.js';
-import { MINE_LEVELS, mineLevel } from '../games/mine/levels.js';
+import { MINE_BOARD_SIZES, MINE_LEVELS, mineLevel } from '../games/mine/levels.js';
 import { createMinePracticeStore } from '../games/mine/practice-store.js';
 import { createMineController } from './mine-controller.js';
 
 /** user 为会话确认后的身份；游客无需登录，身份切换由既有认证事件驱动。 */
 export function createMinePracticeController({ dom = document, view = window, user = null, storage, settings } = {}) {
   const scope=createScope();
-  const ui=cacheIds({ cards:'practice-levels',change:'practice-change',owner:'practice-owner',panel:'practice-game',empty:'practice-empty',
+  const ui=cacheIds({ sizes:'practice-sizes',sizeSummary:'practice-size-summary',cards:'practice-levels',change:'practice-change',owner:'practice-owner',panel:'practice-game',empty:'practice-empty',
     title:'practice-game-title',description:'practice-game-description',kicker:'practice-game-kicker',restart:'practice-restart',
     rulesButton:'practice-rules',rules:'practice-rules-dialog',rulesTitle:'practice-rules-title',rulesDescription:'practice-rules-description',
     rulesTiming:'practice-rules-timing',start:'practice-start',safeTotal:'practice-safe-total',timer:'practice-timer',
@@ -22,6 +22,8 @@ export function createMinePracticeController({ dom = document, view = window, us
   if(storage===undefined) { try { storage=view.localStorage; } catch { /* 使用内存继续练习。 */ } }
   const store=createMinePracticeStore({storage,userId:user?.id??null});
   const cardNodes=new Map();
+  const sizeNodes=new Map();
+  let visibleSize=store.activeId?mineLevel(store.activeId).rows:10;
   let destroyed=false;
   const mine=createMineController({ui,dom,settings:settings??getAudioSettings(view),canPlay,
     onChange:changed,onComplete:showOutcome,onBusyChange:updateActions});
@@ -52,10 +54,13 @@ export function createMinePracticeController({ dom = document, view = window, us
     for(const level of MINE_LEVELS) {
       const nodes=cardNodes.get(level.id),entry=store.entries[level.id];
       nodes.button.setAttribute('aria-pressed',String(store.activeId===level.id));
-      nodes.button.setAttribute('aria-label',`${level.name}，${level.difficulty}，${level.mineCount}颗雷，${stateLabel(entry)}`);
+      nodes.button.hidden=level.rows!==visibleSize;
+      nodes.button.setAttribute('aria-label',`${level.rows}乘${level.cols}，${level.name}，${level.difficulty}，${level.mineCount}颗雷，${stateLabel(entry)}`);
       nodes.state.textContent=stateLabel(entry);
       nodes.time.textContent=entry?formatTime(store.seconds(level.id)):'尚未开始';
     }
+    for(const [size,button] of sizeNodes)button.setAttribute('aria-pressed',String(size===visibleSize));
+    ui.sizeSummary.textContent=`${visibleSize} × ${visibleSize} · 三个难度独立续玩`;
   }
 
   /** 只刷新显示计时；不每秒写盘、重画棋盘或请求后端。 */
@@ -90,7 +95,8 @@ export function createMinePracticeController({ dom = document, view = window, us
       ?`${level.name}已通关，排开 ${game.cells.length-game.level.mineCount} 个安全格，用时 ${formatTime(store.seconds(level.id))}。可以继续查看棋盘，或试试下一关。`
       :`${level.mineCount} 颗地雷已显示，本局用时 ${formatTime(store.seconds(level.id))}。可以重开本关，也可以换个档位。`;
     const index=MINE_LEVELS.findIndex(item=>item.id===level.id);
-    ui.next.textContent=index===MINE_LEVELS.length-1?'回到入门关':'试试下一关';
+    const next=MINE_LEVELS[(index+1)%MINE_LEVELS.length];
+    ui.next.textContent=next.rows!==level.rows?`试试 ${next.rows} × ${next.cols} · ${next.difficulty}`:'试试下一关';
     save();tick();updateActions();
     if(focus)ui.outcome.focus({preventScroll:true});
   }
@@ -121,15 +127,18 @@ export function createMinePracticeController({ dom = document, view = window, us
     ui.viewport.focus({preventScroll:true});
   }
 
-  /** 保存旧关并停止其动画，恢复新关已有棋盘，不复制三套控制器。 */
+  /** 保存旧关并停止其动画，恢复目标关棋盘和尺寸分组，九关复用同一控制器。 */
   function select(id,{focus=false}={}) {
     save();
     if(ui.rules.open)ui.rules.close();
     const entry=store.select(id),level=mineLevel(id);
+    visibleSize=level.rows;
     mine.restore(entry.game);
     ui.empty.hidden=true;ui.panel.hidden=false;ui.outcome.hidden=true;ui.message.textContent='';
     ui.title.textContent=level.name;ui.description.textContent=level.description;
-    ui.kicker.textContent=`${level.difficulty} / ${level.mineCount} 颗雷`;
+    ui.kicker.textContent=`${level.rows} × ${level.cols} · ${level.difficulty} / ${level.mineCount} 颗雷`;
+    ui.viewport.setAttribute('aria-label',`${level.rows}乘${level.cols}扫雷棋盘，可上下左右滑动查看`);
+    ui.viewport.scrollTo(0,0);
     ui.safeTotal.textContent=` / ${level.rows*level.cols-level.mineCount}`;
     mine.render();showOutcome(false);
     if(entry.rulesOpen)openRules();
@@ -152,15 +161,24 @@ export function createMinePracticeController({ dom = document, view = window, us
   function setUser(value) {
     if(ui.rules.open)ui.rules.close();
     store.setUser(value?.id??null);mine.clear();ui.panel.hidden=true;ui.empty.hidden=false;
+    visibleSize=store.activeId?mineLevel(store.activeId).rows:10;
     showOwner(value);updateCards();
     if(store.activeId)select(store.activeId);
   }
 
+  // 尺寸按钮只切换难度列表，玩家点击关卡后才创建棋局，不覆盖正在玩的进度。
+  for(const size of MINE_BOARD_SIZES) {
+    const button=dom.createElement('button');button.type='button';button.className='practice-size';button.dataset.size=String(size);
+    button.textContent=`${size} × ${size}`;button.setAttribute('aria-controls','practice-levels');
+    button.setAttribute('aria-label',`${size}乘${size}棋盘，${size*size}个格子`);
+    ui.sizes.append(button);sizeNodes.set(size,button);
+    scope.listen(button,'click',()=>{visibleSize=size;updateCards();});
+  }
   // 关卡按钮使用原生 button 和 aria-pressed，同时提供名称、密度与可恢复状态。
   for(const [index,level] of MINE_LEVELS.entries()) {
     const button=dom.createElement('button');button.type='button';button.className='practice-level';button.dataset.level=level.id;
     const head=dom.createElement('span');head.className='practice-level-head';
-    const number=dom.createElement('span');number.textContent=`0${index+1} / ${level.difficulty}`;
+    const number=dom.createElement('span');number.textContent=`0${index%3+1} / ${level.difficulty}`;
     const density=dom.createElement('span');density.textContent=`${level.mineCount} 颗雷`;head.append(number,density);
     const title=dom.createElement('span');title.className='practice-level-title';title.textContent=level.name;
     const description=dom.createElement('span');description.className='practice-level-description';description.textContent=level.description;
@@ -185,6 +203,7 @@ export function createMinePracticeController({ dom = document, view = window, us
   });
   scope.listen(ui.restart,'click',restart);
   scope.listen(ui.change,'click',()=>{
+    visibleSize=mineLevel(store.activeId).rows;updateCards();
     ui.cards.scrollIntoView({block:'start',behavior:'instant'});
     cardNodes.get(store.activeId)?.button.focus({preventScroll:true});
   });

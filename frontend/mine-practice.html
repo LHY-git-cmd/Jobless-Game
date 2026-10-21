@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="扫雷多关卡练习：三个雷数档位，独立存档，随时续玩。" />
+    <meta name="description" content="扫雷多关卡练习：10×10、15×15、20×20，每种尺寸三个难度，独立存档，随时续玩。" />
     <meta name="theme-color" content="#102b3c" />
     <title>扫雷练习 · 无职游戏</title>
     <link rel="icon" href="./favicon.ico" />
@@ -22,13 +22,14 @@
         <section class="practice-intro" aria-labelledby="practice-title">
           <div>
             <p class="eyebrow">岛屿试炼 / MINESWEEPER</p>
-            <h1 id="practice-title">同一片海，三种挑战。</h1>
+            <h1 id="practice-title">三种棋盘，九段探索。</h1>
             <p class="practice-description">从浅滩到礁石，按自己的节奏出发。<br />每一关都替你留着进度，随时回来继续。</p>
           </div>
           <div class="practice-note"><span class="practice-badge">多关卡体验版</span><p id="practice-owner">正在读取练习进度…</p><p>成绩保存在本浏览器，不计入正式排行。</p></div>
         </section>
         <section aria-labelledby="practice-levels-title" class="practice-selection">
-          <div class="section-heading"><h2 id="practice-levels-title">选择你的落脚点</h2><span>10 × 10 · 三关独立续玩</span></div>
+          <div class="section-heading"><h2 id="practice-levels-title">选择你的落脚点</h2><span id="practice-size-summary">10 × 10 · 三个难度独立续玩</span></div>
+          <div id="practice-sizes" class="practice-sizes" role="group" aria-label="选择棋盘尺寸"></div>
           <div id="practice-levels" class="practice-levels" aria-label="扫雷练习关卡"></div>
         </section>
         <div class="practice-layout">
@@ -49,7 +50,7 @@
             <p id="practice-message" role="status" aria-live="polite"></p>
             <div id="practice-outcome" class="practice-outcome" hidden tabindex="-1" aria-labelledby="practice-outcome-title"><span class="eyebrow">本关结果</span><h3 id="practice-outcome-title"></h3><p id="practice-outcome-description"></p><button id="practice-next" type="button">试试下一关</button></div>
           </section>
-          <section id="practice-empty" class="practice-empty" aria-labelledby="practice-empty-title"><span class="practice-compass" aria-hidden="true">◇</span><p class="eyebrow">你的下一步</p><h2 id="practice-empty-title">先选一处，再慢慢探索。</h2><p>三个档位随时可玩，无需依次解锁。<br />选择上方任意关卡，就能开启自己的棋局。</p></section>
+          <section id="practice-empty" class="practice-empty" aria-labelledby="practice-empty-title"><span class="practice-compass" aria-hidden="true">◇</span><p class="eyebrow">你的下一步</p><h2 id="practice-empty-title">先选一处，再慢慢探索。</h2><p>先选棋盘尺寸，再挑一个难度，无需依次解锁。<br />九关分别保留进度，随时回来继续。</p></section>
         </div>
         <p id="practice-storage-status" role="status" class="practice-storage-status"></p>
       </main>

@@ -105,7 +105,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── docs/                                 # 实施计划、设计说明等项目文档
 │   ├── frontend-refactor-plan.md          # 已确认的多页前端模块化、缓存与请求层重构计划
 │   ├── frontend-refactor-report.md        # 重构产出、测试统计、环境待验收及发布回退说明
-│   ├── mine-multilevel-mvp-plan.md         # 已授权扫雷三档MVP范围、身份/存档隔离与验收计划
+│   ├── mine-multilevel-mvp-plan.md         # 扫雷MVP与已确认的三尺寸九关扩展/兼容验收计划
 │   ├── mine-multilevel-mvp-report.md       # MVP实际效果、测试统计、预览地址与边界说明
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
@@ -119,7 +119,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── frontend/                             # 可独立预览的网页前端及其测试
 │   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
 │   ├── index.html                        # 游戏入口、三关界面及游戏弹窗
-│   ├── mine-practice.html                # 扫雷三档练习页，独立续玩与本地成绩体验
+│   ├── mine-practice.html                # 扫雷三尺寸九关练习页，独立续玩与本地成绩体验
 │   ├── mine-practice.css                 # 练习选关卡、棋盘、规则与窄屏布局
 │   ├── ranking.html                      # 排行榜默认入口，展示扫雷分榜及三个单项导航
 │   ├── ranking-mine.html                 # 扫雷历史最佳通关排行
@@ -141,7 +141,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   └── mine-practice.js          # 练习页等待身份后创建实例，游客无需登录
 │   │   ├── games/                        # 游戏关卡数据与独立进度模型
 │   │   │   └── mine/                     # 扫雷练习稳定关卡标识和版本化存档
-│   │   │       ├── levels.js             # 10×10/10、15、20颗雷的三个练习档位
+│   │   │       ├── levels.js             # 10×10/15×15/20×20三尺寸各三难度，兼容原关卡ID
 │   │   │       └── practice-store.js     # 按账号/游客、关卡保存棋盘与绝对计时
 │   │   ├── game/                         # 游戏控制器与页面协调，不包含规则算法
 │   │   │   ├── game-controller.js        # 账号/轮次、选关/重开、规则计时与通关协调
@@ -201,7 +201,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── dom-events.test.js            # 固定节点语义映射、局部查询及事件取消订阅契约
 │       ├── controller-contracts.test.js  # 无副作用导入、独立棋盘、存档协调及实例资源清理
 │       ├── http.test.js                  # 共享传输超时隔离、清理、204与业务错误兼容契约
-│       ├── mine-levels.test.js           # 参数化规则、独立续玩/计时、身份隔离及损坏存档降级
+│       ├── mine-levels.test.js           # 九关参数化规则、跨尺寸续玩/重开与旧存档/身份隔离
 │       ├── game.test.js                  # 扫雷规则测试
 │       ├── akari.test.js                 # 照明规则测试
 │       ├── sudoku.test.js                # 数独规则、候选笔记独立性、编辑保护与旧存档兼容
@@ -252,7 +252,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_avatars.py             # 真实临时API/Chrome：25图、保存/失败、棋局保持、四榜及窄屏
         ├── verify_forum.py               # 双账号真实论坛/消息、键盘/手机、跨浏览器及游戏续玩
         ├── verify_refactor.py            # 真实HTTP缓存/304/206、跨页/重启续玩、计时及爆炸卸载恢复
-        ├── verify_mine_practice.py        # 三档布雷/续玩/计时/身份隔离、窄屏及正式成绩不受影响
+        ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料

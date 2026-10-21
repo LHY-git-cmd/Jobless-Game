@@ -1,4 +1,4 @@
-"""作用：独立 Chrome/临时 SQLite 验证扫雷多关卡MVP、身份隔离及移动布局。
+"""作用：独立 Chrome/临时 SQLite 验证三种尺寸九个扫雷关卡、身份隔离及移动布局。
 
 所有账号与存档仅用于临时浏览器和数据库；记录挑战写请求以确认练习不污染正式榜单。
 只输出最终统计或失败摘要，浏览器日志与截图存入 artifacts/frontend。
@@ -64,6 +64,9 @@ def main():
 
                     def select(level):
                         """通过关卡卡片切换，确认展示状态与关卡身份一致。"""
+                        size=level.split('-')[1] if level.split('-')[1].isdigit() else '10'
+                        click(f'button.practice-size[data-size="{size}"]')
+                        assert evaluate(f'!document.querySelector(\'[data-level="{level}"]\').hidden')
                         click(f'[data-level="{level}"]')
                         wait(f'document.querySelector(\'[data-level="{level}"]\').getAttribute("aria-pressed")==="true"')
 
@@ -80,10 +83,11 @@ def main():
 
                     command('Emulation.setDeviceMetricsOverride',{'width':1280,'height':1000,'deviceScaleFactor':1,'mobile':False})
                     command('Page.navigate',{'url':base+'mine-practice.html'})
-                    wait("document.querySelectorAll('[data-level]').length===3")
+                    wait("document.querySelectorAll('[data-level]').length===9")
+                    assert evaluate("document.querySelectorAll('[data-level]:not([hidden])').length===3 && document.querySelectorAll('button.practice-size').length===3")
                     assert evaluate("!document.getElementById('practice-empty').hidden && document.getElementById('practice-owner').textContent.includes('游客')")
                     evaluate("localStorage.setItem('jobless-progress-v1:1','original-official-progress')")
-                    checks.append('游客无需登录可选三关，初始引导和独立练习说明可见')
+                    checks.append('游客无需登录可选九关，按尺寸分组三个难度，初始引导可见')
                     shot('mine-mvp-desktop-selection.png')
                     for level,count in [('mine-easy',10),('mine-normal',15),('mine-hard',20)]:
                         select(level)
@@ -157,7 +161,7 @@ def main():
                         command('Emulation.setDeviceMetricsOverride',{'width':width,'height':900,'deviceScaleFactor':1,'mobile':True})
                         evaluate('window.scrollTo(0,0)')
                         assert evaluate(f'document.documentElement.scrollWidth<={width}')
-                        assert evaluate("[...document.querySelectorAll('[data-level]')].every(n=>{const r=n.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.right<=innerWidth})")
+                        assert evaluate("[...document.querySelectorAll('[data-level]:not([hidden])')].every(n=>{const r=n.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.right<=innerWidth})")
                         shot(f'mine-mvp-mobile-{width}-selection.png')
                         evaluate("document.getElementById('practice-game').scrollIntoView({block:'start',behavior:'instant'})")
                         viewport=evaluate("(()=>{const v=document.getElementById('practice-viewport');v.scrollLeft=v.scrollWidth;return {scrollLeft:v.scrollLeft,scrollWidth:v.scrollWidth,clientWidth:v.clientWidth,right:v.getBoundingClientRect().right,width:innerWidth}})()")
@@ -169,6 +173,46 @@ def main():
                     command('Emulation.setDeviceMetricsOverride',{'width':1280,'height':1000,'deviceScaleFactor':1,'mobile':False})
                     evaluate("document.getElementById('practice-game').scrollIntoView({block:'start',behavior:'instant'})")
                     shot('mine-mvp-desktop-board.png')
+
+                    # 新棋盘沿用真实规则/按钮；逐关核对配置、网格行列与右下角读屏坐标。
+                    for size,counts in [(15,[23,34,45]),(20,[40,60,80])]:
+                        for difficulty,count in zip(['easy','normal','hard'],counts):
+                            level=f'mine-{size}-{difficulty}'
+                            select(level)
+                            state=entry(level)['game']
+                            assert len(state['cells'])==size*size
+                            assert sum(cell['mine'] for cell in state['cells'])==count
+                            assert evaluate("getComputedStyle(document.getElementById('practice-board')).gridTemplateColumns.split(' ').length")==size
+                            assert evaluate("getComputedStyle(document.getElementById('practice-board')).gridTemplateRows.split(' ').length")==size
+                            assert f'{size} × {size}' in evaluate("document.getElementById('practice-rules-description').textContent")
+                            click('#practice-start')
+                            last=size*size-1
+                            click(f'#practice-board [data-index="{last}"]');click('#practice-flag')
+                            assert evaluate(f'document.querySelector(\'#practice-board [data-index="{last}"]\').getAttribute("aria-label")')==f'第 {size} 行第 {size} 列，已标记'
+                            assert entry(level)['game']['flaggedCount']==1
+                        checks.append(f'{size}×{size}三个难度布雷正确，网格尺寸和右下角格子操作/坐标准确')
+                    large_before=entry('mine-20-hard')['game']
+                    command('Page.reload');wait("document.querySelectorAll('#practice-board button').length===400")
+                    assert evaluate("document.querySelector('button.practice-size[data-size=\"20\"]').getAttribute('aria-pressed')==='true'")
+                    assert entry('mine-20-hard')['game']==large_before
+                    assert entry('mine-easy')['game']==easy_before
+                    assert entry('mine-normal')['game']['status']=='won'
+                    checks.append('20×20刷新恢复尺寸分组和原棋盘，10×10旧进度与通关保持')
+                    for width in (1280,375,320):
+                        command('Emulation.setDeviceMetricsOverride',{'width':width,'height':900,'deviceScaleFactor':1,'mobile':width<600})
+                        evaluate("document.getElementById('practice-game').scrollIntoView({block:'start',behavior:'instant'})")
+                        assert evaluate(f'document.documentElement.scrollWidth<={width}')
+                        viewport=evaluate("(()=>{const v=document.getElementById('practice-viewport');v.scrollLeft=v.scrollWidth;v.scrollTop=v.scrollHeight;const c=document.querySelector('#practice-board [data-index=\"399\"]').getBoundingClientRect(),r=v.getBoundingClientRect();return {left:v.scrollLeft,top:v.scrollTop,lastVisible:c.right<=r.right+1&&c.bottom<=r.bottom+1};})()")
+                        assert viewport['left']>0 and viewport['top']>0 and viewport['lastVisible'],viewport
+                        shot(f'mine-large-{width}-board.png')
+                    checks.append('20×20在桌面/375/320px均不撑宽整页，可双向滑到最右下角')
+                    click('#practice-restart')
+                    assert entry('mine-20-hard')['game']['flaggedCount']==0
+                    assert entry('mine-easy')['game']==easy_before
+                    assert entry('mine-normal')['game']['status']=='won'
+                    click('#practice-start');select('mine-normal')
+                    checks.append('重开20×20只清空当前关，其他尺寸棋盘/成绩保留')
+                    command('Emulation.setDeviceMetricsOverride',{'width':1280,'height':1000,'deviceScaleFactor':1,'mobile':False})
 
                     login('练习甲')
                     wait("document.getElementById('practice-empty').hidden===false")

@@ -8,6 +8,9 @@
 .practice-note p { margin: 8px 0 0; }
 .practice-badge { display: inline-block; border: 1px solid #f0d49a66; border-radius: 20px; padding: 5px 12px; color: var(--gold); background: #102b3cbf; }
 .practice-selection { margin-bottom: 30px; }
+.practice-sizes { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.practice-size { min-width: 110px; min-height: 44px; background: #102b3cf5; }
+.practice-size[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
 .practice-levels { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
 .practice-level { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 22px; text-align: left; border-radius: 14px; background: #102b3cf5; box-shadow: 0 8px 32px #06162433; }
 .practice-level[aria-pressed="true"] { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold), 0 8px 32px #06162433; }
@@ -30,7 +33,8 @@
 .practice-game .top-row { flex-wrap: wrap; padding-bottom: 16px; }
 .practice-game .top-row .eyebrow { margin: 0; }
 .practice-top-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.practice-game .board { grid-template-columns: repeat(var(--mine-cols,10),44px); width: max-content; }
+.practice-game .board-viewport { max-height: min(65svh,640px); overscroll-behavior: contain; }
+.practice-game .board { grid-template-columns: repeat(var(--mine-cols,10),44px); grid-template-rows: repeat(var(--mine-rows,10),44px); width: max-content; }
 .practice-game .stats { gap: 12px; flex-wrap: wrap; }
 .practice-game .stats > span { white-space: nowrap; }
 .practice-primary { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); font-weight: 600; }
@@ -63,6 +67,8 @@
   .practice-note { max-width: none; margin-top: 20px; }
   .practice-note p { display: block; margin: 8px 0 0; }
   .practice-selection .section-heading { align-items: start; flex-direction: column; gap: 8px; }
+  .practice-sizes { gap: 8px; }
+  .practice-size { flex: 1; min-width: 0; padding: 10px 8px; }
   .practice-levels { grid-template-columns: 1fr; gap: 12px; }
   .practice-level { padding: 16px 18px; gap: 10px; }
   .practice-level-title { font-size: 21px; }

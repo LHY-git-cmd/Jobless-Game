@@ -15,17 +15,52 @@ test('关卡配置准确布雷、计算线索和胜负，原有默认调用保�
   assert.equal(createGame(()=>0).level.mineCount,10);
   for (const level of MINE_LEVELS) {
     const game=createGame(()=>0,level);
-    assert.equal(game.cells.length,100);
+    assert.equal(game.cells.length,level.rows*level.cols);
     assert.equal(game.cells.filter(cell=>cell.mine).length,level.mineCount);
     for(let index=0;index<game.cells.length;index++) {
       if(game.cells[index].mine||game.cells[index].revealed)continue;
       selectCell(game,index);revealSelected(game,1000+index);
     }
     assert.equal(game.status,'won');
-    assert.equal(game.revealedCount,100-level.mineCount);
+    assert.equal(game.revealedCount,level.rows*level.cols-level.mineCount);
   }
   assert.throws(()=>createGame(Math.random,{rows:10,cols:10,mineCount:100}),/配置/);
   assert.throws(()=>createGame(Math.random,{rows:0,cols:10,mineCount:10}),/配置/);
+});
+
+test('提供三种棋盘尺寸且各有三个难度，原10×10关卡身份和版本保持兼容', () => {
+  assert.equal(MINE_LEVELS.length,9);
+  assert.equal(new Set(MINE_LEVELS.map(level=>level.id)).size,9);
+  for(const size of [10,15,20]) {
+    const group=MINE_LEVELS.filter(level=>level.rows===size&&level.cols===size);
+    assert.equal(group.length,3);
+    assert.deepEqual(group.map(level=>level.difficulty),['入门','进阶','挑战']);
+    assert.ok(group[0].mineCount<group[1].mineCount&&group[1].mineCount<group[2].mineCount);
+  }
+  assert.deepEqual(MINE_LEVELS.filter(level=>level.rows===10).map(({id,version,mineCount})=>({id,version,mineCount})),[
+    {id:'mine-easy',version:1,mineCount:10},{id:'mine-normal',version:1,mineCount:15},{id:'mine-hard',version:1,mineCount:20},
+  ]);
+});
+
+test('不同尺寸独立保存和重开，大棋盘边缘格子可标记，刷新不丢失旧10×10进度', () => {
+  const storage=memory();let now=1000;
+  const options={storage,userId:1,now:()=>now,random:()=>0};
+  const store=createMinePracticeStore(options);
+  store.select('mine-easy');store.start();selectCell(store.current.game,99);toggleFlag(store.current.game);store.save();
+  const small=structuredClone(store.current.game);
+  for(const size of [15,20]) {
+    const level=MINE_LEVELS.find(item=>item.rows===size&&item.difficulty==='挑战');
+    assert.ok(level,`缺少${size}×${size}挑战关`);
+    store.select(level.id);store.start();now+=2000;
+    const last=size*size-1;
+    assert.equal(selectCell(store.current.game,last),true);toggleFlag(store.current.game);store.save();
+    const restored=createMinePracticeStore(options);
+    assert.equal(restored.activeId,level.id);
+    assert.equal(restored.current.game.cells[last].flagged,true);
+    assert.deepEqual(restored.entries['mine-easy'].game,small);
+    restored.restart();assert.equal(restored.current.game.cells[last].flagged,false);
+    assert.deepEqual(restored.entries['mine-easy'].game,small);
+  }
 });
 
 test('三关独立续玩和重开，首次确认才计时，切关和刷新继续累计', () => {
