@@ -193,3 +193,67 @@ class ProgressionAPI(TestCase):
         locked = self.client.put('/api/v1/me/appearance', headers={'If-Match': value.headers['etag']}, json={**payload, 'theme_id': 'starlight'})
         self.assertEqual(locked.status_code, 403)
         self.assertEqual(self.client.put('/api/v1/me/appearance', headers={'If-Match': value.headers['etag']}, json=payload).status_code, 200)
+
+    def test_star_improvement_and_version_change_never_reaward(self):
+        """先一星再三星累计80经验；新题版本保留最高星和永久里程碑。"""
+        from copy import deepcopy
+        from backend.app.models.entities.progression import GameAttempt, GameLevelVersion
+        attempt = self.create().json()
+        with self.sessions() as db:
+            db.get(GameAttempt, attempt['attempt_id']).started_at = utc_now()-timedelta(milliseconds=LEVELS['akari-001']['t2_ms']+1000)
+            db.commit()
+        first = self.client.put(attempt['links']['completion'], json=self.answer(attempt)).json()
+        self.assertEqual((first['stars'], first['awarded_xp'], first['awarded_stars']), (1, 40, 1))
+        next_attempt = self.create().json()
+        second = self.client.put(next_attempt['links']['completion'], json=self.answer(next_attempt)).json()
+        self.assertEqual((second['awarded_xp'], second['awarded_stars']), (40, 2))
+        with self.sessions() as db:
+            revised = deepcopy(LEVELS['akari-001']); revised['level_version'] = 2
+            db.add(GameLevelVersion(level_id='akari-001', level_version=2, definition=revised)); db.commit()
+        versioned = self.client.post('/api/v1/attempts', headers={'Idempotency-Key': str(uuid4())},
+                    json={'level_id': 'akari-001', 'level_version': 2, 'mode': 'campaign'}).json()
+        third = self.client.put(versioned['links']['completion'], json=self.answer(versioned)).json()
+        self.assertEqual((third['awarded_xp'], third['awarded_stars'], third['progression']['xp']), (0, 0, 80))
+
+    def test_legacy_client_reported_completions_do_not_grant_qualifications(self):
+        """旧挑战即使三关全完成，也不能兑换正式成长或PK资格。"""
+        state = self.client.post('/api/challenges/start', json={'request_id': str(uuid4())}).json()
+        for index, category in enumerate(('mine', 'akari', 'sudoku')):
+            response = self.client.post(f"/api/challenges/{state['run_id']}/complete", json={
+                'category': category, 'revision': state['revision'], 'attempt_id': state['levels'][index]['attempt_id'],
+                'duration_seconds': 1, 'development': False})
+            self.assertEqual(response.status_code, 200, response.text)
+            state = response.json()
+        value = self.client.get('/api/v1/me/pk-eligibility').json()
+        self.assertFalse(any(item['completed'] for item in value['requirements']))
+        self.assertEqual(self.client.get('/api/v1/me/progression').json()['xp'], 0)
+
+    def test_feature_disabled_and_cursor_pages(self):
+        """关闭开关不触库上线新能力，分页不会重复关卡或无限返回。"""
+        all_ids, cursor = [], None
+        while True:
+            page = self.client.get('/api/v1/me/level-progress?limit=2'+('&cursor='+cursor if cursor else '')).json()
+            self.assertLessEqual(len(page['items']), 2)
+            all_ids.extend(item['level_id'] for item in page['items'])
+            cursor = page['next_cursor']
+            if not cursor:
+                break
+        self.assertEqual(len(all_ids), len(set(all_ids)))
+        self.assertEqual(len(all_ids), 12)
+        self.settings.progression_enabled = False
+        response = self.client.get('/api/v1/me/progression')
+        self.assertEqual((response.status_code, response.json()['code']), (404, 'feature_disabled'))
+
+    def test_lost_mine_exposes_terminal_time_and_cannot_be_revived(self):
+        """失败尝试返回停止时刻，重复揭同雷仍为原终态，完成不能获资格。"""
+        from backend.app.models.entities.progression import GameAttempt
+        attempt = self.create('mine-beginner-001').json()
+        with self.sessions() as db:
+            index = db.get(GameAttempt, attempt['attempt_id']).board['mine_indices'][0]
+        path = f"{attempt['links']['self']}/reveals/{index}"
+        lost = self.client.put(path, json={}).json()
+        self.assertEqual(lost['status'], 'lost')
+        self.assertIsNotNone(lost['ended_at'])
+        repeat = self.client.put(path, json={}).json()
+        self.assertEqual(repeat['ended_at'], lost['ended_at'])
+        self.assertEqual(self.client.put(attempt['links']['completion'], json={}).status_code, 409)

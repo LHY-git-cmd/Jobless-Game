@@ -17,6 +17,13 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │
 ├── .tools/                               # 本地辅助工具与临时提交辅助脚本；不纳入版本管理
 ├── backend/                              # FastAPI 登录、独立关卡、排行榜、Flyway 与部署支持
+│   ├── content/                          # 冻结关卡、规则门槛与独立PK题库
+│   │   └── game-catalog-v1.json           # 十关照明、三题PK、初级扫雷/数独与建议参数v1
+│   ├── content_check.py                  # 开发机唯一解、初级单候选与只生成新文件的题库工具
+│   ├── cleanup_game_history.py           # 有界历史清理，保留永久成长与资格
+│   ├── export_game_contract.py           # 从实际v1路由和DTO导出/核对契约草案
+│   ├── verify_progression_mysql.py       # 独立临时MySQL5.7/Flyway及并发联调入口
+│   ├── probe_pk_capacity.py              # 专用测试会话HTTP/SSE共存观测，默认30分钟
 │   ├── README.md                         # 本地运行、迁移、宝塔部署及资源验收说明
 │   ├── .env.example                      # 不含真实凭据的应用配置模板
 │   ├── flyway.conf.example               # 不含真实凭据的 Flyway 配置模板
@@ -33,6 +40,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── auth_controller.py        # 登录、当前用户、注销路由及同源校验
 │   │   │   ├── avatar_controller.py      # 当前登录账号更换预设头像的同源接口
 │   │   │   ├── forum_controller.py       # 论坛公开读取、同源写入及账号消息路由
+│   │   │   ├── progression_controller.py # 正式关卡、尝试、成长、资格和外观REST资源
+│   │   │   ├── pk_controller.py          # 房间、成员、提交、匹配票及不持DB的SSE响应
+│   │   │   ├── pk_ingress.py             # 终盘入口时间/待处理任务登记与取消清理
 │   │   │   └── ranking_controller.py     # 挑战创建/重开/通关、个人记录与公开排行榜路由
 │   │   ├── services/                    # 业务层：流程、事务与登录专属资源限制
 │   │   │   ├── __init__.py               # 业务层包标识
@@ -41,12 +51,18 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── forum_service.py          # 论坛幂等、频率、归属、点赞与通知原子事务
 │   │   │   ├── auth_rules.py             # 用户名计数、账号键和密码长度规则
 │   │   │   ├── login_limiter.py          # 有界单进程登录频率保护
+│   │   │   ├── game_rules.py             # 有界照明/数独终盘验证和毫秒星级/经验计算
+│   │   │   ├── progression_service.py    # 正式扫雷揭格、幂等里程碑、永久资格/主题事务
+│   │   │   ├── pk_service.py             # 双人房间、统一计时、平局及FIFO匹配事务
+│   │   │   ├── pk_runtime.py             # 有限SSE队列、接收窗口及单进程运行索引
+│   │   │   ├── pk_lifecycle.py           # 唯一调度任务、重启作废和有界状态转换
 │   │   │   └── ranking_service.py        # 独立关卡重开/通关、幂等与单项成绩保留事务
 │   │   ├── repositories/                # 数据访问层：对应 Mapper，不提交业务事务
 │   │   │   ├── __init__.py               # 数据访问层包标识
 │   │   │   ├── user_repository.py        # 用户查询和保存
 │   │   │   ├── session_repository.py     # 会话查询、保存、注销与过期分批删除
 │   │   │   ├── forum_repository.py       # 当前锁定读、有限游标、作者/点赞关联及通知SQL
+│   │   │   ├── progression_repository.py # 当前锁定读、有限列表与固定顺序用户锁
 │   │   │   └── ranking_repository.py     # 用户行锁、进度/成绩读写、保留与榜单分页 SQL
 │   │   ├── models/                      # 模型层：数据库实体和接口数据结构
 │   │   │   ├── __init__.py               # 模型层包标识
@@ -55,16 +71,23 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── user.py               # 用户实体
 │   │   │   │   ├── auth_session.py       # 账号会话实体
 │   │   │   │   ├── forum.py              # 帖子、评论、两类点赞与站内通知五表实体
+│   │   │   │   ├── progression.py        # 关卡版本、尝试/快照、永久成长/资格/幂等凭据
+│   │   │   │   ├── cosmetic.py           # 有限主题目录、永久权益与装配版本
+│   │   │   │   ├── pk.py                 # 双人房间、成员、不可变提交和唯一占用
+│   │   │   │   ├── matchmaking.py        # 有界匹配票及到达/过期索引
 │   │   │   │   └── ranking.py            # 当前轮次、不可变通关快照与最佳摘要实体
 │   │   │   └── schemas/                 # 请求 DTO 与脱敏响应模型
 │   │   │       ├── __init__.py           # 接口模型包标识
 │   │   │       ├── auth.py               # 登录输入、用户输出及登录结果
 │   │   │       ├── avatar.py             # 仅接收清单有效编号的严格头像写入请求
 │   │   │       ├── forum.py              # 文字长度/作者隔离、UUID幂等及已读边界DTO
+│   │   │       ├── progression.py        # 正式尝试/终盘/外观严格DTO，不接收客户端奖励
+│   │   │       ├── pk.py                 # 单一匹配池、准备和终盘严格DTO
 │   │   │       └── ranking.py            # 严格挑战请求 DTO 和脱敏成绩/榜单响应模型
 │   │   └── common/                      # 公共层：跨业务基础设施，不反向依赖业务
 │   │       ├── __init__.py               # 公共层包标识
 │   │       ├── config.py                 # 环境配置，保持读取 backend/.env
+│   │       ├── game_catalog.py           # 版本化题库与公开元数据读取，不提前发题
 │   │       ├── avatar_catalog.py         # 缓存共用清单编号并核验静态资源存在性
 │   │       ├── database.py               # 实体基类、有界连接池和会话生命周期
 │   │       ├── security.py               # Argon2id、token 摘要与 UTC 时间工具
@@ -75,7 +98,12 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V1__create_auth_tables.sql     # 用户、会话与相关唯一/到期索引
 │   │   ├── V2__create_ranking_tables.sql  # 当前轮次、成绩、最佳摘要及排序/去重索引
 │   │   ├── V3__add_user_avatar.sql       # 用户预设头像编号，新老账号默认001
-│   │   └── V4__create_forum_tables.sql   # 文字论坛、点赞、站内通知及外键/去重/分页索引
+│   │   ├── V4__create_forum_tables.sql   # 文字论坛、点赞、站内通知及外键/去重/分页索引
+│   │   ├── V5__create_progression_tables.sql # 正式尝试/成长/资格和冻结题库种子
+│   │   ├── V6__create_cosmetic_tables.sql # 主题目录、永久权益与装配配置
+│   │   ├── V7__create_pk_room_tables.sql  # 双人房间、成员、提交与用户占用
+│   │   ├── V8__create_matchmaking_tickets.sql # 排队票及占用票据关联
+│   │   └── V9__index_game_history_retention.sql # 终态时间索引，支持有界清理
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -100,14 +128,16 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_avatar.py                # 头像存储、严格编号/来源/体积、账号隔离和三个分榜跟随
 │       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、登录/排行/论坛V4并发和外键联调
 │       ├── test_forum.py                 # 论坛权限、文字/请求体、幂等、归属、通知及事务回滚
+│       ├── test_game_content.py          # 题库唯一解、评分边界、无死锁与初级难度
+│       ├── test_progression_v1.py        # 尝试/成长/资格/主题/版本/权限及回滚契约
+│       ├── test_pk_v1.py                 # 房间/匹配/平局/资格组合/超时及容量边界
+│       ├── test_pk_events.py             # 有界队列、单账号流与鉴权后DB释放
+│       ├── test_game_cleanup.py          # 历史墓碑/回收不删除永久权益
+│       ├── test_pk_probe.py              # 本地HTTP/SSE观测工具烟测
 │       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
-│   # 成长实施新增：backend/content/game-catalog-v1.json（冻结题库与参数）、backend/content_check.py（离线唯一解工具）
-│   # backend/app/common/game_catalog.py（目录元数据）、services/game_rules.py（有界判题与星级经验规则）
-│   # backend/tests/test_game_content.py、frontend/test/akari-instance.test.js（题库与矩形实例验收）
-│   # 成长后端：entities/progression.py、cosmetic.py；schemas/progression.py；repositories/progression_repository.py
-│   # services/progression_service.py、controllers/progression_controller.py；migrations/V5/V6；tests/test_progression_v1.py
+│   ├── game-progression-openapi.json       # 当前v1路径与严格DTO的OpenAPI契约草案
 │   ├── game-progression-pk-report.md       # 成长/资格/房间匹配实现证据及环境验收边界
 │   ├── game-progression-pk-plan.md         # RESTful关卡成长/主题/房间匹配方案、数据契约及2核2GB验收
 │   ├── frontend-refactor-plan.md          # 已确认的多页前端模块化、缓存与请求层重构计划

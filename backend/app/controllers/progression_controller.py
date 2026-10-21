@@ -1,7 +1,7 @@
 """v1 REST资源路由：HTTP条件、同源保护、严格DTO和有界同步事务。"""
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 from ..common.config import get_settings
 from ..common.database import get_db
@@ -23,6 +23,8 @@ def enabled(feature='progression_enabled'):
 
 def response(resource):
     """保留创建Location、强ETag和成功状态。"""
+    if resource.status == 204:
+        return Response(status_code=204, headers=resource.headers)
     return JSONResponse(resource.data, status_code=resource.status, headers=resource.headers)
 
 
@@ -127,7 +129,7 @@ async def completion(attempt_id: str, request: Request, db: Session = Depends(ge
 async def catalog():
     """主题元数据与版本化样式地址。"""
     enabled('cosmetics_enabled')
-    return {'items': [{**item, 'asset_url': '/journey.css?v=1'} for item in service.COSMETICS]}
+    return {'items': [{**item, 'asset_url': '/journey.css'} for item in service.COSMETICS]}
 
 
 @router.get('/me/cosmetics')

@@ -36,7 +36,7 @@ class LoginBodyLimit:
         original_send = send
         if scope['type'] == 'http':
             # 在解析/数据库槽位前记录接收时刻；正式计时不受DB队列影响。
-            scope.setdefault('state', {})['received_at'] = utc_now()
+            scope.setdefault('state', {}).setdefault('received_at', utc_now())
         async def secure_send(message):
             if message["type"] == "http.response.start":
                 message["headers"] = list(message.get("headers", [])) + [(b"cache-control", b"no-store"), (b"x-content-type-options", b"nosniff")]

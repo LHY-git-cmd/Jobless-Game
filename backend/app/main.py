@@ -12,15 +12,20 @@ from .controllers.avatar_controller import router as avatar_router
 from .controllers.ranking_controller import router as ranking_router
 from .controllers.forum_controller import router as forum_router
 from .controllers.progression_controller import router as progression_router
+from .controllers.pk_controller import router as pk_router
+from .controllers.pk_ingress import PKSubmissionIngress
+from .services.pk_lifecycle import lifespan
 
-app = FastAPI(title="无职游戏 API", docs_url=None, redoc_url=None)
+app = FastAPI(title="无职游戏 API", docs_url=None, redoc_url=None, lifespan=lifespan)
 register_exception_handlers(app)
 app.add_middleware(LoginBodyLimit, max_body_bytes=get_settings().max_request_body_bytes)
+app.add_middleware(PKSubmissionIngress)
 app.include_router(auth_router)
 app.include_router(avatar_router)
 app.include_router(ranking_router)
 app.include_router(forum_router)
 app.include_router(progression_router)
+app.include_router(pk_router)
 
 # API 必须先注册，根路径静态挂载继续兼容本地同源预览与现有启动命令。
 app.mount("/", RevalidatingStaticFiles(directory=Path(__file__).resolve().parents[2] / "frontend", html=True), name="frontend")

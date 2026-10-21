@@ -27,6 +27,7 @@ from backend.app.services.login_limiter import LoginRateLimiter
 from backend.app.models.entities import AuthSession, User
 from backend.app.models.schemas.auth import LoginRequest
 from backend.app.common.security import utc_now
+from backend.app.models.entities import progression, cosmetic, pk, matchmaking
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_URL = os.getenv("TEST_DATABASE_URL")
@@ -44,7 +45,9 @@ class MySQLIntegrationTests(TestCase):
         if url.drivername != "mysql+pymysql" or not (url.database or "").startswith("jobless_auth_test_"):
             raise ValueError("只允许 mysql+pymysql 且数据库名以 jobless_auth_test_ 开头的专用测试库")
         cls.engine = create_engine(url, pool_size=3, max_overflow=0, pool_timeout=.2, connect_args={"connect_timeout": 3, "read_timeout": 5, "write_timeout": 5})
-        unexpected = set(inspect(cls.engine).get_table_names()) - {"users", "auth_sessions", "flyway_schema_history", "challenge_progress", "completion_records", "leaderboard_entries", "forum_posts", "forum_comments", "forum_post_likes", "forum_comment_likes", "forum_notifications"}
+        expected_new = {v.__tablename__ for module in (progression, cosmetic, pk, matchmaking)
+                        for v in vars(module).values() if isinstance(v, type) and hasattr(v, '__tablename__')}
+        unexpected = set(inspect(cls.engine).get_table_names()) - expected_new - {"users", "auth_sessions", "flyway_schema_history", "challenge_progress", "completion_records", "leaderboard_entries", "forum_posts", "forum_comments", "forum_post_likes", "forum_comment_likes", "forum_notifications"}
         if unexpected:
             raise ValueError("测试库存在其他业务表，已停止")
         env = dict(os.environ)
@@ -240,6 +243,141 @@ class MySQLIntegrationTests(TestCase):
         self.client.post("/api/auth/logout")
         again = self.client.post("/api/auth/login", json={"username": name, "password": "avatar-secret"})
         self.assertEqual(again.json()["user"]["avatar_id"], 17)
+
+    def test_v5_real_innodb_concurrent_completions_award_once(self):
+        """两个尝试并发同关结算，永久里程碑唯一键与用户锁共同防重。"""
+        from backend.app.services import progression_service as service
+        from backend.content_check import akari_solutions
+        from threading import Barrier
+        self.client.post('/api/auth/login', json={'username': self.new_name(), 'password': 'progression-test'})
+        raw = self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            first = service.dispatch(raw, db, 'attempt_create', data={'level_id': 'akari-001', 'level_version': 1, 'mode': 'campaign'}, key=str(uuid4())).data
+            original = db.get(progression.GameAttempt, first['attempt_id'])
+            # 防御性竞争夹具：模拟历史版本留下同关活跃尝试；正常API不允许创建第二个。
+            second_id = str(uuid4())
+            clone = progression.GameAttempt(attempt_id=second_id, user_id=original.user_id, level_id=original.level_id,
+                    level_version=original.level_version, game_id=original.game_id, mode=original.mode,
+                    status='active', revision=0, started_at=original.started_at, expires_at=original.expires_at, board={})
+            db.add(clone); db.commit()
+            uid = original.user_id
+        barrier = Barrier(2)
+        payload = {'bulbs': akari_solutions(first['puzzle']['map'])[0]}
+        def complete(attempt_id):
+            """独立连接在同一屏障后结算，实际争用InnoDB锁。"""
+            with self.sessions() as db:
+                barrier.wait(timeout=10)
+                return service.dispatch(raw, db, 'completion_put', rid=attempt_id, data=payload, received_at=utc_now()).data
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(complete, (first['attempt_id'], second_id)))
+        self.assertEqual(sorted(r['awarded_xp'] for r in results), [0, 80])
+        with self.sessions() as db:
+            self.assertEqual(db.get(progression.PlayerProgression, uid).xp, 80)
+            self.assertEqual(len(db.scalars(select(progression.ProgressionGrant).where(progression.ProgressionGrant.user_id == uid)).all()), 4)
+            self.assertEqual(len(db.scalars(select(progression.PlayerQualification).where(progression.PlayerQualification.user_id == uid)).all()), 1)
+
+    def test_v5_concurrent_create_replays_original_before_active_check(self):
+        """并发同键创建只有一个资源，原始状态/位置稳定重放。"""
+        from backend.app.services import progression_service as service
+        from threading import Barrier
+        self.client.post('/api/auth/login', json={'username': self.new_name(), 'password': 'progression-test'})
+        raw = self.client.cookies.get(get_settings().session_cookie_name)
+        key, barrier = str(uuid4()), Barrier(2)
+        def create_one(_):
+            """各自创建独立事务，认证快照早于对方提交也不能重复创建。"""
+            with self.sessions() as db:
+                barrier.wait(timeout=10)
+                return service.dispatch(raw, db, 'attempt_create', data={'level_id': 'akari-001', 'level_version': 1, 'mode': 'campaign'}, key=key)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(create_one, range(2)))
+        self.assertEqual(results[0].data, results[1].data)
+        self.assertEqual(results[0].headers, results[1].headers)
+
+    def test_v7_v8_cancel_pair_competition_has_one_outcome(self):
+        """真实MySQL上竞争取消/配对：只能取消成功或配对成功，不能双重占用。"""
+        from backend.app.services import pk_service as service
+        from backend.app.common.game_catalog import QUALIFICATIONS
+        from threading import Barrier
+        from backend.app.services.pk_runtime import runtime
+        tokens, uids = [], []
+        for _ in range(2):
+            self.client.post('/api/auth/login', json={'username': self.new_name(), 'password': 'pk-test-secret'})
+            raw = self.client.cookies.get(get_settings().session_cookie_name)
+            tokens.append(raw)
+            with self.sessions() as db:
+                uid = auth_service.current_session(raw, db)[1].id
+                uids.append(uid)
+                for key in QUALIFICATIONS:
+                    db.add(progression.PlayerQualification(user_id=uid, requirement_id=key, level_version=1,
+                           attempt_id=str(uuid4()), completed_at=utc_now()))
+                db.commit()
+        with self.sessions() as db:
+            first = service.dispatch(tokens[0], db, 'ticket_create', data={'game_id': 'akari', 'difficulty': 'normal'}, key=str(uuid4())).data
+        barrier = Barrier(2)
+        def cancel_one():
+            """取消方与第二玩家入队同时到达。"""
+            with self.sessions() as db:
+                barrier.wait(timeout=10)
+                try:
+                    return service.dispatch(tokens[0], db, 'ticket_cancel', rid=first['ticket_id']).status
+                except AppError as exc:
+                    return exc.status_code
+        def pair_one():
+            """配对事务重查双方资格及唯一占用。"""
+            with self.sessions() as db:
+                barrier.wait(timeout=10)
+                return service.dispatch(tokens[1], db, 'ticket_create', data={'game_id': 'akari', 'difficulty': 'normal'}, key=str(uuid4())).data
+        room_ids = []
+        try:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                cancelled, paired = executor.submit(cancel_one), executor.submit(pair_one)
+                cancel_status, second = cancelled.result(timeout=15), paired.result(timeout=15)
+            with self.sessions() as db:
+                a = db.get(matchmaking.MatchmakingTicket, first['ticket_id'])
+                b = db.get(matchmaking.MatchmakingTicket, second['ticket_id'])
+                if a.status == 'matched':
+                    room_ids = [a.room_id]
+                    self.assertEqual((cancel_status, b.status, a.room_id), (409, 'matched', b.room_id))
+                    self.assertEqual([db.get(pk.PlayerPKOccupancy, uid).room_id for uid in uids], [a.room_id, a.room_id])
+                else:
+                    self.assertEqual((cancel_status, a.status, b.status), (204, 'cancelled', 'waiting'))
+                    self.assertIsNone(db.get(pk.PlayerPKOccupancy, uids[0]).ticket_id)
+                    self.assertEqual(db.get(pk.PlayerPKOccupancy, uids[1]).ticket_id, b.ticket_id)
+        finally:
+            service.maintenance(self.sessions, restart=True)
+            with self.sessions() as db:
+                if room_ids:
+                    db.execute(delete(pk.PKRoom).where(pk.PKRoom.room_id.in_(room_ids)))
+                db.commit()
+            runtime.reset()
+
+    def test_v5_concurrent_mine_loss_is_irreversible(self):
+        """两连接揭安全格/踩雷按同一账号锁串行，lost后不能继续构造won。"""
+        from backend.app.services import progression_service as service
+        from threading import Barrier
+        self.client.post('/api/auth/login', json={'username': self.new_name(), 'password': 'mine-test-secret'})
+        raw = self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            attempt = service.dispatch(raw, db, 'attempt_create', data={'level_id': 'mine-beginner-001', 'level_version': 1, 'mode': 'qualification'}, key=str(uuid4())).data
+            row = db.get(progression.GameAttempt, attempt['attempt_id'])
+            mines = set(row.board['mine_indices'])
+            uid = row.user_id
+        barrier = Barrier(2)
+        def reveal_one(index):
+            """每个动作使用独立事务，服务端雷图不下发给浏览器。"""
+            with self.sessions() as db:
+                barrier.wait(timeout=10)
+                try:
+                    return service.dispatch(raw, db, 'reveal', rid=attempt['attempt_id'], index=index).status
+                except AppError as exc:
+                    return exc.status_code
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(reveal_one, (next(iter(mines)), next(iter(set(range(100))-mines)))))
+        self.assertIn(201, results)
+        with self.sessions() as db:
+            row = db.get(progression.GameAttempt, attempt['attempt_id'])
+            self.assertEqual((row.status, row.board['outcome']), ('lost', 'lost'))
+            self.assertIsNone(db.get(progression.PlayerQualification, (uid, 'mine-beginner-001')))
 
 
 if __name__ == "__main__":

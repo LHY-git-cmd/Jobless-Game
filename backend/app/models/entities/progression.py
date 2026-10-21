@@ -51,7 +51,8 @@ class PlayerLevelProgress(Base):
 class GameAttempt(Base):
     """绑定账号与不可变题目版本；扫雷隐藏棋盘不进入公开表示。"""
     __tablename__ = 'game_attempts'
-    __table_args__ = (Index('ix_attempt_owner_active', 'user_id', 'status', 'level_id'), Index('ix_attempt_expiry', 'expires_at'))
+    __table_args__ = (Index('ix_attempt_owner_active', 'user_id', 'status', 'level_id'), Index('ix_attempt_expiry', 'expires_at'),
+                      Index('ix_attempt_retention', 'status', 'ended_at'))
     attempt_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[int] = mapped_column(UID, ForeignKey('users.id', ondelete='CASCADE'))
     level_id: Mapped[str] = mapped_column(String(40))

@@ -43,6 +43,7 @@ def main():
         "DATABASE_URL='" + url + "'",
         "COOKIE_SECURE=" + str(secure).lower(),
         "DEV_QUICK_COMPLETE_ENABLED=false", "DB_POOL_SIZE=3", "DB_MAX_OVERFLOW=0",
+        "PROGRESSION_ENABLED=false", "COSMETICS_ENABLED=false", "PK_ROOMS_ENABLED=false", "MATCHMAKING_ENABLED=false",
         "LOGIN_HASH_CONCURRENCY=1", "",
     ])
     flyway = "\n".join([

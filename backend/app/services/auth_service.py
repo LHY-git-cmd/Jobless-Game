@@ -102,6 +102,8 @@ def logout_transaction(raw_token: str | None, db: Session) -> None:
     if raw_token:
         session_repository.remove_by_token_hash(db, hash_session_token(raw_token))
         db.commit()
+        from .pk_runtime import runtime
+        runtime.revoke(raw_token)
 
 
 async def logout(raw_token: str | None, db: Session) -> None:

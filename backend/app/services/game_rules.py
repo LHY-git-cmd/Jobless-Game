@@ -63,6 +63,16 @@ def stars_for(level, duration_ms):
     return 3 if duration_ms <= level['t3_ms'] else 2 if duration_ms <= level['t2_ms'] else 1
 
 
+def elapsed_ms(started_at, received_at):
+    """纯整数微秒换算，避免1.001秒浮点乘法误变1000毫秒。"""
+    delta = received_at-started_at
+    return max(0, delta.days*86400000 + delta.seconds*1000 + delta.microseconds//1000)
+
+
 def xp_for(previous, current):
     """按最高星里程碑发放经验，不因重复通关或版本更新重奖。"""
-    return sum(amount for milestone, amount in ((1, 40), (2, 10), (3, 30)) if previous < milestone <= current)
+    from ..common.game_catalog import POLICY
+    reward = POLICY['milestone_xp']
+    return (reward['completion'] if previous == 0 and current > 0 else 0) + sum(
+        reward['star'] + (reward['three_star_bonus'] if star == 3 else 0)
+        for star in range(1, 4) if previous < star <= current)

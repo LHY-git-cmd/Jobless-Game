@@ -2,6 +2,30 @@
 
 采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供三个独立关卡、通关记录、三个单项排行榜以及文字论坛和站内消息。
 
+新增正式成长与双人照明竞速使用 `/api/v1`，与旧成绩和本地练习分开。先在专用库执行 Flyway V1～V9，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`；全部默认 `false`。页面入口是 `/journey.html` 和 `/pk.html`。HTTP部署仍遵循原Cookie配置，正式HTTPS必须开启Secure。
+
+首版十关照明发放一次性经验与最高星，三游戏正式初级资格为AND；扫雷由服务器逐格揭开，旧成绩和开发通关不能换资格。独立主题仅改变成长/竞速页的语义色和棋盘描边。房间/匹配各有容量保护，单进程调度器负责倒计时、平局/断线/超时，SSE鉴权后立即释放数据库连接，重启作废所有未完成房间与等待票。生产仍为一个worker、320MiB/1CPU、数据库池3/执行槽4。
+
+Nginx需要同步合并 `deploy/nginx-site.conf.example` 的精确 `/api/v1/me/events` 路由：关闭buffer/cache，读取超时75秒；普通API维持短超时。新v1写请求4KiB，论坛维持独立32KiB。Docker镜像已包含冻结题库与历史清理工具，正式应用启动不自动迁移。
+
+本轮验证与操作命令（在项目根目录运行，日志写入本地artifacts）：
+
+```powershell
+python -m backend.content_check
+python -m backend.export_game_contract --check
+python -m unittest discover -s backend/tests *> artifacts/backend/tests.log
+python backend/verify_progression_mysql.py *> artifacts/backend/mysql.log
+python artifacts/frontend/verify_game_progression.py *> artifacts/backend/browser.log
+```
+
+MySQL脚本要求Docker可用及本地有 `mysql:5.7.40`、`redgate/flyway:13.6.0`，随机凭据仅进入子进程环境；使用临时容器/专用测试库，结束仅删除该容器。浏览器验收要求Chrome及 `requirements-browser.txt`，仅用临时SQLite，不连接项目库。
+
+维护清理用 `python -m backend.cleanup_game_history --batch-size 200 --max-batches 10`，必须指向明确配置并已备份的项目库：结果30天后变为7天410墓碑，再回收；永久星级、奖励凭据、资格和外观不会删除。该脚本按需运行，不新增常驻清理服务。V9仅补充清理索引，V1～V8均保留。
+
+目标机容量观测工具：`python -m backend.probe_pk_capacity --base-url https://测试站点 --sessions-file artifacts/backend/pk-sessions.local.json --seconds 1800`。会话文件是最多16个**专用测试账号Cookie值**的JSON数组，需匹配 `--cookie-name`，不能提交或分享。工具只读HTTP/SSE，不自动创建对局；按方案另准备2/4/8人对局、8人排队及重连/结束循环，合并目标机CPU、RSS、MemAvailable、MySQL锁/OOM等证据后再判断是否通过。客户端观测报告始终不自行宣告目标容量通过。
+
+完整边界、测试统计及发布/回退注意事项见 [成长竞速实施报告](../docs/game-progression-pk-report.md)，契约草案见 [OpenAPI](../docs/game-progression-openapi.json)。
+
 需要在本机把 MySQL 一并容器化验证时，使用项目根目录 `compose.yaml`，参见 [Docker 部署与验收](./deploy/docker/README.md)。该方案使用独立数据库与数据卷，不读取下面的 `backend/.env`；服务器宝塔复用方案仍按本文执行。
 
 ## 五层架构

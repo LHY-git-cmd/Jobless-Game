@@ -13,7 +13,7 @@ def rows(db, model, *conditions, lock=True, limit=50, order=None):
     """有界读取；写路径使用当前读，所有列表有固定上限。"""
     query = select(model).where(*conditions)
     if order is not None:
-        query = query.order_by(order)
+        query = query.order_by(*(order if isinstance(order, tuple) else (order,)))
     query = query.limit(limit).execution_options(populate_existing=True)
     return list(db.scalars(query.with_for_update() if lock else query))
 

@@ -19,7 +19,7 @@ from ..models.entities.progression import (GameLevelVersion, PlayerProgression, 
 from ..models.entities.cosmetic import PlayerCosmetic, PlayerAppearance
 from ..repositories import progression_repository as repo
 from . import auth_service
-from .game_rules import validate_akari, validate_sudoku, stars_for
+from .game_rules import validate_akari, validate_sudoku, stars_for, elapsed_ms
 
 DEFAULT_APPEARANCE = {key: 'default' for key in ('theme_id', 'mine_skin_id', 'akari_skin_id', 'sudoku_skin_id')}
 COSMETICS = [{'cosmetic_id': 'default', 'name': '海岛', 'kind': 'theme', 'required_stars': 0, 'asset_version': 1},
@@ -194,6 +194,7 @@ def attempt_resource(db, attempt, status=200):
     data = {'attempt_id': attempt.attempt_id, 'level_id': attempt.level_id, 'level_version': attempt.level_version,
             'game_id': attempt.game_id, 'mode': attempt.mode, 'status': attempt.status, 'revision': attempt.revision,
             'started_at': iso(attempt.started_at), 'expires_at': iso(attempt.expires_at), 'server_now': iso(utc_now()),
+            'ended_at': iso(attempt.ended_at) if attempt.ended_at else None,
             'puzzle': deepcopy(level['puzzle']), 'links': {'self': base, 'completion': base + '/completion'}}
     if attempt.game_id == 'mine':
         data['board'] = mine_public(attempt.board)
@@ -208,7 +209,7 @@ def owned_attempt(db, uid, attempt_id):
     attempt = repo.get(db, GameAttempt, attempt_id)
     if not attempt or attempt.user_id != uid:
         fail(404, 'attempt_not_found', '尝试不存在。')
-    if attempt.status == 'expired' or (attempt.status == 'active' and attempt.expires_at <= utc_now()):
+    if attempt.status in ('expired', 'tombstone') or (attempt.status == 'active' and attempt.expires_at <= utc_now()):
         fail(410, 'attempt_expired', '本次尝试已过期，请重新开始。')
     return attempt
 
@@ -326,7 +327,7 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
              attempt.game_id == 'mine' and not data and attempt.board['outcome'] == 'won')
     if not valid:
         fail(422, 'invalid_completion', '终盘尚未满足全部规则。')
-    duration = max(0, int((received_at - attempt.started_at).total_seconds() * 1000))
+    duration = elapsed_ms(attempt.started_at, received_at)
     current = stars_for(level, duration) if attempt.mode == 'campaign' else 0
     summary = repo.get(db, PlayerProgression, uid)
     if summary is None:
@@ -435,7 +436,7 @@ def cosmetics(db, uid, **_):
     owned = {r.cosmetic_id for r in repo.rows(db, PlayerCosmetic, PlayerCosmetic.user_id == uid, lock=False)} | {'default'}
     return Resource({'items': [{**item, 'owned': item['cosmetic_id'] in owned,
              'locked_reason': None if item['cosmetic_id'] in owned else f"累计{item['required_stars']}星解锁",
-             'asset_url': '/journey.css?v=1'} for item in COSMETICS], 'appearance': appearance(db, uid).data})
+             'asset_url': '/journey.css'} for item in COSMETICS], 'appearance': appearance(db, uid).data})
 
 
 ACTIONS = {'attempt_create': create_attempt, 'attempt_get': get_attempt, 'attempt_abandon': abandon_attempt,

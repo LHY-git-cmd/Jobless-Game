@@ -51,3 +51,11 @@ class ContentTests(TestCase):
         puzzle = {'map': ['.1.', '...', '.#.'], 'rows': 3, 'cols': 3}
         for bulbs in ([0, 0], [-1], [9], [1], [True], [0, 2]):
             self.assertFalse(validate_akari(puzzle, bulbs))
+
+    def test_elapsed_time_has_no_float_rounding_at_millisecond_boundary(self):
+        """1001ms不能因浮点乘法变成1000ms，微秒尾数向下取整。"""
+        from datetime import datetime, timedelta
+        from backend.app.services.game_rules import elapsed_ms
+        start = datetime(2026, 1, 1)
+        self.assertEqual(elapsed_ms(start, start+timedelta(milliseconds=1001)), 1001)
+        self.assertEqual(elapsed_ms(start, start+timedelta(days=1, milliseconds=1001, microseconds=999)), 86401001)
