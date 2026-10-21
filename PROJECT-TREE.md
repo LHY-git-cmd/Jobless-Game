@@ -211,6 +211,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── avatar.js                     # 固定图片路径、清单读取、错误回退及按账号隔离保存状态
 │   │   ├── avatar-picker.js              # 设置中的头像网格、按需加载、明确保存和失败重试
 │   │   ├── auth.js                       # 共享登录弹窗、会话恢复、用户名设置入口及退出
+│   │   ├── player-profile.js             # 首页左上账号按钮、头像内等级、真实星数与绿色经验条
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
 │   │   ├── auth-game.js                  # 首页三个独立关卡的登录拦截与授权续接
@@ -262,6 +263,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── forum-body.test.js            # 正文表单/链接、旧标题隐藏、左评论按钮及右侧图标交互
 │       ├── notifications.test.js         # 浏览器计时器、登录/可见性、账号隔离及已读边界
 │       ├── avatar.test.js                # 头像路径、清单错误、保存重试和退出/换号晚到响应隔离
+│       ├── player-profile.test.js        # 成长读取换号隔离、不可用状态及同账号头像更新不重复请求
 │       ├── completion.test.js            # 自由选关/计时/存档/保存及销毁重建和旧响应回归
 │       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
 │       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换

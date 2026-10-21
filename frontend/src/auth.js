@@ -6,6 +6,7 @@ import { initMusic } from "./music.js";
 import { initGameSettings } from "./settings.js";
 import { createAvatarImage, updateAvatarImage } from "./avatar.js";
 import { initNotifications } from "./notifications.js";
+import { initPlayerProfile } from './player-profile.js';
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
 export function initAuth() {
@@ -63,6 +64,8 @@ export function initAuth() {
   usernameLabel.className = "auth-username";
   userButton.append(avatarImage, usernameLabel);
   userButton.addEventListener("click", () => { if (user) gameSettings.open(userButton); });
+  const profileHost = document.querySelector('[data-player-profile]');
+  const profile = profileHost ? initPlayerProfile({ host: profileHost, userButton, openButton, avatarImage, usernameLabel }) : null;
   let user = null;
   let pending = null;
   let returnFocus = null;
@@ -78,10 +81,11 @@ export function initAuth() {
     if (previousId !== user?.id) identityGeneration++;
     if (previousId !== user?.id) gameSettings.close();
     gameSettings.setUser(user);
+    profile?.setUser(user);
     if (previousId !== user?.id) document.dispatchEvent(new CustomEvent(Events.AUTH_CHANGED, {
       detail: { user: user ? { ...user } : null },
     }));
-    const label = host.querySelector(".auth-user");
+    const label = userButton;
     usernameLabel.textContent = user?.username || "";
     updateAvatarImage(avatarImage, user?.avatar_id);
     label.setAttribute("aria-label", user ? `${user.username}，打开游戏设置` : "打开游戏设置");
