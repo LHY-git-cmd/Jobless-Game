@@ -15,7 +15,7 @@ let uid, epoch = 0, readVersion = 0, cosmetics = [], equipped = 'default', theme
 function renderGame() {
   document.title = `${game.name}选关 · 无职游戏`;
   document.body.dataset.game = game.id;
-  $('levels-title').textContent = `${game.name}关卡`;
+  $('levels-title').textContent = game.id==='mine'?'扫雷':`${game.name}关卡`;
   document.querySelector('.site-nav [aria-current="page"]').href = gameLink(game.id);
   $('catalog-empty-title').textContent = `${game.name}关卡重新设计中`;
   if (game.art) {
