@@ -29,10 +29,12 @@
 .mine-start-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 24px; border-top: 1px solid var(--line); padding-top: 24px; }
 .mine-start-row p { color: var(--muted); font-size: 13px; line-height: 1.9; margin: 0; max-width: 660px; }
 .mine-start-row button { flex: none; min-width: 160px; padding: 14px 24px; }
-.mine-play-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; }
+.mine-play-heading { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 12px; }
+.mine-play-heading > #mine-back { grid-column: 1; grid-row: 1; justify-self: start; }
+.mine-play-heading > #mine-restart { grid-column: 2; grid-row: 1; justify-self: end; }
 .mine-play-heading h2 { font-size: 24px; margin: 0; }
 .mine-play-heading .eyebrow { margin-top: 0; }
-.mine-play-heading > .journey-actions { margin-left: auto; }
+.mine-play-heading > .journey-actions { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
 .mine-play-heading > .journey-actions button { padding-inline: 12px; font-size: 14px; }
 .mine-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-block: 1px solid var(--line); margin-top: 24px; }
 .mine-stats > div { display: flex; flex-direction: column; gap: 8px; padding: 20px 8px; text-align: center; }
@@ -82,14 +84,14 @@
 @media(max-width:700px) {
   .mine-play { display: flex; flex-direction: column; }
   .mine-play-heading { order: 0; }.mine-stats { order: 1; }.mine-tutorial { order: 2; }
-  .mine-operation { order: 3; position: sticky; top: 8px; z-index: 4; background: var(--surface); padding-block: 8px; border-bottom: 1px solid var(--line); }
-  .mine-operation p { margin: 4px 0; }.mine-viewport { order: 4; max-height: 55svh; }.mine-help { order: 5; }.mine-result { order: 6; }
+  .mine-operation { order: 4; padding-block: 8px; }
+  .mine-operation p { margin: 4px 0; }.mine-viewport { order: 3; max-height: 55svh; }.mine-help { order: 5; }.mine-result { order: 6; }
   .mine-keyboard-hint { display: none; }
   .mine-stat-stars { gap: 2px; }.mine-stat-stars svg { width: 18px; height: 18px; }
   .mine-intro { gap: 12px; margin-bottom: 24px; }.mine-intro img { width: 56px; height: 56px; }.mine-intro .eyebrow { font-size: 10px; letter-spacing: 1px; }
   .mine-difficulties { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }.mine-difficulties button { padding: 16px 10px; }.mine-difficulties strong { font-size: 18px; }.mine-difficulties span { font-size: 12px; }
   .mine-start-row { flex-direction: column; align-items: stretch; gap: 16px; }.mine-start-row button { width: 100%; }
-  .mine-play-heading { align-items: flex-start; gap: 16px; }.mine-play-heading > .journey-actions { margin: 0; width: 100%; gap: 8px; }
+  .mine-play-heading { gap: 12px; }.mine-play-heading > .journey-actions { gap: 8px; }
   .mine-play-heading > button { padding-inline: 10px; }.mine-play-heading h2 { font-size: 20px; }.mine-stats strong { font-size: 24px; }
   .mine-operation .journey-actions { width: 100%; }.mine-operation button { flex: 1; }.mine-tutorial { padding-inline: 12px; }
 }

@@ -29,7 +29,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       <div class="mine-start-row"><p id="mine-reward-note">正在加载难度…</p><button id="mine-start" class="journey-primary" type="button" disabled>开始游戏 <span aria-hidden="true">→</span></button></div>
     </div>
     <section id="mine-play" class="mine-play" aria-label="扫雷游戏" hidden>
-      <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><div class="journey-actions"><button id="mine-rules" type="button">规则</button><button id="mine-sound" type="button">音效：开</button><button id="mine-restart" type="button">重新开始</button></div></div>
+      <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><button id="mine-restart" type="button">重新开始</button><div class="journey-actions"><button id="mine-rules" type="button">规则</button><button id="mine-sound" type="button">音效：开</button></div></div>
       <div class="mine-stats"><div><span>剩余雷标记</span><strong id="mine-left">0</strong></div><div><span>可得星数</span><span id="mine-available-stars" class="mine-rating mine-stat-stars" aria-live="polite"></span></div><div><span id="mine-clock-label">本局用时</span><strong id="mine-clock">00:00</strong></div></div>
       <div id="mine-tutorial" class="mine-tutorial" hidden><span id="mine-tutorial-count" class="eyebrow"></span><h3 id="mine-tutorial-title"></h3><p id="mine-tutorial-text"></p><button id="mine-understood" type="button" class="journey-primary" hidden>明白了，试试标记 →</button></div>
       <div id="mine-viewport" class="mine-viewport" tabindex="0" role="region" aria-label="扫雷棋盘，可上下左右滚动"><div id="mine-board" class="mine-board" role="group" aria-label="扫雷棋盘"></div></div>
