@@ -89,7 +89,7 @@ def main():
                 def elapsed(level,seconds):
                     """仅测试夹具调整起点，刷新后显示须读取服务端真实尝试。"""
                     with sessions() as db:
-                        row=db.get(GameAttempt,active(level).attempt_id);row.started_at=utc_now()-timedelta(seconds=seconds);db.commit()
+                        row=db.get(GameAttempt,active(level).attempt_id);row.started_at=utc_now()-timedelta(milliseconds=seconds*1000+row.board.get('clock_paused_ms',0));db.commit()
                     cmd('Page.reload');wait("!document.getElementById('mine-play').hidden && !document.getElementById('mine-restart').disabled")
                 cmd('Page.enable')
                 cmd('Page.addScriptToEvaluateOnNewDocument',{'source':"window.flightBatches=0;document.addEventListener('DOMContentLoaded',()=>new MutationObserver(records=>records.forEach(r=>r.addedNodes.forEach(n=>{if(n.classList?.contains('mine-star-collection'))window.flightBatches++}))).observe(document.body,{childList:true}));"})

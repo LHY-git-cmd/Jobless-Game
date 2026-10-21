@@ -133,6 +133,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_forum.py                 # 论坛权限、文字/请求体、幂等、归属、通知及事务回滚
 │       ├── test_game_content.py          # 题库唯一解、评分边界、无死锁与初级难度
 │       ├── test_mine_redesign.py         # 五档矩形扫雷、教学步骤、首击安全、经验补差及冻结时间
+│       ├── test_mine_pause.py            # 服务器暂停/继续、防重版本、账号隔离及有效时长结算
 │       ├── test_progression_v1.py        # 尝试/成长/资格/主题/版本/权限及回滚契约
 │       ├── test_pk_v1.py                 # 房间/匹配/平局/资格组合/超时及容量边界
 │       ├── test_pk_events.py             # 有界队列、单账号流与鉴权后DB释放
@@ -327,6 +328,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_game_catalog.py         # 新版三卡/空目录/成长/旧关卡下线/过渡及窄屏验收
         ├── verify_mine_redesign.py       # 五档扫雷真实浏览器/临时SQLite及隔离本地预览
         ├── verify_mine_stars.py          # 三颗星/时间降星/汇聚/手机操作及换号取消专项浏览器验收
+        ├── verify_mine_pause.py          # 规则/选关/真实标签切换/离页暂停与继续、活动时长星级验收
         ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志

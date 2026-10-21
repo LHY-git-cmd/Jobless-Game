@@ -5,16 +5,20 @@ import { createJourneyStore } from '../../progression/journey-store.js';
 /** request与时钟可注入测试；本地仅保存选格/旗标和正式尝试的引用。 */
 export function createMineSession({uid,storage,request=api,onChange=()=>{},onReward=()=>{},now=Date.now}={}) {
   let epoch=0, dead=false, offset=0;
-  const state={levels:[],progress:[],enabled:false,selected:null,attempt:null,result:null,flags:[],cell:null,busy:false,message:''};
+  let anchor=now(),clockQueue=Promise.resolve(),operationDone=Promise.resolve(),frozen=null,pendingClock=null;
+  const pauseReasons=new Set();
+  const state={levels:[],progress:[],enabled:false,selected:null,attempt:null,result:null,flags:[],cell:null,busy:false,paused:false,clockBusy:false,message:''};
   const store=createJourneyStore(storage,uid,message=>{state.message=message;});
   /** 渲染订阅只接收当前会话，销毁后的响应不可通知页面。 */
   function publish(){if(!dead) onChange(state);}
   /** 串行写操作并统一恢复按钮；错误交给界面显示可重试状态。 */
   async function perform(work) {
     if(dead||state.busy) return;
+    const clockWait=clockQueue;
+    let done;operationDone=new Promise(resolve=>{done=resolve;});
     const stamp=epoch;state.busy=true;publish();
-    try{return await work(()=>!dead&&stamp===epoch);}
-    finally {if(!dead&&stamp===epoch){state.busy=false;publish();}}
+    try{await clockWait;return await work(()=>!dead&&stamp===epoch);}
+    finally {done();if(!dead&&stamp===epoch){state.busy=false;publish();}}
   }
   /** 采用服务器棋盘并恢复同一次尝试的草稿，旗标永远不替代权威揭格。 */
   function adopt(value) {
@@ -29,7 +33,40 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     state.cell=Number.isInteger(saved?.selected)&&saved.selected>=0&&saved.selected<count?saved.selected:null;
     offset=Date.parse(value.server_now)-now();
     if(!Number.isFinite(offset)) offset=0;
+    anchor=now();
+    state.paused=pauseReasons.size>0||state.clockBusy||Boolean(value.timing?.paused);
+    frozen=state.paused?(value.timing?.elapsed_ms??Math.max(0,(Date.parse(value.ended_at||'')||now()+offset)-Date.parse(value.started_at))):null;
     save();publish();
+  }
+  /** 当前显示从服务端活动时长递增；暂停意图立即冻结，不等待网络往返。 */
+  function elapsed(){
+    const attempt=state.attempt;if(!attempt)return 0;
+    if(frozen!==null)return frozen;
+    if(attempt.timing)return attempt.timing.elapsed_ms+(attempt.ended_at||attempt.timing.paused?0:Math.max(0,now()-anchor));
+    return Math.max(0,(Date.parse(attempt.ended_at||'')||now()+offset)-Date.parse(attempt.started_at));
+  }
+  /** 修订冲突只读取最新权威快照重试，不允许旧离页请求覆盖新会话。 */
+  async function writeClock(paused,current){
+    const attempt=state.attempt;
+    if(!attempt||attempt.status!=='active'||attempt.board.outcome!=='active')return;
+    for(let retry=0;retry<3;retry++){
+      const command=pendingClock?.rid===attempt.attempt_id?pendingClock:{rid:attempt.attempt_id,paused,revision:state.attempt.timing?.revision||0,command_id:crypto.randomUUID()};
+      pendingClock=command;
+      try{
+        const {rid,...body}=command;
+        const response=await request(attempt.links.self+'/clock',{method:'PUT',body,keepalive:true});
+        if(!current())return;
+        pendingClock=null;adopt(response.data);
+        if(command.paused!==paused){retry--;continue;}
+        return;
+      }catch(error){
+        if(!current())return;
+        if(error.code!=='clock_conflict')throw error;
+        const latest=await request(attempt.links.self);if(!current())return;
+        pendingClock=null;adopt(latest.data);
+      }
+    }
+    throw new Error('计时同步失败，请重试继续游戏。');
   }
   /** 保存失败仍可继续操作，正式棋盘可由账号服务端恢复。 */
   function save(){if(state.attempt)store.save(state.attempt,{flags:state.flags,selected:state.cell});}
@@ -49,6 +86,8 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     const response=await request(path);
     if(!current())return;
     adopt(response.data);
+    await writeClock(pauseReasons.size>0,current);
+    if(!current())return;
     if(response.data.status==='completed') {
       const result=await request(response.data.links.completion);
       if(current()){state.result=result.data;publish();}
@@ -114,14 +153,14 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     });},
     /** 选择格子不揭开，方便触屏玩家确认操作。 */
     choose(index){
-      if(state.busy||!state.attempt||state.attempt.board.outcome!=='active')return;
+      if(state.busy||state.paused||!state.attempt||state.attempt.board.outcome!=='active')return;
       if(!Number.isInteger(index)||index<0||index>=state.attempt.puzzle.rows*state.attempt.puzzle.cols)return;
       state.cell=index;save();publish();
     },
     /** 普通旗标本地保存；教学标记必须由服务器确认步骤。 */
     async mark(){return perform(async current=>{
       const attempt=state.attempt,index=state.cell;
-      if(!attempt||index===null||attempt.board.outcome!=='active'||attempt.board.revealed.some(v=>v.index===index))return;
+      if(state.paused||!attempt||index===null||attempt.board.outcome!=='active'||attempt.board.revealed.some(v=>v.index===index))return;
       if(attempt.puzzle.tutorial){
         if(attempt.board.tutorial_step!==2||index!==6){state.message='请按教学提示标记第2行第2列。';return;}
         const response=await request(attempt.links.self+'/tutorial-actions/flag',{method:'PUT',body:{}});
@@ -132,14 +171,14 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     /** 教学确认数字含义后进入标记阶段。 */
     async acknowledge(){return perform(async current=>{
       const attempt=state.attempt;
-      if(!attempt?.puzzle.tutorial||attempt.board.tutorial_step!==1)return;
+      if(state.paused||!attempt?.puzzle.tutorial||attempt.board.tutorial_step!==1)return;
       const response=await request(attempt.links.self+'/tutorial-actions/number',{method:'PUT',body:{}});
       if(current())adopt(response.data);
     });},
     /** 揭格响应确认前保留原盘，断网可以重放同一位置。 */
     async reveal(){return perform(async current=>{
       const attempt=state.attempt,index=state.cell;
-      if(!attempt||index===null||state.flags.includes(index)||attempt.board.outcome!=='active')return;
+      if(state.paused||!attempt||index===null||state.flags.includes(index)||attempt.board.outcome!=='active')return;
       if(attempt.puzzle.tutorial&&(attempt.board.tutorial_step<3||[6,18,24].includes(index))){
         if(!(attempt.board.tutorial_step===0&&index===0)){state.message='请先完成高亮的教学步骤。';return;}
       }
@@ -162,7 +201,31 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
       await begin(current);
     });},
     /** 服务端时间校准只供显示，正式星级仍由后端计算。 */
-    elapsed(){const attempt=state.attempt;if(!attempt)return 0;return Math.max(0,(Date.parse(attempt.ended_at||'')||now()+offset)-Date.parse(attempt.started_at));},
+    elapsed,
+    /** 规则、隐藏、选关各持有暂停原因，全部解除才发送继续；离页请求使用keepalive。 */
+    async setPaused(reason,value,{immediate=false,sync=true}={}){
+      if(dead)return;
+      const before=pauseReasons.size>0,time=elapsed();
+      if(value)pauseReasons.add(reason);else pauseReasons.delete(reason);
+      const paused=pauseReasons.size>0;
+      if(!sync)return;
+      if(!state.attempt||state.attempt.board.outcome!=='active')return;
+      if(before===paused&&state.paused===paused&&!pendingClock&&!state.clockBusy)return;
+      frozen=time;state.paused=true;state.clockBusy=true;publish();
+      const waitOperation=immediate?Promise.resolve():operationDone;
+      const stamp=epoch,current=()=>!dead&&stamp===epoch;
+      const work=async()=>{
+        if(!immediate)await waitOperation;
+        if(!current())return;
+        try{
+          await writeClock(paused,current);
+          if(current()){state.clockBusy=false;state.paused=pauseReasons.size>0||Boolean(state.attempt.timing?.paused);if(!state.paused)frozen=null;}
+        }catch(error){if(current()){state.clockBusy=false;state.paused=true;}throw error;}
+        finally{if(current())publish();}
+      };
+      const next=immediate?work():clockQueue.catch(()=>{}).then(work);
+      clockQueue=next.catch(()=>{});return next;
+    },
     /** 换号/离开使所有尚未返回的读写失效。 */
     destroy(){dead=true;epoch++;state.attempt=null;state.result=null;state.flags=[];},
   };

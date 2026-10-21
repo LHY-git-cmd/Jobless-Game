@@ -139,7 +139,7 @@ def main():
                 click('#mine-rules');wait("document.getElementById('mine-rules-dialog').open")
                 assert active('mine-v2-easy-20').started_at==started
                 click('#mine-rules-confirm')
-                checks.append('方向键选格与游戏中重看规则保留原始计时')
+                checks.append('方向键选格与游戏中重看规则暂停，保留原始棋局')
                 for width in (1440,375,320):
                     cmd('Emulation.setDeviceMetricsOverride',{'width':width,'height':900,'deviceScaleFactor':1,'mobile':width<700})
                     assert ev('document.documentElement.scrollWidth<=innerWidth'),f'{width}px整页溢出'

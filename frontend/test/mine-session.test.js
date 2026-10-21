@@ -6,7 +6,7 @@ import { createMineSession } from '../src/games/mine/session.js';
 /** 最小接口夹具只模拟协议，不替代后端规则测试。 */
 function fixture() {
   const calls = [], memory = new Map();
-  let starts = 0, completionFails = false, attempt;
+  let starts = 0, completionFails = false, attempt,clockTime=Date.parse('2026-10-22T00:00:00Z'),clockElapsed=0,clockPaused=false,clockRevision=0;
   const levels = ['easy','tutorial'].map((difficulty,i)=>({ level_id:`mine-test-${difficulty}`,difficulty,level_version:1,
     rows:i?5:10,cols:i?5:10,mine_count:i?3:10,name:difficulty,star_xp:i?[2]:[2,4,6],t3_ms:75000,t2_ms:150000 }));
   const storage = {getItem:k=>memory.get(k),setItem:(k,v)=>memory.set(k,v)};
@@ -20,9 +20,13 @@ function fixture() {
       starts++;
       const level=levels.find(v=>v.level_id===options.body.level_id);
       attempt={attempt_id:'a',level_id:level.level_id,level_version:1,revision:0,status:'active',
-        started_at:'2026-10-22T00:00:00Z',server_now:'2026-10-22T00:00:00Z',ended_at:null,
+        started_at:'2026-10-22T00:00:00Z',server_now:new Date(clockTime).toISOString(),ended_at:null,
+        timing:{elapsed_ms:0,paused:false,paused_ms:0,revision:0},
         puzzle:{rows:level.rows,cols:level.cols,mine_count:level.mine_count,checksum:'c',tutorial:level.difficulty==='tutorial'},
         board:{revealed:[],outcome:'active',...(level.difficulty==='tutorial'?{tutorial_step:0}:{})},links:{self:'/api/v1/attempts/a',completion:'/api/v1/attempts/a/completion'}};
+    } else if(path.endsWith('/clock')) {
+      clockElapsed+=clockPaused?0:clockTime-Date.parse(attempt.server_now);clockPaused=options.body.paused;clockRevision++;
+      attempt.server_now=new Date(clockTime).toISOString();attempt.timing={elapsed_ms:clockElapsed,paused:clockPaused,paused_ms:0,revision:clockRevision};
     } else if(path.endsWith('/reveals/0')) {
       attempt=structuredClone(attempt); attempt.board.revealed=[{index:0,value:1}];
       if(attempt.puzzle.tutorial) attempt.board.tutorial_step=1;
@@ -36,7 +40,7 @@ function fixture() {
     }
     return {data:structuredClone(attempt),etag:'"1"'};
   }
-  return {request,storage,calls,levels,get starts(){return starts;},failCompletion(v){completionFails=v;}};
+  return {request,storage,calls,levels,get starts(){return starts;},failCompletion(v){completionFails=v;},now:()=>clockTime,tick(ms){clockTime+=ms;}};
 }
 
 test('切换难度不创建尝试，点击开始才发POST，标记不发揭格请求',async()=>{
@@ -87,6 +91,29 @@ test('销毁后迟到的响应不写回棋盘或存档',async()=>{
     if(path==='attempts') await new Promise(resolve=>release=resolve);
     return f.request(path,options);
   }});
-  await model.load();const pending=model.open();model.destroy();release();await pending;
+  await model.load();const pending=model.open();await Promise.resolve();model.destroy();release();await pending;
   assert.equal(model.state.attempt,null);
+});
+
+test('规则和隐藏分别暂停，嵌套暂停全部解除才继续，暂停不能揭格',async()=>{
+  const f=fixture(),model=createMineSession({uid:1,...f});await model.load();await model.open();
+  f.tick(10000);assert.equal(model.elapsed(),10000);
+  await model.setPaused('rules',true);const frozen=model.elapsed();f.tick(90000);
+  assert.equal(model.elapsed(),frozen);model.choose(4);assert.equal(model.state.cell,null);
+  await model.setPaused('hidden',true);await model.setPaused('rules',false);
+  f.tick(5000);assert.equal(model.elapsed(),frozen);
+  await model.setPaused('hidden',false);f.tick(3000);assert.equal(model.elapsed(),frozen+3000);
+  assert.equal(f.calls.filter(v=>v.path.endsWith('/clock')&&v.body.paused).length,1);
+});
+
+test('暂停请求失败后保留冻结和原请求编号，恢复网络可原键重试',async()=>{
+  const f=fixture();let failed=true;
+  const model=createMineSession({uid:1,...f,request:async(path,options)=>{
+    if(path.endsWith('/clock')&&options.body.paused&&failed){failed=false;throw new Error('离线');}
+    return f.request(path,options);
+  }});
+  await model.load();await model.open();f.tick(2000);
+  await assert.rejects(model.setPaused('rules',true),/离线/);f.tick(10000);
+  assert.equal(model.elapsed(),2000);assert.equal(model.state.paused,true);
+  await model.setPaused('rules',false);assert.equal(model.state.paused,false);
 });

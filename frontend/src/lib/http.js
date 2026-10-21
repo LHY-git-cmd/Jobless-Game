@@ -15,13 +15,13 @@ export class HttpError extends Error {
 
 /** timeoutMs 默认十二秒；可注入传输/调度器验证超时，凭据始终由 Cookie 管理。 */
 export async function requestJson(path, { method = 'GET', body, timeoutMs = 12000,
-  headers = {}, includeMeta = false,
+  headers = {}, includeMeta = false, keepalive = false,
   fetchImpl = globalThis.fetch, setTimer = globalThis.setTimeout, clearTimer = globalThis.clearTimeout } = {}) {
   const controller = new AbortController();
   const timer = setTimer(() => controller.abort(), timeoutMs);
   try {
     const response = await fetchImpl(path, {
-      method, credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+      method, credentials: 'same-origin', cache: 'no-store', signal: controller.signal, keepalive,
       headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
