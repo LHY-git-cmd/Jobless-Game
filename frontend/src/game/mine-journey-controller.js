@@ -6,8 +6,7 @@ import { getAudioSettings } from '../audio-settings.js';
 import { createExplosionSequence, createExplosionSound, explosionOrder } from '../mine-effects.js';
 
 const DIFFICULTIES=[['tutorial','入门','从零学会'],['easy','简单','轻松起步'],['medium','中等','多想一步'],['hard','困难','步步推理'],['hell','地狱','极限挑战']];
-const FLAG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V3m0 1h12l-3 4 3 4H6M3 21h7"/></svg>';
-const MINE='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5M4 4l4 4m8 8 4 4M4 20l4-4M16 8l4-4"/></svg>';
+const FLAG='<img src="./assets/minesweeper/v2/flag.webp" width="24" height="24" alt="">';
 
 /** 秒数向下显示，星级仍按服务端毫秒判定。 */
 export function mineTime(ms){const seconds=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;}
@@ -22,7 +21,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
   // 模板只包含开发者静态结构；接口文本和用户状态统一使用textContent。
   host.innerHTML=`
     <div id="mine-selector" class="mine-selector">
-      <div class="mine-intro"><div><p class="eyebrow">MINESWEEPER · 每一步，都有线索</p><h2>选一个难度，开始推理。</h2><p>找到所有安全格，把星星带回旅程。</p></div><img src="./assets/minesweeper.webp" width="84" height="84" alt=""></div>
+      <div class="mine-intro"><div><p class="eyebrow">MINESWEEPER · 每一步，都有线索</p><h2>选一个难度，开始推理。</h2><p>找到所有安全格，把星星带回旅程。</p></div><img src="./assets/minesweeper/v2/theme.webp" width="84" height="84" alt=""></div>
       <div id="mine-difficulties" class="mine-difficulties" role="group" aria-label="扫雷难度"></div>
       <div class="mine-options-heading"><h3 id="mine-options-title">选择棋盘</h3><span>全部难度自由选择</span></div>
       <div id="mine-specs" class="mine-specs" role="group" aria-labelledby="mine-options-title"></div>
@@ -69,7 +68,8 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
   /** 只修改指定地雷的视图，不把隐藏雷图写到DOM。 */
   function paintMine(index){
     const cell=$('mine-board').children[index];if(!cell)return;
-    cell.innerHTML=MINE;cell.classList.add('mine-visible');
+    cell.replaceChildren();cell.classList.add('mine-visible');
+    cell.classList.toggle('mine-exploded',animation?animation.exploded.has(index):true);
     cell.classList.toggle('mine-blasting',Boolean(animation?.exploded.has(index)&&!animation?.settled.has(index)));
     cell.classList.toggle('mine-spent',Boolean(animation?.settled.has(index)));
     cell.setAttribute('aria-label',cell.getAttribute('aria-label').split('，')[0]+'，地雷');
@@ -93,7 +93,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       button.append(size,caption,rating,best);$('mine-specs').append(button);
     }
     const progress=state.progress.find(v=>v.level_id===level.level_id);
-    $('mine-options-title').textContent=level.difficulty==='tutorial'?'你的第一堂扫雷课':level.difficulty==='easy'?'选择棋盘':'挑战详情';
+    $('mine-options-title').textContent=level.difficulty==='tutorial'?'你的第一堂扫雷课':'选择棋盘';
     $('mine-reward-note').textContent=level.difficulty==='tutorial'?'认识数字、学会标记，再独立完成一盘。完成后获得 1 星、2 经验。':`三星 ≤ ${mineTime(level.t3_ms)} · 二星 ≤ ${mineTime(level.t2_ms)} · 其余通关一星。经验 ${level.star_xp.join(' / ')}，提升星级补差额。`;
     $('mine-start').textContent=state.busy?'正在准备…':progress?.current_attempt?'继续游戏 →':model.hasSaved(level.level_id)?'查看上局 →':'开始游戏 →';
     $('mine-start').disabled=state.busy||!state.enabled;
@@ -111,8 +111,8 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       const cell=document.createElement('button');cell.type='button';cell.className='mine-square';cell.dataset.index=index;
       const value=visible.get(index),flagged=state.flags.includes(index),selected=index===state.cell;
       let description='未揭开';
-      if(value!==undefined&&value!==-1){cell.classList.add('mine-open');cell.dataset.number=value;cell.textContent=value||'';description=`周围 ${value} 颗雷`;}
-      else if(flagged){cell.innerHTML=FLAG;cell.classList.add('mine-flagged');description='已标记';}
+      if(value!==undefined&&value!==-1){cell.classList.add('mine-open');cell.dataset.number=value;cell.textContent=value>3?String(value):'';description=`周围 ${value} 颗雷`;}
+      else if(flagged){cell.classList.add('mine-flagged');description='已标记';}
       cell.classList.toggle('mine-selected',selected);cell.setAttribute('aria-pressed',String(selected));
       const step=board.tutorial_step;
       const target=attempt.puzzle.tutorial&&((step===0&&index===0)||(step===1&&index===0)||(step===2&&index===6));

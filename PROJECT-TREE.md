@@ -19,7 +19,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── backend/                              # FastAPI 登录、独立关卡、排行榜、Flyway 与部署支持
 │   ├── content/                          # 冻结关卡、规则门槛与独立PK题库
 │   │   ├── game-catalog-v1.json           # 十关照明、三题PK、历史初级扫雷/数独与建议参数v1
-│   │   └── mine-catalog-v2.json           # 五档七项扫雷、矩形尺寸、星级时限及逐星经验
+│   │   └── mine-catalog-v2.json           # 教学与四档各三规格，共十三项扫雷、时限及逐星经验
 │   ├── content_check.py                  # 开发机唯一解、初级单候选与只生成新文件的题库工具
 │   ├── cleanup_game_history.py           # 有界历史清理，保留永久成长与资格
 │   ├── export_game_contract.py           # 从实际v1路由和DTO导出/核对契约草案
@@ -105,7 +105,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V7__create_pk_room_tables.sql  # 双人房间、成员、提交与用户占用
 │   │   ├── V8__create_matchmaking_tickets.sql # 排队票及占用票据关联
 │   │   ├── V9__index_game_history_retention.sql # 终态时间索引，支持有界清理
-│   │   └── V10__publish_mine_difficulties.sql # 扫雷五档七项不可变关卡与独立奖励定义
+│   │   ├── V10__publish_mine_difficulties.sql # 扫雷五档原七项不可变关卡与独立奖励定义
+│   │   └── V11__expand_mine_board_choices.sql # 中等/困难/地狱新增六个矩形棋盘，不改旧定义
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -254,7 +255,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── background.mp3            # 用户提供的阿尔法脑波背景音乐，低音量循环播放
 │   │   │   └── victory.mp3               # 用户指定的 PVZ 胜利音效；开始结算时播放一次
 │   │   └── minesweeper/                  # 扫雷格子状态素材
-│   │       └── *.webp                    # 覆盖格、打开格、旗帜、地雷、爆炸与数字图片
+│   │       ├── *.webp                    # 历史覆盖格、打开格、旗帜、地雷、爆炸与数字图片
+│   │       └── v2/                       # 用户指定原图切片：覆盖/数字/旗帜/地雷/爆炸及入口图
+│   │           └── *.webp                # 九张版本化WebP，新主题不会被旧素材缓存覆盖
 │   │
 │   └── test/                             # Node.js 自动化测试，验证规则与页面流程
 │       ├── dom-events.test.js            # 固定节点语义映射、局部查询及事件取消订阅契约
@@ -294,6 +297,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   └── imge/                             # 原始图片与图片提取脚本；保留现有目录拼写
 │       ├── start.jpeg                    # 海岛入口原始图片
 │       ├── 扫雷.jpeg                     # 扫雷原始图片
+│       ├── minesweeper-theme.png          # 用户最新指定的扫雷主题原图，保留不覆盖
+│       ├── prepare_mine_theme.py          # 从指定原图裁切九张v2 WebP棋格/入口素材
 │       ├── 灯泡.png                      # 灯泡原始图片
 │       ├── avatar/                       # 用户提供的25张原始PNG头像，保留编号及原图
 │       │   └── *.png                     # 001至025原图

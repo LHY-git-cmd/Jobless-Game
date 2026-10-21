@@ -12,7 +12,7 @@
 
 旧的 [扫雷练习地址](./frontend/mine-practice.html) 兼容跳转新版扫雷选关，不再展示原九关。旧本地存档、历史成长和资格保留。新版扫雷浏览器验收使用 `python artifacts/frontend/verify_mine_redesign.py`，只访问临时SQLite及独立Chrome；历史空目录验收脚本保留为材料，原MVP背景见 [历史实施报告](./docs/mine-multilevel-mvp-report.md)。
 
-扫雷入门为5×5/3雷的四步教学，完成固定1星、2经验。简单提供10×10/10雷、15×12/18雷、20×15/30雷；中等、困难、地狱分别为10×10的12/15/18雷。尺寸按列×行。普通10×10在75秒内三星、150秒内二星，其他通关一星；简单大棋盘同比放宽时限。每关累计最高星，经验提升补差额；普通首次揭格安全、各关独立续玩，服务端验证操作并冻结终盘时间。详细奖励表见 [重制计划](./docs/mine-difficulty-redesign-plan.md)，实际验收见 [实施报告](./docs/mine-difficulty-redesign-report.md)。
+扫雷入门为5×5/3雷的四步教学，完成固定1星、2经验。简单、中等、困难、地狱均提供10×10、15×12、20×15三种棋盘，雷数依次为10/18/30、12/22/36、15/27/45、18/32/54。尺寸按列×行。普通10×10在75秒内三星、150秒内二星，其他通关一星；大棋盘同比放宽时限。每关累计最高星，经验提升补差额；普通首次揭格安全、各关独立续玩，服务端验证操作并冻结终盘时间。棋格、数字、旗帜及地雷直接使用用户指定PNG的v2切片。详细奖励表见 [重制计划](./docs/mine-difficulty-redesign-plan.md)，实际验收见 [实施报告](./docs/mine-difficulty-redesign-report.md)。
 
 后端按控制层、业务层、数据访问层、模型层和公共层组织，调用方向为 Controller → Service → Repository。层级职责和扩展约定见 [后端架构说明](./backend/README.md#五层架构)。
 
@@ -20,7 +20,7 @@
 
 双人竞速必须正式通过扫雷初级（新版简单10×10通关同样认可）、照明第1关、数独初级三项，旧客户端成绩与本地练习不自动补资格。支持房间码邀请和普通照明FIFO匹配；双方准备后5秒倒计时、10分钟竞速、一秒平局窗口，断线宽限30秒，PK不发成长奖励。中间照明/数独草稿按账号保存在本浏览器，服务器负责正式起点、判题、奖励、资格与结果。
 
-这些新能力默认关闭；扫雷重制需先在专用环境完成Flyway V1～V10，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`。本次未改写现有站点配置或部署生产。实际实现、测试统计和待完成的目标机容量验收见 [成长竞速实施报告](./docs/game-progression-pk-report.md)，操作命令见 [后端说明](./backend/README.md)。
+这些新能力默认关闭；扫雷重制需先在专用环境完成Flyway V1～V11，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`。本次未改写现有站点配置或部署生产。实际实现、测试统计和待完成的目标机容量验收见 [成长竞速实施报告](./docs/game-progression-pk-report.md)，操作命令见 [后端说明](./backend/README.md)。
 
 顶部导航按“排行榜 / 无职游戏 / 论坛”排列。排行榜只提供扫雷、照明、数独三个独立分榜，原排行榜入口默认展示扫雷分榜。文字论坛只填写正文即可发布帖子，支持评论、评论下回复及各自点赞；游客可读，登录后参与，复用游戏账号和头像。
 

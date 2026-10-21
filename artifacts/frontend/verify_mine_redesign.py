@@ -1,4 +1,4 @@
-"""作用：独立Chrome/临时SQLite验收五档扫雷、教学、账号奖励、续玩及窄屏。
+"""作用：独立Chrome/临时SQLite验收原图主题、五档十三项扫雷、教学、奖励、续玩及窄屏。
 
 真实登录、真实API和真实页面操作；只在测试进程读取临时雷图，不访问业务数据库。
 """
@@ -15,7 +15,7 @@ import time
 import verify_ranking as qa
 from verify_progress import browser
 from sqlalchemy import select, func
-from backend.app.common.game_catalog import LEVELS
+from backend.app.common.game_catalog import LEVELS, MINE_LEVELS
 from backend.app.models.entities.progression import GameLevel, GameLevelVersion, GameAttempt, PlayerProgression
 from backend.app.services import progression_service
 
@@ -77,6 +77,7 @@ def main():
                     progression_service.limiter.clear()
                     if ev("!document.getElementById('mine-play').hidden"):click('#mine-back')
                     click(f'[data-difficulty="{LEVELS[level]["difficulty"]}"]')
+                    assert ev("document.querySelectorAll('#mine-specs [data-level]').length===3")
                     click(f'[data-level="{level}"]');click('#mine-start')
                     wait("document.getElementById('mine-rules-dialog').open || !document.getElementById('mine-play').hidden")
                     if ev("document.getElementById('mine-rules-dialog').open"):click('#mine-rules-confirm')
@@ -110,11 +111,16 @@ def main():
                 account('扫雷验收甲');wait("document.getElementById('mine-rules-dialog').open")
                 with sessions() as db:assert db.scalar(select(func.count()).select_from(GameAttempt))==0
                 click('#mine-rules-confirm');wait("document.querySelectorAll('#mine-board [data-index]').length===25")
+                assert ev("getComputedStyle(document.querySelector('#mine-board [data-index=\"0\"]')).backgroundImage.includes('/minesweeper/v2/covered.webp')")
                 reveal(4)
                 assert ev("document.querySelectorAll('#mine-board [data-number]').length===0")
                 reveal(0);wait("!document.getElementById('mine-understood').hidden")
+                assert ev("getComputedStyle(document.querySelector('#mine-board [data-index=\"0\"]')).backgroundImage.includes('/minesweeper/v2/number-1.webp') && document.querySelector('#mine-board [data-index=\"0\"]').textContent===''")
                 click('#mine-understood');click('#mine-board [data-index="6"]');click('#mine-flag')
                 wait("document.querySelector('#mine-board [data-index=\"6\"]').classList.contains('mine-flagged')")
+                assert ev("getComputedStyle(document.querySelector('#mine-board [data-index=\"6\"]')).backgroundImage.includes('/minesweeper/v2/flag.webp')")
+                shot('mine-original-theme-tutorial.png')
+                checks.append('格子、红旗、数字直接使用指定原图切片')
                 solve('mine-v2-tutorial')
                 assert ev("document.getElementById('mine-result-description').textContent.includes('1 星、2 经验')")
                 checks.append('游客先登录、首次规则不计时、四步教学与固定奖励')
@@ -147,21 +153,28 @@ def main():
                 wait("document.getElementById('mine-left').textContent==='30' && !document.getElementById('mine-restart').disabled")
                 checks.append('重开确认与当前关旗标清空')
                 cmd('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1100,'deviceScaleFactor':1,'mobile':False})
-                for level,xp in [('mine-v2-easy-20',12),('mine-v2-easy-15',9),('mine-v2-easy-10',6),('mine-v2-medium',9),('mine-v2-hard',12),('mine-v2-hell',15)]:
+                ordinary=[v for v in MINE_LEVELS if v['difficulty']!='tutorial']
+                # 首项已打开，其余按目录逐项验证，包括中等之后的全部矩形棋盘。
+                ordinary.sort(key=lambda v: v['level_id']!='mine-v2-easy-20')
+                for definition in ordinary:
+                    level,xp=definition['level_id'],definition['star_xp'][-1]
                     if level!='mine-v2-easy-20':choose(level)
                     # 首揭完成后读取实际布局，兼容首击安全导致的地雷迁移。
                     reveal(0);solve(level,block_completion=level=='mine-v2-easy-10')
                     assert ev(f"document.getElementById('mine-result-description').textContent.includes('3 星、{xp} 经验')")
-                wait("document.querySelector('.player-stars strong').textContent==='19'")
-                checks.append('六种普通棋盘全部通关、精确19星65经验与顶部成长刷新')
+                wait("document.querySelector('.player-stars strong').textContent==='37'")
+                checks.append('十二种普通棋盘全部通关、每档三个规格、精确37星194经验与顶部刷新')
                 checks.append('结算请求断网、终盘计时冻结、原尝试重试成功')
                 shot('mine-five-result.png')
+                choose('mine-v2-hell')
                 click('#mine-restart');wait("!document.getElementById('mine-restart').disabled && document.getElementById('mine-result').hidden")
                 reveal(0)
                 row=active('mine-v2-hell');mine=row.board['mine_indices'][0]
                 click(f'#mine-board [data-index="{mine}"]');click('#mine-reveal')
                 wait("!document.getElementById('mine-result').hidden && document.getElementById('mine-result-title').textContent.includes('碰到')",seconds=20)
                 assert ev("document.querySelectorAll('.mine-visible').length===18")
+                assert ev("getComputedStyle(document.querySelector('.mine-visible')).backgroundImage.includes('/minesweeper/v2/exploded.webp') && getComputedStyle(document.querySelector('.mine-visible')).opacity==='1'")
+                shot('mine-original-theme-lost.png')
                 click('#mine-sound');assert ev("document.getElementById('mine-sound').textContent==='音效：关'")
                 checks.append('失败连锁显示全部地雷，音效开关遵循共享设置')
                 click('#mine-back')
@@ -189,7 +202,7 @@ def main():
                 checks.append('照明/数独重制占位页保持正常')
                 with sessions() as db:
                     summary=db.scalars(select(PlayerProgression).order_by(PlayerProgression.user_id)).first()
-                    assert (summary.total_stars,summary.xp)==(19,65)
+                    assert (summary.total_stars,summary.xp)==(37,194)
         finally:
             server.should_exit=True;worker.join(timeout=10);listener.close()
             qa.api.app.dependency_overrides.clear();engine.dispose()

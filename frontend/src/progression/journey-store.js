@@ -8,7 +8,7 @@ export function createJourneyStore(storage, uid, onError = () => {}) {
     const parsed = JSON.parse(storage?.getItem(key) || 'null');
     if (parsed?.entries && parsed?.starts) value = parsed;
   } catch { onError('本地进度读取失败，仍可从服务器恢复正式尝试。'); }
-  /** 有界保存最多12关的本地状态，不保存正式权益或账号凭据。 */
+  /** 按有限关卡保存本地草稿，不保存正式权益或账号凭据。 */
   function persist() {
     try { storage?.setItem(key, JSON.stringify(value)); }
     catch { onError('本地存储不可用，离开前请提交结果；刷新可能丢失未提交布局。'); }
