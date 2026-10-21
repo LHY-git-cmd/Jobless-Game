@@ -44,5 +44,7 @@ export function createJourneyStore(storage, uid, onError = () => {}) {
     clearStart(level) { delete value.starts[level]; persist(); },
     /** 每账号最后所选关卡，仅作为导航提示。 */
     get selected() { return value.selected; },
+    /** 只用作GET定位，必须由服务器核验账号、版本与状态后才能恢复。 */
+    reference(level) { return value.entries[level]?.identity?.split(':')[0] || null; },
   };
 }

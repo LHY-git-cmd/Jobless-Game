@@ -1,0 +1,68 @@
+/* 五档扫雷：沿用海岛深蓝/暖金，矩形棋盘在自身区域滚动。 */
+.mine-host { min-width: 0; border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb,var(--surface) 96%,transparent); box-shadow: 0 20px 60px #04162240; }
+.mine-selector,.mine-play { padding: clamp(20px,3.6vw,44px); }
+.mine-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.mine-intro h2 { font-size: clamp(23px,2.4vw,32px); margin: 8px 0 12px; letter-spacing: 1px; text-wrap: balance; }
+.mine-intro p:not(.eyebrow) { margin: 0; color: var(--muted); line-height: 1.7; }
+.mine-intro img { object-fit: contain; flex: none; filter: drop-shadow(0 6px 14px #02121a66); }
+.mine-difficulties { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; }
+.mine-difficulties button { min-width: 0; padding: 20px 12px; text-align: left; border-color: var(--line); background: color-mix(in srgb,var(--surface-raised) 65%,transparent); }
+.mine-difficulties strong { display: block; font-size: 20px; font-weight: 600; margin-bottom: 10px; }
+.mine-difficulties span { color: var(--muted); font-size: 13px; }
+.mine-difficulties button[aria-pressed="true"] { border-color: var(--gold); background: color-mix(in srgb,var(--gold) 11%,var(--surface)); box-shadow: inset 0 3px var(--gold); }
+.mine-difficulties button[aria-pressed="true"] strong { color: var(--gold); }
+.mine-options-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 32px 0 16px; }
+.mine-options-heading h3 { margin: 0; font-size: 16px; font-weight: 500; }
+.mine-options-heading span { font-size: 13px; color: var(--muted); }
+.mine-specs { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); gap: 12px; }
+.mine-spec { display: flex; align-items: flex-start; flex-direction: column; gap: 14px; text-align: left; padding: 24px; min-width: 0; background: var(--surface); }
+.mine-spec[aria-pressed="true"] { border-color: var(--gold); background: color-mix(in srgb,var(--gold) 5%,var(--surface)); }
+.mine-spec strong { font: 600 26px/1.3 Georgia,"Microsoft YaHei",sans-serif; }
+.mine-spec > span,.mine-spec small { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.mine-spec .mine-spec-reward { color: var(--gold); }
+.mine-spec small { border-top: 1px solid var(--line); width: 100%; padding-top: 12px; margin-top: auto; }
+.mine-start-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 24px; border-top: 1px solid var(--line); padding-top: 24px; }
+.mine-start-row p { color: var(--muted); font-size: 13px; line-height: 1.9; margin: 0; max-width: 660px; }
+.mine-start-row button { flex: none; min-width: 160px; padding: 14px 24px; }
+.mine-play-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 20px; }
+.mine-play-heading h2 { font-size: 24px; margin: 0; }
+.mine-play-heading .eyebrow { margin-top: 0; }
+.mine-play-heading > .journey-actions { margin-left: auto; }
+.mine-play-heading > .journey-actions button { padding-inline: 12px; font-size: 14px; }
+.mine-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-block: 1px solid var(--line); margin-top: 24px; }
+.mine-stats > div { display: flex; flex-direction: column; gap: 8px; padding: 20px 8px; text-align: center; }
+.mine-stats span { font-size: 13px; color: var(--muted); }
+.mine-stats strong { font: 500 28px/1.2 Georgia,serif; font-variant-numeric: tabular-nums; color: var(--gold); }
+.mine-viewport { min-width: 0; max-width: 100%; max-height: min(65svh,660px); overflow: auto; overscroll-behavior: contain; padding: 12px 4px; margin: 16px 0; scrollbar-color: var(--gold) var(--surface); }
+.mine-board { display: grid; grid-template-columns: repeat(var(--mine-cols),44px); gap: 3px; width: max-content; padding: 5px; margin-inline: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--board-dark); }
+.mine-square { width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 3px; background: var(--surface-raised); font: 700 22px/1 system-ui,sans-serif; display: grid; place-items: center; }
+.mine-square svg,.mine-operation svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.mine-square.mine-open { background: var(--paper); color: var(--ink); border-color: transparent; box-shadow: inset 0 1px 3px #061b2920; }
+.mine-square[data-number="1"] { color: #245c9d; }.mine-square[data-number="2"] { color: #267044; }.mine-square[data-number="3"] { color: #ac3535; }
+.mine-square.mine-flagged { color: var(--gold); }
+.mine-square.mine-selected { outline: 2px solid var(--gold); outline-offset: -2px; position: relative; z-index: 1; }
+.mine-square:focus-visible { outline: 3px solid var(--gold); outline-offset: 1px; position: relative; z-index: 2; }
+.mine-square.mine-target { outline: 3px solid #7fddbd; outline-offset: -3px; box-shadow: 0 0 12px #7fddbd66; }
+.mine-square.mine-visible { color: #f7e4dc; background: #873f3d; }
+.mine-square.mine-blasting { animation: mine-blast 500ms ease-out both; }.mine-square.mine-spent { background: #5e3437; }
+.mine-operation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.mine-operation p { color: var(--muted); font-size: 14px; }
+.mine-operation button { display: inline-flex; align-items: center; gap: 8px; min-width: 100px; justify-content: center; }
+.mine-help { color: var(--muted); font-size: 12px; line-height: 1.8; margin-bottom: 0; }
+.mine-tutorial { border-left: 3px solid #7fddbd; padding: 16px 20px; background: color-mix(in srgb,#7fddbd 7%,var(--surface)); margin-top: 20px; }
+.mine-tutorial h3 { font-size: 18px; margin: 8px 0; }.mine-tutorial p:not(.eyebrow) { color: var(--muted); line-height: 1.8; margin: 8px 0; }
+.mine-result { margin-top: 24px; border: 1px solid var(--gold); border-radius: 12px; padding: 24px; background: color-mix(in srgb,var(--gold) 6%,var(--surface)); }
+.mine-result h3 { margin: 8px 0; font-size: 23px; }.mine-result p:last-of-type { color: var(--muted); line-height: 1.9; }
+.mine-result-stars { color: var(--gold); font-size: 28px; letter-spacing: 6px; }
+.mine-feedback { padding: 0 clamp(20px,3.6vw,44px); }.mine-feedback p { color: var(--gold); line-height: 1.8; margin: 0; }
+.mine-feedback:not(:has(p:empty)) { padding-bottom: 20px; }.mine-feedback button { margin-top: 12px; }
+@keyframes mine-blast { 0% { box-shadow: 0 0 0 3px #f0d49a; background: #ed9167; } 100% { box-shadow: 0 0 0 9px transparent; } }
+@media(max-width:700px) {
+  .mine-intro { gap: 12px; margin-bottom: 24px; }.mine-intro img { width: 56px; height: 56px; }.mine-intro .eyebrow { font-size: 10px; letter-spacing: 1px; }
+  .mine-difficulties { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }.mine-difficulties button { padding: 16px 10px; }.mine-difficulties strong { font-size: 18px; }.mine-difficulties span { font-size: 12px; }
+  .mine-start-row { flex-direction: column; align-items: stretch; gap: 16px; }.mine-start-row button { width: 100%; }
+  .mine-play-heading { align-items: flex-start; gap: 16px; }.mine-play-heading > .journey-actions { margin: 0; width: 100%; gap: 8px; }
+  .mine-play-heading > button { padding-inline: 10px; }.mine-play-heading h2 { font-size: 20px; }.mine-stats strong { font-size: 24px; }
+  .mine-operation .journey-actions { width: 100%; }.mine-operation button { flex: 1; }.mine-tutorial { padding-inline: 12px; }
+}
+@media(prefers-reduced-motion:reduce) { .mine-square.mine-blasting { animation: none; } }

@@ -18,7 +18,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── .tools/                               # 本地辅助工具与临时提交辅助脚本；不纳入版本管理
 ├── backend/                              # FastAPI 登录、独立关卡、排行榜、Flyway 与部署支持
 │   ├── content/                          # 冻结关卡、规则门槛与独立PK题库
-│   │   └── game-catalog-v1.json           # 十关照明、三题PK、初级扫雷/数独与建议参数v1
+│   │   ├── game-catalog-v1.json           # 十关照明、三题PK、历史初级扫雷/数独与建议参数v1
+│   │   └── mine-catalog-v2.json           # 五档七项扫雷、矩形尺寸、星级时限及逐星经验
 │   ├── content_check.py                  # 开发机唯一解、初级单候选与只生成新文件的题库工具
 │   ├── cleanup_game_history.py           # 有界历史清理，保留永久成长与资格
 │   ├── export_game_contract.py           # 从实际v1路由和DTO导出/核对契约草案
@@ -51,8 +52,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── forum_service.py          # 论坛幂等、频率、归属、点赞与通知原子事务
 │   │   │   ├── auth_rules.py             # 用户名计数、账号键和密码长度规则
 │   │   │   ├── login_limiter.py          # 有界单进程登录频率保护
-│   │   │   ├── game_rules.py             # 有界照明/数独终盘验证和毫秒星级/经验计算
-│   │   │   ├── progression_service.py    # 正式扫雷揭格、幂等里程碑、永久资格/主题事务
+│   │   │   ├── game_rules.py             # 照明/数独终盘验证、毫秒星级及版本化逐星经验
+│   │   │   ├── progression_service.py    # 矩形扫雷/教学/首击安全、冻结计时及幂等奖励/资格事务
 │   │   │   ├── pk_service.py             # 双人房间、统一计时、平局及FIFO匹配事务
 │   │   │   ├── pk_runtime.py             # 有限SSE队列、接收窗口及单进程运行索引
 │   │   │   ├── pk_lifecycle.py           # 唯一调度任务、重启作废和有界状态转换
@@ -103,7 +104,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V6__create_cosmetic_tables.sql # 主题目录、永久权益与装配配置
 │   │   ├── V7__create_pk_room_tables.sql  # 双人房间、成员、提交与用户占用
 │   │   ├── V8__create_matchmaking_tickets.sql # 排队票及占用票据关联
-│   │   └── V9__index_game_history_retention.sql # 终态时间索引，支持有界清理
+│   │   ├── V9__index_game_history_retention.sql # 终态时间索引，支持有界清理
+│   │   └── V10__publish_mine_difficulties.sql # 扫雷五档七项不可变关卡与独立奖励定义
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -129,6 +131,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、登录/排行/论坛V4并发和外键联调
 │       ├── test_forum.py                 # 论坛权限、文字/请求体、幂等、归属、通知及事务回滚
 │       ├── test_game_content.py          # 题库唯一解、评分边界、无死锁与初级难度
+│       ├── test_mine_redesign.py         # 五档矩形扫雷、教学步骤、首击安全、经验补差及冻结时间
 │       ├── test_progression_v1.py        # 尝试/成长/资格/主题/版本/权限及回滚契约
 │       ├── test_pk_v1.py                 # 房间/匹配/平局/资格组合/超时及容量边界
 │       ├── test_pk_events.py             # 有界队列、单账号流与鉴权后DB释放
@@ -144,6 +147,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── frontend-refactor-report.md        # 重构产出、测试统计、环境待验收及发布回退说明
 │   ├── mine-multilevel-mvp-plan.md         # 扫雷MVP与已确认的三尺寸九关扩展/兼容验收计划
 │   ├── mine-multilevel-mvp-report.md       # MVP实际效果、测试统计、预览地址与边界说明
+│   ├── mine-difficulty-redesign-plan.md    # 已确认的扫雷五档、教学、矩形棋盘及账号奖励计划
+│   ├── mine-difficulty-redesign-report.md  # 扫雷重制效果、验收统计、本地预览及发布条件
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
@@ -156,9 +161,10 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── frontend/                             # 可独立预览的网页前端及其测试
 │   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
 │   ├── index.html                        # 扫雷/照明/数独三卡分别链接新版选关，旧单关已移除
-│   ├── journey.html                      # 简洁选关页，直接显示当前游戏关卡区；保留头像成长/资格/主题
+│   ├── journey.html                      # 扫雷五档选关/游戏与照明数独占位，保留头像成长/资格/主题
 │   ├── pk.html                           # 房间/匹配、准备/倒计时/竞速/结果与重连页面
 │   ├── journey.css                       # 沿用海岛风格、语义主题、正式棋盘与窄屏布局
+│   ├── mine-journey.css                  # 扫雷难度卡、教学、44px矩形棋盘及窄屏容器布局
 │   ├── navigation.css                    # 首页与新版入口跨页淡入/轻移、背景保留及减少动画适配
 │   ├── mine-practice.html                # 旧练习地址兼容跳转新版扫雷选关，不再展示旧题
 │   ├── mine-practice.css                 # 保留的旧练习样式，当前入口已停用
@@ -179,15 +185,16 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   └── lifecycle.js              # 实例监听/订阅/定时器清理与异步回调保护
 │   │   ├── pages/                        # 页面展示入口，业务流程通过回调连接
 │   │   │   ├── home.js                   # 旧单关首页展示工厂，当前首页不再装配
-│   │   │   ├── journey.js                # 当前游戏空目录与资格/主题，成长由顶部头像独立读取
+│   │   │   ├── journey.js                # 扫雷控制器/其他游戏占位与资格主题，顶部头像读取成长
 │   │   │   ├── pk.js                     # REST写入、SSE通知、双人竞速和身份销毁装配
 │   │   │   └── mine-practice.js          # 保留的旧练习装配，当前兼容跳转页不加载
 │   │   ├── games/                        # 游戏关卡数据与独立进度模型
 │   │   │   ├── formal-board.js           # 照明实例、数独输入及仅显示权威揭格的正式棋盘
 │   │   │   ├── catalog.js                # 三游戏新版目录元数据、稳定链接及旧参数兼容
-│   │   │   └── mine/                     # 扫雷练习稳定关卡标识和版本化存档
+│   │   │   └── mine/                     # 正式扫雷会话与保留的历史练习模块
 │   │   │       ├── levels.js             # 10×10/15×15/20×20三尺寸各三难度，兼容原关卡ID
-│   │   │       └── practice-store.js     # 按账号/游客、关卡保存棋盘与绝对计时
+│   │   │       ├── practice-store.js     # 按账号/游客、关卡保存棋盘与绝对计时
+│   │   │       └── session.js            # 显式开始、服务端揭格、教学、续玩/重开与结算重试
 │   │   ├── progression/                  # 正式成长传输与账号隔离中间盘
 │   │   │   ├── client.js                 # v1资源、Idempotency-Key/If-Match及响应元数据
 │   │   │   └── journey-store.js          # 账号/尝试/题目版本隔离和待确认终盘冻结
@@ -197,6 +204,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── game-controller.js        # 账号/轮次、选关/重开、规则计时与通关协调
 │   │   │   ├── game-ui.js                # 游戏固定节点语义映射，避免控制器散落ID
 │   │   │   ├── mine-controller.js        # 扫雷独立棋盘、事件、连锁爆炸与音效
+│   │   │   ├── mine-journey-controller.js # 五档选关/四步教学/权威棋盘、音效及账号状态销毁
 │   │   │   ├── mine-practice-controller.js # 多关选取、规则确认、进度恢复与本地结果展示
 │   │   │   ├── sudoku-controller.js      # 数独独立棋盘、笔记、输入与检查
 │   │   │   ├── akari-controller.js       # 照明独立棋盘、灯光/数字墙提示与点击
@@ -253,6 +261,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── controller-contracts.test.js  # 无副作用导入、独立棋盘、存档协调及实例资源清理
 │       ├── http.test.js                  # 共享传输超时隔离、清理、204与业务错误兼容契约
 │       ├── mine-levels.test.js           # 九关参数化规则、跨尺寸续玩/重开与旧存档/身份隔离
+│       ├── mine-session.test.js          # 正式扫雷显式开始、权威揭格、教学、续玩与断网重试
 │       ├── game.test.js                  # 扫雷规则测试
 │       ├── akari.test.js                 # 照明规则测试
 │       ├── sudoku.test.js                # 数独规则、候选笔记独立性、编辑保护与旧存档兼容
@@ -309,6 +318,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_refactor.py            # 真实HTTP缓存/304/206、跨页/重启续玩、计时及爆炸卸载恢复
         ├── verify_game_progression.py     # 双Chrome正式成长/三项资格/主题/房间SSE与匹配验收
         ├── verify_game_catalog.py         # 新版三卡/空目录/成长/旧关卡下线/过渡及窄屏验收
+        ├── verify_mine_redesign.py       # 五档扫雷真实浏览器/临时SQLite及隔离本地预览
         ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志

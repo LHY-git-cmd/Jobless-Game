@@ -1,12 +1,14 @@
-/** 简洁选关页：直接展示当前游戏关卡，账号成长集中在顶部头像，不加载旧题/旧存档。 */
+/** 独立选关页：扫雷五档正式游戏，其他游戏保留占位；账号成长集中在顶部头像。 */
 import { initAuth } from '../auth.js';
 import { Events } from '../lib/events.js';
 import { api } from '../progression/client.js';
 import { gameFromSearch, gameLink } from '../games/catalog.js';
+import { createMineJourney } from '../game/mine-journey-controller.js';
 
 const $ = id => document.getElementById(id);
 const game = gameFromSearch(location.search);
 const auth = initAuth();
+let mineJourney;
 let uid, epoch = 0, readVersion = 0, cosmetics = [], equipped = 'default', themeBusy = false;
 
 /** URL决定游戏身份，刷新和返回不恢复任何已下线的题目。 */
@@ -24,15 +26,21 @@ function renderGame() {
     for (const digit of ['1', '2', '', '', '5', '6', '7', '', '9']) { const cell = document.createElement('span'); cell.textContent = digit; grid.append(cell); }
     $('catalog-art').append(grid);
   }
+  if(game.id==='mine') {
+    $('catalog-empty').hidden=true;
+    const host=document.createElement('div');host.className='mine-host';host.id='mine-journey';
+    $('catalog-empty').after(host);
+    mineJourney=createMineJourney({host,auth,onReward:()=>void refresh()});
+  }
 }
 
-/** 旧资格链接进入对应游戏空目录，不以稳定关卡ID自动打开旧棋盘。 */
+/** 旧资格链接进入对应游戏目录，不自动打开历史版本的旧棋盘。 */
 function renderQualifications(value) {
   $('journey-qualifications').replaceChildren();
   for (const item of value.requirements) {
     const link = document.createElement('a');
     link.href = gameLink(gameFromSearch(`?level=${encodeURIComponent(item.level_id)}`).id);
-    link.textContent = `${item.name}　${item.completed ? '已通过' : '新关卡待开放'}`;
+    link.textContent = `${item.name}　${item.completed ? '已通过' : item.level_id.startsWith('mine-') ? '前往简单关挑战' : '新关卡待开放'}`;
     $('journey-qualifications').append(link);
   }
 }
@@ -109,14 +117,15 @@ async function identityChanged() {
   if (uid === next) return;
   uid = next; epoch++; readVersion++; themeBusy = false; cosmetics = []; equipped = 'default';
   document.documentElement.dataset.theme = 'default'; $('journey-login').hidden = Boolean(uid); $('theme-preview-reset').hidden = true;
-  $('journey-qualifications').replaceChildren(); renderCosmetics(); await refresh();
+  $('journey-qualifications').replaceChildren(); renderCosmetics();
+  await Promise.all([refresh(),mineJourney?.setUser(uid)]);
 }
 
 renderGame();
-$('journey-refresh').addEventListener('click', () => void refresh());
+$('journey-refresh').addEventListener('click', () => {void refresh();void mineJourney?.refresh();});
 $('journey-login').addEventListener('click', () => void auth.requireLogin(refresh));
 $('theme-preview-reset').addEventListener('click', () => { document.documentElement.dataset.theme = equipped; $('theme-preview-reset').hidden = true; $('theme-message').textContent = ''; });
 document.addEventListener(Events.AUTH_CHANGED, () => void identityChanged());
-window.addEventListener('pagehide', () => { epoch++; readVersion++; });
+window.addEventListener('pagehide', () => { epoch++; readVersion++; mineJourney?.destroy(); });
 window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
 void auth.ready.then(identityChanged);
