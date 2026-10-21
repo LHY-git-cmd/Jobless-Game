@@ -23,9 +23,13 @@ export function neighbors(index, rows, cols) {
   return result;
 }
 
-/** 创建随机棋盘；首次排雷不保底。 */
-export function createGame(random = Math.random) {
-  const level = GAME_CONFIG;
+/** 创建随机棋盘；config 指定尺寸/雷数，旧调用仍采用默认关卡，首次排雷不保底。 */
+export function createGame(random = Math.random, config = GAME_CONFIG) {
+  const { rows, cols, mineCount } = config;
+  // 尺寸与雷数必须是有限整数，至少保留一个安全格；上限避免错误配置创建超大棋盘。
+  if (![rows, cols, mineCount].every(Number.isInteger) || rows < 1 || cols < 1 || rows > 50 || cols > 50 ||
+      mineCount < 1 || mineCount >= rows * cols) throw new Error('扫雷关卡配置无效。');
+  const level = Object.freeze({ rows, cols, mineCount });
 
   const cells = Array.from({ length: level.rows * level.cols }, () => ({
     mine: false,
