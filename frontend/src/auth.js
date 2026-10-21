@@ -7,6 +7,7 @@ import { initGameSettings } from "./settings.js";
 import { createAvatarImage, updateAvatarImage } from "./avatar.js";
 import { initNotifications } from "./notifications.js";
 import { initPlayerProfile } from './player-profile.js';
+import { initAvatarDialog } from './avatar-picker.js';
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
 export function initAuth() {
@@ -14,7 +15,8 @@ export function initAuth() {
   if (!host) return null;
   initMusic();
   host.innerHTML = `<button type="button" class="auth-open" aria-haspopup="dialog">登录</button>
-    <button type="button" class="auth-user hidden" aria-haspopup="dialog" aria-controls="game-settings" title="打开游戏设置"></button><button type="button" class="auth-logout hidden">退出登录</button>
+    <button type="button" class="auth-user hidden" aria-haspopup="dialog" aria-controls="avatar-dialog" title="更换头像"></button>
+    <button type="button" class="auth-settings hidden" aria-label="打开游戏设置" aria-haspopup="dialog" aria-controls="game-settings" title="游戏设置"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m9.5 3-.7 2.1-2 .9-2-.4-2 3.4 1.4 1.7v2.6L2.8 15l2 3.4 2-.4 2 .9.7 2.1h4l.7-2.1 2-.9 2 .4 2-3.4-1.4-1.7v-2.6L20.2 9l-2-3.4-2 .4-2-.9-.7-2.1Z"/><circle cx="11.5" cy="12" r="3"/></svg></button><button type="button" class="auth-logout hidden">退出登录</button>
     <span class="auth-header-status" role="status"></span>`;
   initNotifications();
   const modal = document.createElement("dialog");
@@ -50,8 +52,10 @@ export function initAuth() {
   const openButton = host.querySelector(".auth-open");
   const logoutButton = host.querySelector(".auth-logout");
   const headerStatus = host.querySelector(".auth-header-status");
-  const gameSettings = initGameSettings({
-    onAvatarSaved: value => {
+  const settingsButton = host.querySelector('.auth-settings');
+  const gameSettings = initGameSettings();
+  const avatarDialog = initAvatarDialog({
+    onSaved: value => {
       if (user?.id !== value.id) return;
       renderUser(value);
       document.dispatchEvent(new CustomEvent(Events.USER_PROFILE_UPDATED, { detail: { user: { ...value } } }));
@@ -63,7 +67,8 @@ export function initAuth() {
   const usernameLabel = document.createElement("span");
   usernameLabel.className = "auth-username";
   userButton.append(avatarImage, usernameLabel);
-  userButton.addEventListener("click", () => { if (user) gameSettings.open(userButton); });
+  userButton.addEventListener("click", () => { if (user) avatarDialog.open(userButton); });
+  settingsButton.addEventListener('click', () => { if (user) gameSettings.open(settingsButton); });
   const profileHost = document.querySelector('[data-player-profile]');
   const profile = profileHost ? initPlayerProfile({ host: profileHost, userButton, openButton, avatarImage, usernameLabel }) : null;
   let user = null;
@@ -79,8 +84,8 @@ export function initAuth() {
     const previousId = user?.id;
     user = value ? { id: value.id, username: value.username, avatar_id: value.avatar_id ?? 1 } : null;
     if (previousId !== user?.id) identityGeneration++;
-    if (previousId !== user?.id) gameSettings.close();
-    gameSettings.setUser(user);
+    if (previousId !== user?.id) { gameSettings.close(); avatarDialog.close(); }
+    avatarDialog.setUser(user);
     profile?.setUser(user);
     if (previousId !== user?.id) document.dispatchEvent(new CustomEvent(Events.AUTH_CHANGED, {
       detail: { user: user ? { ...user } : null },
@@ -88,10 +93,11 @@ export function initAuth() {
     const label = userButton;
     usernameLabel.textContent = user?.username || "";
     updateAvatarImage(avatarImage, user?.avatar_id);
-    label.setAttribute("aria-label", user ? `${user.username}，打开游戏设置` : "打开游戏设置");
+    label.setAttribute("aria-label", user ? `${user.username}，更换头像` : "更换头像");
     label.classList.toggle("hidden", !user);
     openButton.classList.toggle("hidden", Boolean(user));
     logoutButton.classList.toggle("hidden", !user);
+    settingsButton.classList.toggle('hidden', !user);
     headerStatus.textContent = "";
   }
 

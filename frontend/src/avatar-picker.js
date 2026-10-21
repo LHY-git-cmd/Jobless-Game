@@ -1,7 +1,7 @@
-/** 游戏设置中的头像选择器：展开后才加载网格，明确保存，支持键盘、重试和账号隔离。 */
+/** 独立头像弹窗的选择器：按需加载网格，明确保存，支持键盘、重试和账号隔离。 */
 import { createAvatarImage, createAvatarSelection, loadAvatarCatalog, updateAvatarImage } from "./avatar.js";
 
-/** 复用现有设置弹窗，选择区独立滚动，音频设置仍可按原方式使用。 */
+/** 头像选择区独立滚动，沿用原保存及账号隔离流程。 */
 export function initAvatarPicker(host, { dom = document, onSaved, onUnauthorized } = {}) {
   host.innerHTML = `<div class="settings-avatar-heading"><h3 id="avatar-title">个人头像</h3><span class="avatar-account-note">跟随账号保存</span></div>
     <div class="avatar-current"><div class="avatar-preview"></div><div><p class="avatar-caption">选一个喜欢的形象</p><button type="button" class="avatar-expand" aria-expanded="false" aria-controls="avatar-choices">更换头像</button></div></div>
@@ -81,5 +81,45 @@ export function initAvatarPicker(host, { dom = document, onSaved, onUnauthorized
     },
     /** 每次打开恢复账号当前头像，丢弃尚未保存的预览。 */
     reset(user) { if (!model.state.busy) model.setUser(user); },
+    /** 点击头像直接展开候选网格，沿用原选择、重试和保存流程。 */
+    open(user) {
+      if (!model.state.busy) model.setUser(user);
+      choices.hidden = false; expand.setAttribute('aria-expanded', 'true'); expand.textContent = '收起头像';
+      void load();
+    },
+  };
+}
+
+/** 独立头像弹窗只负责形象选择，设置入口不再混入头像编辑。 */
+export function initAvatarDialog({ dom = document, onSaved, onUnauthorized } = {}) {
+  const dialog = dom.createElement('dialog');
+  dialog.id = 'avatar-dialog'; dialog.className = 'auth-dialog avatar-dialog';
+  dialog.setAttribute('aria-labelledby', 'avatar-dialog-title');
+  dialog.innerHTML = '<div class="auth-card"><button type="button" class="auth-close avatar-dialog-close" aria-label="关闭头像选择">×</button><p class="eyebrow">个人形象 / AVATAR</p><h2 id="avatar-dialog-title">更换头像</h2><section class="settings-avatar" aria-labelledby="avatar-title"></section></div>';
+  dom.body.append(dialog);
+  const picker = initAvatarPicker(dialog.querySelector('.settings-avatar'), { dom, onSaved, onUnauthorized });
+  const closeButton = dialog.querySelector('.avatar-dialog-close');
+  let currentUser = null, returnFocus = null;
+  /** 关闭或Esc回到头像按钮，恢复原来的键盘操作位置。 */
+  function close() { dialog.close(); returnFocus?.focus(); }
+  closeButton.addEventListener('click', close);
+  dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
+  dialog.addEventListener('keydown', event => {
+    if (event.key !== 'Tab') return;
+    const controls = [...dialog.querySelectorAll('button:not(:disabled)')].filter(button => !button.hidden && !button.closest('[hidden]'));
+    const first = controls[0], last = controls.at(-1);
+    // 网格滚动与焦点循环独立；首尾跳转不会把键盘焦点移出模态窗口。
+    if (event.shiftKey && dom.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && dom.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
+  return {
+    /** 原生dialog隔离焦点，直接展示头像列表。 */
+    open(trigger) {
+      if (!currentUser || dialog.open) return;
+      returnFocus = trigger; picker.open(currentUser); dialog.showModal(); closeButton.focus();
+    },
+    /** 换号同步预览并使旧加载/保存结果失效。 */
+    setUser(user) { currentUser = user; picker.setUser(user); },
+    close,
   };
 }

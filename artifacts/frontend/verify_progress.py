@@ -215,7 +215,7 @@ def main():
         with tempfile.TemporaryDirectory(prefix="progress-qa-") as profile, (ROOT / "artifacts/frontend/progress-browser.log").open("w") as log:
             with browser(profile, log) as (command, evaluate):
                 command("Page.navigate", {"url": url})
-                wait_for(evaluate, "document.querySelector('.auth-user')?.textContent === '恢复测试'")
+                wait_for(evaluate, "document.querySelector('.auth-username')?.textContent === '恢复测试'")
                 evaluate("document.getElementById('start-button').click()")
                 wait_for(evaluate, "document.querySelectorAll('#board button').length === 100")
                 time.sleep(1.1)
@@ -230,7 +230,7 @@ def main():
                 assert evaluate("[...document.querySelectorAll('#board button')].map(c => c.getAttribute('aria-label'))") == before
                 evaluate("document.getElementById('back-button').click()")
                 command("Page.reload")
-                wait_for(evaluate, "document.querySelector('.auth-user')?.textContent === '恢复测试'")
+                wait_for(evaluate, "document.querySelector('.auth-username')?.textContent === '恢复测试'")
                 assert evaluate("!document.getElementById('landing').classList.contains('hidden')")
                 evaluate("document.getElementById('start-button').click()")
                 wait_for(evaluate, "document.querySelectorAll('#board button').length === 100")

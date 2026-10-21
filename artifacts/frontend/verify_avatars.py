@@ -106,9 +106,8 @@ def main():
                     assert progress_before, "未生成真实棋局存档"
                     evaluate("window.avatarAuthChanges=0;document.addEventListener('auth-changed',()=>{window.avatarAuthChanges++})")
 
-                    click(".auth-user")
                     command("Network.setBlockedURLs", {"urls": ["*avatars/v1/catalog.json*"]})
-                    click(".avatar-expand")
+                    click(".auth-user")
                     wait("!document.querySelector('.avatar-retry').hidden")
                     assert evaluate("document.querySelector('.avatar-save').disabled")
                     command("Network.setBlockedURLs", {"urls": []})
@@ -132,6 +131,7 @@ def main():
                     assert evaluate("Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('jobless-progress-v1:')).map(k=>[k,localStorage.getItem(k)]))") == progress_before
                     checks.append("换头像不触发换号事件，真实棋局存档保持不变")
 
+                    click(".avatar-dialog-close"); click(".auth-settings")
                     evaluate("document.getElementById('settings-effects-volume').value='70'; document.getElementById('settings-effects-volume').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('settings-effects-volume').focus();")
                     key("ArrowRight", 39)
                     assert evaluate("document.getElementById('settings-effects-value').textContent") == "71%"
@@ -139,7 +139,7 @@ def main():
                     key("Tab", 9)
                     assert evaluate("document.activeElement.classList.contains('settings-close')")
                     key("Escape", 27)
-                    assert evaluate("!document.getElementById('game-settings').open && document.activeElement.classList.contains('auth-user')")
+                    assert evaluate("!document.getElementById('game-settings').open && document.activeElement.classList.contains('auth-settings')")
                     checks.append("音效音量仍即时生效，Tab 循环和 Esc 恢复入口焦点")
 
                     command("Page.reload")
@@ -161,7 +161,7 @@ def main():
                         assert evaluate("document.querySelector('.ranking-player').textContent") == "头像验收"
                     checks.append("刷新保持且四个排行榜均显示当前账号头像")
 
-                    click(".auth-user"); click(".avatar-expand")
+                    click(".auth-user")
                     wait("document.querySelectorAll('.avatar-option').length===25")
                     click('[data-avatar-id="25"]'); click(".avatar-save")
                     wait("document.querySelector('.ranking-identity img').getAttribute('src')==='/assets/avatars/v1/025.webp'")
@@ -172,26 +172,26 @@ def main():
                     key("Enter", 13)
                     assert evaluate("document.querySelector('[data-avatar-id=\"18\"]').getAttribute('aria-pressed')") == "true", evaluate("({active:document.activeElement.outerHTML, selected:[...document.querySelectorAll('.avatar-option[aria-pressed=true]')].map(b=>b.dataset.avatarId), status:document.querySelector('.avatar-status').textContent})")
                     assert evaluate("document.querySelector('.auth-avatar').getAttribute('src')") == "/assets/avatars/v1/025.webp"
-                    click(".settings-close"); click(".auth-user")
+                    click(".avatar-dialog-close"); click(".auth-user")
                     assert evaluate("document.querySelector('.avatar-preview img').getAttribute('src')") == "/assets/avatars/v1/025.webp"
                     checks.append("键盘选择与未保存预览，关闭重开恢复当前头像")
 
                     for width in (390, 320):
                         command("Emulation.setDeviceMetricsOverride", {"width": width, "height": 844, "deviceScaleFactor": 1, "mobile": False})
-                        evaluate("document.getElementById('game-settings').scrollTop=0")
+                        evaluate("document.getElementById('avatar-dialog').scrollTop=0")
                         assert evaluate("document.documentElement.scrollWidth<=innerWidth")
-                        assert evaluate("(()=>{const d=document.getElementById('game-settings');return d.scrollWidth<=d.clientWidth && d.getBoundingClientRect().right<=innerWidth;})()")
+                        assert evaluate("(()=>{const d=document.getElementById('avatar-dialog');return d.scrollWidth<=d.clientWidth && d.getBoundingClientRect().right<=innerWidth;})()")
                         assert evaluate("(()=>{const g=document.querySelector('.avatar-grid');return g.scrollWidth<=g.clientWidth;})()"), f"{width}px 头像网格内部横向溢出"
                         assert evaluate("[...document.querySelectorAll('.avatar-option')].every(b=>b.getBoundingClientRect().width>=44)")
                         shot(f"avatar-mobile-{width}.png")
-                    click(".settings-close")
+                    click(".avatar-dialog-close")
                     shot("avatar-ranking-mobile.png")
                     checks.append("390px/320px 设置与榜单不横向溢出，选择按钮至少44px")
 
                     click(".auth-user")
                     evaluate("document.querySelector('.auth-avatar').src='/assets/avatars/v1/not-found.webp'")
                     wait("document.querySelector('.auth-avatar').getAttribute('src')==='/assets/avatars/v1/001.webp'")
-                    click(".settings-close")
+                    click(".avatar-dialog-close")
                     click(".auth-logout")
                     wait("document.querySelector('.auth-user').classList.contains('hidden')")
                     assert evaluate("document.querySelector('.avatar-preview img').getAttribute('src')") == "/assets/avatars/v1/001.webp"

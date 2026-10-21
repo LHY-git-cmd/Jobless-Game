@@ -207,11 +207,11 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── session.js                    # 各关独立开始/冻结/重开计时；不是账号登录会话
 │   │   ├── progress.js                   # 按账号保存棋局/候选笔记、绝对计时起点及待确认请求
 │   │   ├── audio-settings.js             # 音乐/音效独立开关、音量偏好持久化与订阅同步
-│   │   ├── settings.js                   # 共享游戏设置：头像选择、音频开关/滑块和键盘焦点
+│   │   ├── settings.js                   # 右上独立游戏设置：音频开关/滑块与键盘焦点
 │   │   ├── avatar.js                     # 固定图片路径、清单读取、错误回退及按账号隔离保存状态
-│   │   ├── avatar-picker.js              # 设置中的头像网格、按需加载、明确保存和失败重试
-│   │   ├── auth.js                       # 共享登录弹窗、会话恢复、用户名设置入口及退出
-│   │   ├── player-profile.js             # 首页左上账号按钮、头像内等级、真实星数与绿色经验条
+│   │   ├── avatar-picker.js              # 点击头像打开独立选择弹窗，网格按需加载、保存和重试
+│   │   ├── auth.js                       # 登录/会话、独立头像及右上齿轮设置入口与退出
+│   │   ├── player-profile.js             # 首页70px头像、绿色经验环、底部等级牌与右侧用户名/星数
 │   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
 │   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
 │   │   ├── auth-game.js                  # 首页三个独立关卡的登录拦截与授权续接
@@ -300,7 +300,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_settlement.py          # 三关完成、祝贺与结算流程验证脚本
         ├── verify_live_timers.py         # 游戏实时计时显示验证脚本
         ├── verify_progress.py            # 数独笔记、首页续玩、规则计时、手机布局与刷新/退出恢复验证
-        ├── verify_audio_settings.py      # 用户名设置入口、真实音频音量、跨页偏好与手机/键盘验证
+        ├── verify_audio_settings.py      # 独立齿轮设置入口、音频音量、跨页与手机/键盘验证
         ├── verify_avatars.py             # 真实临时API/Chrome：25图、保存/失败、棋局保持、四榜及窄屏
         ├── verify_forum.py               # 双账号真实论坛/消息、键盘/手机、跨浏览器及游戏续玩
         ├── verify_refactor.py            # 真实HTTP缓存/304/206、跨页/重启续玩、计时及爆炸卸载恢复
