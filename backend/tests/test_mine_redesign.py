@@ -12,7 +12,8 @@ from backend.app.services.game_rules import stars_for
 
 
 IDS = ['mine-v2-tutorial', 'mine-v2-easy-10', 'mine-v2-easy-15', 'mine-v2-easy-20',
-       'mine-v2-medium', 'mine-v2-hard', 'mine-v2-hell']
+       'mine-v2-medium', 'mine-v2-hard', 'mine-v2-hell', 'mine-v2-medium-15', 'mine-v2-medium-20',
+       'mine-v2-hard-15', 'mine-v2-hard-20', 'mine-v2-hell-15', 'mine-v2-hell-20']
 
 
 class MineRedesign(TestCase):
@@ -42,12 +43,16 @@ class MineRedesign(TestCase):
         return response.json()
 
     def test_catalog_and_time_boundaries(self):
-        """公开七项参数和奖励，不发教学雷图；旧定义仍在内部可读。"""
+        """四档普通难度均有三种尺寸，不发教学雷图；旧定义仍在内部可读。"""
         items = self.client.get('/api/v1/levels?game_id=mine').json()['items']
         self.assertEqual([v['level_id'] for v in items], IDS)
         self.assertEqual([(v['cols'], v['rows'], v['mine_count']) for v in items],
-                         [(5,5,3), (10,10,10), (15,12,18), (20,15,30), (10,10,12), (10,10,15), (10,10,18)])
-        self.assertEqual([v['star_xp'] for v in items], [[2],[2,4,6],[3,6,9],[4,8,12],[3,6,9],[4,8,12],[5,10,15]])
+                         [(5,5,3), (10,10,10), (15,12,18), (20,15,30), (10,10,12), (10,10,15), (10,10,18),
+                          (15,12,22), (20,15,36), (15,12,27), (20,15,45), (15,12,32), (20,15,54)])
+        self.assertEqual([v['star_xp'] for v in items], [[2],[2,4,6],[3,6,9],[4,8,12],[3,6,9],[4,8,12],[5,10,15],
+                                                     [5,10,15],[6,12,18],[6,12,18],[8,16,24],[8,16,24],[10,20,30]])
+        for difficulty in ('easy','medium','hard','hell'):
+            self.assertEqual([(v['cols'],v['rows']) for v in items if v['difficulty']==difficulty], [(10,10),(15,12),(20,15)])
         self.assertNotIn('puzzle', items[0])
         self.assertNotIn('mine_indices', str(items))
         level = LEVELS['mine-v2-easy-10']
@@ -120,6 +125,20 @@ class MineRedesign(TestCase):
         self.client.cookies.set(self.settings.session_cookie_name, '2')
         self.assertEqual(self.client.get(attempt['links']['self']).status_code, 404)
         self.assertEqual(self.client.get('/api/v1/me/progression').json()['xp'], 0)
+
+    def test_new_large_boards_have_independent_mines_rewards_and_progress(self):
+        """六个新增关卡均按自己的雷数判胜和发奖，不覆盖原10×10成绩。"""
+        from backend.app.services import progression_service
+        for level_id,xp in zip(IDS[7:],(15,18,18,24,24,30)):
+            progression_service.limiter.clear()
+            attempt=self.start(level_id)
+            last=self.solve(attempt)
+            self.assertEqual(last['board']['outcome'],'won')
+            result=self.client.put(attempt['links']['completion'],json={})
+            self.assertEqual(result.status_code,201,result.text)
+            self.assertEqual((result.json()['stars'],result.json()['awarded_xp']),(3,xp))
+        progress=self.client.get('/api/v1/me/level-progress?game_id=mine&limit=50').json()['items']
+        self.assertEqual([v['best_stars'] for v in progress if v['level_id'] in IDS[4:7]],[0,0,0])
 
     def test_tutorial_requires_steps_and_rewards_once(self):
         """教学先揭0、理解数字、标记6，才允许自由排雷；误操作不使教学失败。"""

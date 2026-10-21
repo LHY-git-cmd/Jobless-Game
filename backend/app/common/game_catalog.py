@@ -14,7 +14,7 @@ QUALIFICATIONS = ('mine-beginner-001', 'akari-001', 'sudoku-beginner-001')
 
 
 def published_levels():
-    """旧扫雷定义用于恢复及永久资格，新选关只展示重制的七项。"""
+    """旧扫雷定义用于恢复及永久资格，新选关展示教学及四档各三种棋盘。"""
     return [level for level in LEVELS.values() if level['level_id'] != 'mine-beginner-001']
 
 

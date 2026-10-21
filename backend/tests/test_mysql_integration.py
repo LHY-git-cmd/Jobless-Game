@@ -294,7 +294,7 @@ class MySQLIntegrationTests(TestCase):
         self.assertEqual(results[0].headers, results[1].headers)
 
     def test_v10_mine_catalog_and_concurrent_reward(self):
-        """真实V10定义与源文件一致，同一新扫雷终盘并发重试只授予6经验。"""
+        """真实V10/V11定义与源文件一致，同一新扫雷终盘并发重试只授予6经验。"""
         from backend.app.services import progression_service as service
         from backend.app.common.game_catalog import MINE_LEVELS
         from threading import Barrier
