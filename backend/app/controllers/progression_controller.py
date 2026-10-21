@@ -8,7 +8,7 @@ from ..common.database import get_db
 from ..common.concurrency import bounded_db_call
 from ..common.game_catalog import LEVELS, metadata, published_levels
 from ..common.security import utc_now
-from ..models.schemas.progression import AttemptCreate, AttemptPatch, CompletionPut, AppearancePut, EmptyDTO
+from ..models.schemas.progression import AttemptCreate, AttemptPatch, CompletionPut, AppearancePut, EmptyDTO, MineClockPut
 from ..services import progression_service as service
 from .auth_controller import enforce_same_origin
 
@@ -99,6 +99,12 @@ async def create(payload: AttemptCreate, request: Request, db: Session = Depends
 async def attempt(attempt_id: str, request: Request, db: Session = Depends(get_db)):
     """账号核验通过后恢复权威尝试。"""
     return await run(request, db, 'attempt_get', rid=attempt_id)
+
+
+@router.put('/attempts/{attempt_id}/clock')
+async def mine_clock(attempt_id: str, payload: MineClockPut, request: Request, db: Session = Depends(get_db)):
+    """版本化暂停/继续，服务端记时，支持离页keepalive同源JSON。"""
+    return await run(request,db,'mine_clock',rid=attempt_id,data=payload.model_dump(mode='json'))
 
 
 @router.patch('/attempts/{attempt_id}')

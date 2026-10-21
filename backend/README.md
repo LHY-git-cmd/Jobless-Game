@@ -189,6 +189,8 @@ npm test *> ../artifacts/frontend/auth-tests.log
 
 ## 目标服务器资源验收
 
+新版扫雷支持 `PUT /api/v1/attempts/{id}/clock`，严格JSON为 `{paused, revision, command_id}`：只接受暂停意图、预期时钟修订和UUID，计时由服务器产生。同编号重试幂等，旧修订409；终盘后只返回原有冻结时间。JSON棋盘存储暂停起点、累计毫秒与修订，兼容缺少字段的旧尝试，无需新增数据库迁移。客户端离页请求用fetch keepalive；暂停成功后揭格和教学写操作返回409，继续后可操作，完成时扣除累计暂停时长。此端点仅适用于扫雷，不改竞速统一计时或其他游戏规则。
+
 未提供目标机器访问凭据，不能将开发机运行成功视为服务器验收。记录启动前后 `free -m`、`/proc/meminfo` 的 `MemAvailable`、`ps -eo pid,comm,rss,%cpu`、MySQL 连接数，以及迁移全进程峰值。系统/宝塔和其他服务、MySQL、Python、Nginx 分别计入，尽量保留至少 350MiB 可用内存。
 
 从开发机对专用测试账号逐级探测，密码通过交互读取，不写入参数或输出：

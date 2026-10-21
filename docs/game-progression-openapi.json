@@ -1443,6 +1443,157 @@
         }
       }
     },
+    "/api/v1/attempts/{attempt_id}/clock": {
+      "put": {
+        "tags": [
+          "progression"
+        ],
+        "summary": "Mine Clock",
+        "description": "版本化暂停/继续，服务端记时，支持离页keepalive同源JSON。",
+        "operationId": "mine_clock_api_v1_attempts__attempt_id__clock_put",
+        "parameters": [
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attempt Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MineClockPut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/attempts/{attempt_id}/reveals/{cell_index}": {
       "put": {
         "tags": [
@@ -4879,6 +5030,33 @@
         ],
         "title": "MembershipCreate",
         "description": "房间码只是定位信息，仍需Cookie身份及资格。"
+      },
+      "MineClockPut": {
+        "properties": {
+          "paused": {
+            "type": "boolean",
+            "title": "Paused"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "command_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Command Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "paused",
+          "revision",
+          "command_id"
+        ],
+        "title": "MineClockPut",
+        "description": "时钟只接收暂停意图、版本及防重编号，不接受客户端时间。"
       },
       "PoolCreate": {
         "properties": {

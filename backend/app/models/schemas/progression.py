@@ -1,7 +1,8 @@
 """v1严格DTO：禁止客户端指定奖励、用时、用户和胜者。"""
 
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, StrictInt
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictBool
+from uuid import UUID
 
 
 class StrictDTO(BaseModel):
@@ -29,6 +30,13 @@ class CompletionPut(StrictDTO):
 
 class EmptyDTO(StrictDTO):
     """正式揭格不接受客户端棋盘。"""
+
+
+class MineClockPut(StrictDTO):
+    """时钟只接收暂停意图、版本及防重编号，不接受客户端时间。"""
+    paused: StrictBool
+    revision: int = Field(ge=0,strict=True)
+    command_id: UUID
 
 
 class AppearancePut(StrictDTO):

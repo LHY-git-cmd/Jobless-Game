@@ -189,6 +189,44 @@ def mine_public(board):
             **({'mines': sorted(mines)} if board['outcome'] == 'lost' else {})}
 
 
+def mine_timing(attempt,now=None):
+    """活动时长排除暂停区间，旧棋局缺少时钟字段时默认连续计时。"""
+    board=attempt.board
+    terminal=attempt.ended_at
+    if board.get('finished_at'):
+        terminal=datetime.fromisoformat(board['finished_at'])
+    paused_at=datetime.fromisoformat(board['clock_paused_at']) if board.get('clock_paused_at') else None
+    end=terminal or paused_at or now or utc_now()
+    elapsed=max(0,elapsed_ms(attempt.started_at,end)-board.get('clock_paused_ms',0))
+    return {'elapsed_ms':elapsed,'paused':bool(paused_at and not terminal),
+            'paused_ms':board.get('clock_paused_ms',0),'revision':board.get('clock_revision',0)}
+
+
+def mine_clock(db,uid,rid,data,**_):
+    """比较交换阻止旧标签页迟到暂停；同编号重试不重复累计暂停时长。"""
+    attempt=owned_attempt(db,uid,rid)
+    if attempt.game_id!='mine':
+        fail(422,'invalid_clock','此游戏不支持扫雷暂停计时。')
+    if attempt.status!='active' or attempt.board['outcome']!='active':
+        return attempt_resource(db,attempt)
+    board=deepcopy(attempt.board)
+    if board.get('clock_command')==data['command_id']:
+        return attempt_resource(db,attempt)
+    if data['revision']!=board.get('clock_revision',0):
+        fail(409,'clock_conflict','计时状态已更新，请同步后重试。')
+    now=utc_now()
+    if data['paused']:
+        if not board.get('clock_paused_at'):
+            board['clock_paused_at']=now.isoformat()
+    elif board.get('clock_paused_at'):
+        board['clock_paused_ms']=board.get('clock_paused_ms',0)+elapsed_ms(datetime.fromisoformat(board['clock_paused_at']),now)
+        board['clock_paused_at']=None
+    # 即使重复“继续”也推进版本，拦截刷新前在途的离页暂停请求。
+    board['clock_revision']=board.get('clock_revision',0)+1
+    board['clock_command']=data['command_id'];attempt.board=board;attempt.revision+=1
+    return attempt_resource(db,attempt)
+
+
 def attempt_resource(db, attempt, status=200):
     """本人尝试快照包含题目，无标准答案或扫雷种子。"""
     level = level_definition(db, attempt.level_id, attempt.level_version)
@@ -200,6 +238,7 @@ def attempt_resource(db, attempt, status=200):
             'puzzle': deepcopy(level['puzzle']), 'links': {'self': base, 'completion': base + '/completion'}}
     if attempt.game_id == 'mine':
         data['board'] = mine_public(attempt.board)
+        data['timing'] = mine_timing(attempt)
     headers = {'ETag': etag(attempt.revision)}
     if status == 201:
         headers['Location'] = base
@@ -287,6 +326,8 @@ def reveal(db, uid, rid, index, received_at=None, **_):
         return attempt_resource(db, attempt)
     if attempt.status != 'active' or board['outcome'] != 'active':
         fail(409, 'attempt_terminal', '本次扫雷已结束。')
+    if board.get('clock_paused_at'):
+        fail(409,'attempt_paused','游戏已暂停，请继续游戏后再排雷。')
     if puzzle.get('tutorial'):
         step = board['tutorial_step']
         if step in (1,2) or (step == 0 and index != 0) or index in board['mine_indices']:
@@ -340,6 +381,8 @@ def tutorial_action(db, uid, rid, tutorial_action, **_):
         return attempt_resource(db, attempt)
     if attempt.status != 'active' or board['tutorial_step'] != target-1:
         fail(409, 'tutorial_step', '请先完成当前教学步骤。')
+    if board.get('clock_paused_at'):
+        fail(409,'attempt_paused','游戏已暂停，请继续游戏后再操作。')
     board['tutorial_step'] = target
     attempt.board = board
     attempt.revision += 1
@@ -375,7 +418,7 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
     if not valid:
         fail(422, 'invalid_completion', '终盘尚未满足全部规则。')
     terminal_at = datetime.fromisoformat(attempt.board['finished_at']) if attempt.game_id == 'mine' and attempt.board.get('finished_at') else received_at
-    duration = elapsed_ms(attempt.started_at, terminal_at)
+    duration = max(0,elapsed_ms(attempt.started_at, terminal_at)-attempt.board.get('clock_paused_ms',0)) if attempt.game_id=='mine' else elapsed_ms(attempt.started_at,terminal_at)
     current = stars_for(level, duration) if attempt.mode == 'campaign' else 0
     summary = repo.get(db, PlayerProgression, uid)
     if summary is None:
@@ -488,7 +531,7 @@ def cosmetics(db, uid, **_):
 
 
 ACTIONS = {'attempt_create': create_attempt, 'attempt_get': get_attempt, 'attempt_abandon': abandon_attempt,
-           'reveal': reveal, 'tutorial_action': tutorial_action, 'completion_put': complete_attempt, 'completion_get': get_completion,
+           'reveal': reveal, 'mine_clock': mine_clock, 'tutorial_action': tutorial_action, 'completion_put': complete_attempt, 'completion_get': get_completion,
            'level_progress': list_progress, 'appearance_get': appearance, 'appearance_put': put_appearance,
            'cosmetics': cosmetics}
 READ_ACTIONS = {'attempt_get', 'completion_get', 'level_progress', 'appearance_get', 'cosmetics', 'progression', 'eligibility'}

@@ -414,6 +414,26 @@ class MySQLIntegrationTests(TestCase):
             self.assertIsNone(db.get(progression.PlayerQualification, (uid, 'mine-beginner-001')))
 
 
+    def test_mine_clock_pause_survives_connection_change(self):
+        """真实MySQL JSON持久化暂停，换连接恢复并拒绝迟到旧修订。"""
+        from backend.app.services import progression_service as service
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'mine-clock-test'})
+        raw=self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            first=service.dispatch(raw,db,'attempt_create',data={'level_id':'mine-v2-easy-10','level_version':1,'mode':'campaign'},key=str(uuid4())).data
+        with self.sessions() as db:
+            paused=service.dispatch(raw,db,'mine_clock',rid=first['attempt_id'],data={'paused':True,'revision':0,'command_id':str(uuid4())}).data
+        with self.sessions() as db:
+            restored=service.dispatch(raw,db,'attempt_get',rid=first['attempt_id']).data
+            self.assertTrue(restored['timing']['paused'])
+            self.assertEqual(restored['timing']['elapsed_ms'],paused['timing']['elapsed_ms'])
+            continued=service.dispatch(raw,db,'mine_clock',rid=first['attempt_id'],data={'paused':False,'revision':restored['timing']['revision'],'command_id':str(uuid4())}).data
+            self.assertFalse(continued['timing']['paused'])
+        with self.sessions() as db:
+            with self.assertRaises(AppError):
+                service.dispatch(raw,db,'mine_clock',rid=first['attempt_id'],data={'paused':True,'revision':0,'command_id':str(uuid4())})
+
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
