@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createAkariSession } from '../../../src/games/akari/session.js';
 
 /** 小题盘具有两个独立区域，能分别验证未满足数字和最终通关。 */
-function fixture() {
+function fixture(puzzleOverride={}) {
   const memory=new Map(),calls=[];
   let attempt,starts=0,time=10000,offline=false;
   const levels=[{level_id:'akari-v2-001',level_version:1,number:1,rows:3,cols:3}];
@@ -17,8 +17,8 @@ function fixture() {
     if(path==='me/level-progress?game_id=akari&limit=50')return {data:{items:[]}};
     if(path==='attempts') {
       starts++;
-      attempt={attempt_id:String(starts),level_id:levels[0].level_id,level_version:1,status:'active',
-        puzzle:{rows:3,cols:3,map:['..1','###','1..'],checksum:'fixed'},
+      attempt={attempt_id:String(starts),level_id:levels[0].level_id,level_version:options.body.level_version,status:'active',
+        puzzle:{rows:3,cols:3,map:['..1','###','1..'],checksum:'fixed',...puzzleOverride},
         timing:{elapsed_ms:0,paused:false,revision:0},
         links:{self:`/api/v1/attempts/${starts}`,completion:`/api/v1/attempts/${starts}/completion`}};
     } else if(path.endsWith('/clock')) {
@@ -30,7 +30,7 @@ function fixture() {
     } else if(options.method==='PATCH')attempt.status='abandoned';
     return {data:structuredClone(attempt),etag:'"1"'};
   }
-  return {request,storage,calls,now:()=>time,tick:ms=>time+=ms,fail:value=>offline=value,get starts(){return starts;}};
+  return {request,storage,calls,levels,now:()=>time,tick:ms=>time+=ms,fail:value=>offline=value,get starts(){return starts;}};
 }
 
 test('照明只在显式开始时创建局，同账号恢复灯泡且不同账号隔离',async()=>{
@@ -97,4 +97,32 @@ test('入门先练习撤灯，再完成全盘；恢复时丢弃损坏的灯泡�
   saved.entries['akari-v2-001'].draft.bulbs={bad:true};f.storage.setItem(key,JSON.stringify(saved));
   const restored=createAkariSession({uid:1,...f,request});await restored.load();
   assert.equal(restored.state.board.bulbs.size,0);
+});
+
+test('七步教学限制当前目标，实际演示互照、数字墙并恢复引导步骤',async()=>{
+  const f=fixture({rows:5,cols:5,map:['..0#1','.###.','0####','##10#','##..#'],tutorial:true,
+    tutorial_steps:[{index:0,bulb:true},{index:0,bulb:false},{index:0,bulb:true},{index:1,bulb:true},{index:1,bulb:false},{index:9,bulb:true},{}]});
+  const model=createAkariSession({uid:1,...f});await model.load();await model.open();
+  await model.toggle(9);assert.equal(model.state.board.bulbs.size,0);assert.match(model.state.message,/高亮/);
+  await model.toggle(0);assert.equal(model.state.tutorialStep,1);
+  await model.toggle(1);assert.equal(model.state.board.bulbs.has(1),false);
+  await model.toggle(0);assert.equal(model.state.tutorialStep,2);
+  await model.toggle(0);await model.toggle(1);assert.equal(model.state.tutorialStep,4);
+  assert.deepEqual([...model.state.board.bulbs],[0,1]);assert.equal(model.state.board.complete,false);
+  await model.toggle(1);await model.toggle(9);assert.equal(model.state.tutorialStep,6);
+  assert.equal(model.state.result,null);model.destroy();
+  const restored=createAkariSession({uid:1,...f});await restored.load();
+  assert.equal(restored.state.tutorialStep,6);assert.deepEqual([...restored.state.board.bulbs],[0,9]);
+  await restored.toggle(22);assert.equal(restored.state.result.stars,3);
+});
+
+test('题目更新后旧完成盘不遮挡新版入口，旧活动盘明确提示旧版本',async()=>{
+  const f=fixture(),model=createAkariSession({uid:1,...f});await model.load();await model.open();
+  await model.toggle(1);await model.toggle(7);model.destroy();f.levels[0].level_version=2;
+  const revised=createAkariSession({uid:1,...f});await revised.load();
+  assert.equal(revised.state.attempt,null);assert.equal(revised.hasSaved('akari-v2-001'),false);
+  await revised.open();assert.equal(revised.state.attempt.level_version,2);assert.equal(f.starts,2);
+  revised.destroy();f.levels[0].level_version=3;
+  const active=createAkariSession({uid:1,...f});await active.load();
+  assert.equal(active.state.attempt.level_version,2);assert.match(active.state.message,/旧版/);
 });

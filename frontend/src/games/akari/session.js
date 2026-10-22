@@ -2,12 +2,14 @@
 import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
 import { createAkari, toggleBulb } from './rules.js';
+import { akariTutorialSteps } from './tutorial.js';
 
 /** request、storage、now可注入；客户端不决定奖励或正式用时。 */
 export function createAkariSession({uid,storage,request=api,now=Date.now,onChange=()=>{},onReward=()=>{}}={}) {
   const state={levels:[],progress:[],enabled:false,selected:null,attempt:null,board:null,result:null,busy:false,pending:false,paused:false,message:'',tutorialStep:0};
   const store=createJourneyStore(storage,`akari:${uid}`,message=>{state.message=message;});
   const reasons=new Set();
+  const outdatedCompleted=new Set();
   let dead=false,anchor=now(),frozen=null,clockQueue=Promise.resolve(),operationDone=Promise.resolve(),pendingClock=null;
   if(!storage&&uid)state.message='本地存储不可用，刷新可能丢失未提交的灯泡布局。';
 
@@ -34,7 +36,8 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
     const saved=store.load(attempt),cells=attempt.puzzle.map.join('');
     state.attempt=attempt;state.selected=attempt.level_id;state.result=null;state.board=createAkari(attempt.puzzle);
     state.board.bulbs=new Set((Array.isArray(saved?.draft?.bulbs)?saved.draft.bulbs:[]).filter(i=>Number.isInteger(i)&&i>=0&&cells[i]==='.'));
-    state.tutorialStep=Math.min(2,Math.max(0,Number(saved?.draft?.tutorialStep)||0));
+    const lastStep=Math.max(0,akariTutorialSteps(attempt.puzzle).length-1);
+    state.tutorialStep=Math.min(lastStep,Math.max(0,Math.trunc(Number(saved?.draft?.tutorialStep)||0)));
     state.pending=Boolean(saved?.pending);anchor=now();
     state.paused=reasons.size>0||Boolean(attempt.timing?.paused);
     frozen=state.pending||state.paused?attempt.timing?.elapsed_ms||0:null;
@@ -84,12 +87,21 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
   async function restore(path){
     const response=await request(path);if(dead)return;adopt(response.data);
     if(response.data.status==='completed'){
-      const result=await request(response.data.links.completion);if(!dead)confirmed(result.data,true);return;
+      const result=await request(response.data.links.completion);if(dead)return;confirmed(result.data,true);
+      if(state.levels.find(v=>v.level_id===response.data.level_id)?.level_version!==response.data.level_version){
+        // 已完成旧盘保留正式成绩，新的选关入口应开始最新版而不是反复显示旧尺寸。
+        outdatedCompleted.add(response.data.level_id);state.attempt=null;state.board=null;state.result=null;state.pending=false;frozen=null;
+        state.message='本关已更新，可以开始新版棋盘；旧成绩已保留。';
+      }
+      return;
     }
     if(response.data.status!=='active')return;
     if(state.pending){await writeClock(false);if(!dead)await settle();return;}
     await writeClock(reasons.size>0);if(dead)return;
     state.paused=reasons.size>0||Boolean(state.attempt.timing?.paused);frozen=state.paused?state.attempt.timing.elapsed_ms:null;
+    if(state.levels.find(v=>v.level_id===state.attempt.level_id)?.level_version!==state.attempt.level_version){
+      state.message=`正在继续旧版${state.attempt.puzzle.rows}×${state.attempt.puzzle.cols}棋局，重新开始将使用新版棋盘。`;
+    }
   }
   /** 创建响应丢失使用同一UUID；服务器已有本关时转为恢复。 */
   async function begin(){
@@ -102,7 +114,7 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
       await restore(active);if(!dead)store.clearStart(level.level_id);return;
     }
     if(dead)return;
-    await restore(response.data.links.self);if(!dead)store.clearStart(level.level_id);
+    await restore(response.data.links.self);if(!dead){store.clearStart(level.level_id);outdatedCompleted.delete(level.level_id);state.message='';}
   }
   /** 统一把进度引用和本地引用转换为核验地址。 */
   function reference(){return state.progress.find(v=>v.level_id===state.selected)?.current_attempt||store.reference(state.selected);}
@@ -112,7 +124,7 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
   return {
     get state(){return state;},elapsed,
     /** 卡片只把草稿当作导航提示。 */
-    hasSaved(id){return Boolean(store.reference(id));},
+    hasSaved(id){return Boolean(store.reference(id))&&!outdatedCompleted.has(id);},
     /** 游客可读目录，登录后读取该账号进度并核验上局引用。 */
     async load(){return perform(async()=>{
       const [levels,features]=await Promise.all([request('levels?game_id=akari'),request('features')]);if(dead)return;
@@ -130,7 +142,7 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
     async open(){return perform(async()=>{
       if(!uid)throw new Error('请先登录。');if(!state.enabled)throw new Error('照明暂未开放。');
       const ref=reference();
-      if(ref)try{await restore(ref.startsWith('/api/')?ref:`/api/v1/attempts/${ref}`);if(dead||['active','completed'].includes(state.attempt.status))return;}
+      if(ref)try{await restore(ref.startsWith('/api/')?ref:`/api/v1/attempts/${ref}`);if(dead||['active','completed'].includes(state.attempt?.status))return;}
       catch(error){if(![404,410].includes(error.status))throw error;}
       await begin();
     });},
@@ -140,12 +152,20 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
       return perform(async()=>{
         if(dead||state.paused||state.pending)return;
         const removing=state.board.bulbs.has(index);
+        const puzzle=state.attempt.puzzle,steps=akariTutorialSteps(puzzle),step=steps[state.tutorialStep];
+        if(puzzle.tutorial_steps&&Number.isInteger(step?.index)&&(step.index!==index||step.bulb===removing)){
+          state.message='请按当前引导点击高亮格，完成这一步后再尝试其他位置。';publish();return;
+        }
         if(!toggleBulb(state.board,index))return;
-        if(state.attempt.puzzle.tutorial){
-          if(state.tutorialStep===0&&!removing)state.tutorialStep=1;
-          else if(state.tutorialStep===1&&removing)state.tutorialStep=2;
+        if(puzzle.tutorial){
+          if(puzzle.tutorial_steps){
+            if(Number.isInteger(step?.index))state.tutorialStep=Math.min(steps.length-1,state.tutorialStep+1);
+          }else{
+            if(state.tutorialStep===0&&!removing)state.tutorialStep=1;
+            else if(state.tutorialStep===1&&removing)state.tutorialStep=2;
+          }
           // 入门必须先练习撤灯，全部约束仍由正式规则决定。
-          if(state.tutorialStep<2)state.board.complete=false;
+          if(state.tutorialStep<steps.length-1)state.board.complete=false;
         }
         state.message='';save();publish();if(state.board.complete)await settle();
       });

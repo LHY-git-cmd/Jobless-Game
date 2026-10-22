@@ -1,5 +1,6 @@
 /** 照明页面：入门及15关选关、分步教学、灯光反馈、续玩和下一关。 */
 import { createAkariSession } from './session.js';
+import { akariTutorialSteps } from './tutorial.js';
 import { inspectAkari, akariCell } from './rules.js';
 import { createScope } from '../../shared/lifecycle.js';
 import { Events, emit } from '../../shared/events.js';
@@ -25,7 +26,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
       <div class="akari-topbar"><button id="akari-back" type="button">返回选关</button><span>无职游戏</span><button id="akari-restart" type="button">重新开始</button></div>
       <div class="akari-heading"><img src="./assets/bulb.webp" alt="" width="72" height="72"><div><p id="akari-kicker" class="eyebrow">AKARI</p><h2 id="akari-title">照明</h2><p>让光，抵达每一个角落。</p></div></div>
       <div class="akari-toolbar"><span id="akari-focus"></span><div><span>本关用时</span><strong id="akari-clock">00:00</strong><button id="akari-rules" type="button">规则</button></div></div>
-      <div id="akari-guide" class="akari-guide" role="status" hidden></div>
+      <div id="akari-guide" class="akari-guide" role="status" hidden><p id="akari-guide-count" class="eyebrow"></p><h3 id="akari-guide-title"></h3><p id="akari-guide-text"></p><p id="akari-guide-target" class="akari-guide-target" hidden></p></div>
       <p class="akari-instructions">点击白格放灯，再点一次撤灯。黑墙不可放灯；数字只计算上下左右。棋盘可在区域内滑动。</p>
       <div class="akari-board-wrap"><div id="akari-viewport" class="akari-viewport" tabindex="0" role="region" aria-label="可滚动照明棋盘"><div id="akari-board" class="akari-board" role="group" aria-label="照明棋盘"></div></div><div id="akari-pause" class="akari-pause" hidden><strong>棋局已暂停</strong><p>准备好后，继续点亮。</p><button id="akari-resume" class="journey-primary" type="button">继续游戏</button></div></div>
       <p id="akari-status" class="akari-status" role="status"></p><p id="akari-conflicts" class="akari-conflicts" role="status" aria-live="polite"></p>
@@ -68,7 +69,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     $('akari-levels').replaceChildren(fragment);
     if(focused&&!state.busy)$('akari-levels').querySelector(`[data-level="${focused}"]`)?.focus({preventScroll:true});
     const selected=state.levels.find(v=>v.level_id===state.selected);
-    $('akari-selection-note').textContent=selected?`${selected.name} · ${selected.focus}。通关不限时，可随时修改。`:'暂时没有可用关卡。';
+    $('akari-selection-note').textContent=selected?`${selected.name} · ${selected.focus||'照亮全部白格，满足数字并避免灯泡互照'}。通关不限时，可随时修改。`:'暂时没有可用关卡。';
     $('akari-start').disabled=state.busy||!state.enabled||!selected;
     $('akari-start').textContent=state.busy?'正在准备…':state.progress.find(v=>v.level_id===state.selected)?.current_attempt?'继续游戏 →':model.hasSaved(state.selected)?'查看上局 →':'开始游戏 →';
   }
@@ -85,7 +86,8 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
   /** 灯泡与错误状态变化时重建格子，250ms时钟更新不重绘棋盘。 */
   function renderBoard(state) {
     const puzzle=state.attempt.puzzle,inspection=inspectAkari(state.board);
-    const key=JSON.stringify([state.attempt.attempt_id,[...state.board.bulbs],state.busy,state.pending,state.paused,state.attempt.status]);
+    const steps=akariTutorialSteps(puzzle),guide=steps[state.tutorialStep];
+    const key=JSON.stringify([state.attempt.attempt_id,[...state.board.bulbs],state.busy,state.pending,state.paused,state.attempt.status,state.tutorialStep]);
     if(key!==boardKey){
       boardKey=key;
       const focused=$('akari-board').contains(document.activeElement)?document.activeElement.dataset.index:null;
@@ -105,6 +107,12 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
         }
         const wrong=inspection.conflictingBulbs.has(index)||inspection.wrongClues.has(index)||(inspection.lit.size===inspection.whiteCount&&inspection.unmetClues.has(index));
         cell.classList.toggle('error',wrong);if(wrong)cell.setAttribute('aria-invalid','true');
+        if(state.attempt.status==='active'&&!state.pending&&guide){
+          const target=index===guide.index;
+          cell.classList.toggle('tutorial-focus',Boolean(guide.focus?.includes(index)));
+          cell.classList.toggle('tutorial-target',target);
+          if(target)cell.setAttribute('aria-label',`${cell.getAttribute('aria-label')}，当前引导目标`);
+        }
         fragment.append(cell);
       }
       $('akari-board').replaceChildren(fragment);
@@ -125,11 +133,13 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     const level=state.levels.find(v=>v.level_id===state.attempt.level_id);
     $('akari-kicker').textContent=`${level?.name||'照明'} / AKARI`;$('akari-focus').textContent=level?.focus||'';
     $('akari-guide').hidden=!(level?.number<=5)&&!state.attempt.puzzle.tutorial;
-    $('akari-guide').textContent=state.attempt.puzzle.tutorial?[
-      '第1步：在任意白格放一盏灯，观察光线沿横竖方向传播。',
-      '第2步：再次点击刚才的灯泡撤灯。放错位置也能随时修改。',
-      '第3步：照亮所有白格，让灯泡不互照，并满足每个数字。数字只计算上下左右。'
-    ][state.tutorialStep]:level?.guide||'';
+    const steps=akariTutorialSteps(state.attempt.puzzle),guide=steps[state.tutorialStep];
+    $('akari-guide-count').hidden=!guide;$('akari-guide-title').hidden=!guide;
+    $('akari-guide-count').textContent=guide?`第${state.tutorialStep+1}步 / 共${steps.length}步`:'';
+    $('akari-guide-title').textContent=guide?.title||'';
+    $('akari-guide-text').textContent=guide?.text||level?.guide||'';
+    $('akari-guide-target').hidden=!Number.isInteger(guide?.index);
+    $('akari-guide-target').textContent=Number.isInteger(guide?.index)?`当前操作：第${Math.floor(guide.index/state.attempt.puzzle.cols)+1}行第${guide.index%state.attempt.puzzle.cols+1}列 · ${guide.bulb?'放灯':'撤灯'}（金色粗框）`:'';
     $('akari-restart').disabled=state.busy||state.pending;$('akari-rules').disabled=state.busy;
     $('akari-pause').hidden=!state.paused||state.pending||Boolean(state.result);
     $('akari-resume').disabled=state.busy;

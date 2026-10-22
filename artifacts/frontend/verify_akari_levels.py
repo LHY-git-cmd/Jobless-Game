@@ -70,16 +70,30 @@ def main():
                 shot('akari-levels-desktop.png');checks.append('游客16关目录和编号，无难度系数')
                 click('#akari-start');wait("!document.getElementById('auth-dialog').classList.contains('hidden')")
                 ev("document.getElementById('auth-username').value='照明验收';document.getElementById('auth-password').value='akari-browser-test';document.querySelector('.auth-submit').click()")
-                wait("document.querySelectorAll('#akari-board [data-index]').length===16&&!document.getElementById('akari-restart').disabled")
-                assert ev("(()=>{const r=document.getElementById('akari-board').getBoundingClientRect();return Math.abs(r.width-r.height)<1;})()"),'入门应为4×4方形，不应保留旧10行'
+                wait("document.querySelectorAll('#akari-board [data-index]').length===25&&!document.getElementById('akari-restart').disabled")
+                assert ev("(()=>{const r=document.getElementById('akari-board').getBoundingClientRect();return Math.abs(r.width-r.height)<1;})()"),'入门应为5×5方形，不应保留旧10行'
                 shot('akari-tutorial-desktop.png')
-                first=next(i for i,c in enumerate(''.join(AKARI_LEVELS[0]['puzzle']['map'])) if c=='.')
-                bulb(first);wait("document.getElementById('akari-guide').textContent.includes('第2步')")
-                bulb(first);wait("document.getElementById('akari-guide').textContent.includes('第3步')")
-                checks.append('入门实际放灯及撤灯后进入完整解题')
+                bulb(9);assert ev("document.getElementById('akari-message').textContent.includes('高亮')")
+                for step,action in enumerate(AKARI_LEVELS[0]['puzzle']['tutorial_steps'][:-1]):
+                    assert ev(f'document.querySelector(\'#akari-board [data-index="{action["index"]}"]\').classList.contains("tutorial-target")')
+                    bulb(action['index']);wait(f"document.getElementById('akari-guide-count').textContent.startsWith('第{step+2}步')")
+                    if step==3:
+                        assert ev("document.querySelectorAll('#akari-board .error.bulb').length===2")
+                        assert ev("document.getElementById('akari-conflicts').textContent.includes('互相照射')")
+                        shot('akari-tutorial-conflict.png')
+                    if step==4:
+                        assert ev("document.querySelectorAll('#akari-board .error').length===0")
+                cmd('Page.reload');wait("document.getElementById('akari-guide-count').textContent.startsWith('第7步')&&!document.getElementById('akari-restart').disabled")
+                assert ev("document.querySelectorAll('#akari-board .bulb').length===2")
+                shot('akari-tutorial-numbers.png')
+                checks.append('七步教学目标高亮、误操作阻止、实际互照/撤灯/数字墙及刷新恢复')
                 for number,level in enumerate(AKARI_LEVELS):
                     if number:choose(level)
                     answer=akari_solutions(level['puzzle']['map'])[0]
+                    if number==0:
+                        answer=[i for i in answer if not ev(f'document.querySelector(\'#akari-board [data-index="{i}"]\').classList.contains("bulb")')]
+                    if number>=10:
+                        assert level['puzzle']['rows']==level['puzzle']['cols']==10
                     if number==1:
                         click('#akari-rules');wait("document.getElementById('akari-rules-dialog').open&&!document.getElementById('akari-pause').hidden")
                         frozen=ev("document.getElementById('akari-clock').textContent");time.sleep(1.1)
@@ -114,6 +128,8 @@ def main():
                         cmd('Network.setBlockedURLs',{'urls':[]});click('#akari-retry-settlement')
                         checks.append('断网终盘刷新后以原负载重试')
                     wait("!document.getElementById('akari-result').hidden&&document.getElementById('akari-result-title').textContent.includes('点亮')")
+                    if number==0:
+                        shot('akari-tutorial-complete.png')
                     assert ev("document.querySelectorAll('#akari-board button:not(:disabled)').length===0")
                     checks.append(f'{level["name"]}真实点击完成及服务器结算')
                 shot('akari-final-complete.png')

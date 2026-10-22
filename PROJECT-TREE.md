@@ -23,6 +23,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── sudoku-catalog-v2.json         # 数独五档十三题、尺寸、推理技巧、时限及逐星经验
 │   │   ├── akari-catalog-v2.json          # 照明入门及第1～15关的冻结地图和参数
 │   │   ├── akari-audit-v2.json            # 照明离线逻辑推理及内部递进度量，不下发浏览器
+│   │   ├── akari-catalog-v3.json          # 七步入门及第10～15关10×10的追加版本目录
+│   │   ├── akari-audit-v3.json            # 最新16题的离线唯一解与递进推理审计
 │   │   └── sudoku-audit-v2.json           # 开发机离线唯一解和逐步推理记录，不下发浏览器
 │   ├── sudoku_content.py                 # 有界离线构造、两解搜索及四档逻辑分级器
 │   ├── akari_content.py                  # 照明确定性逻辑、单层反证、唯一性及16关离线构建
@@ -114,7 +116,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V10__publish_mine_difficulties.sql # 扫雷五档原七项不可变关卡与独立奖励定义
 │   │   ├── V11__expand_mine_board_choices.sql # 中等/困难/地狱新增六个矩形棋盘，不改旧定义
 │   │   ├── V12__publish_sudoku_difficulties.sql # 数独教学与四档各三题，保留历史定义
-│   │   └── V13__publish_akari_levels.sql   # 照明入门及15关，保留旧定义及永久资格
+│   │   ├── V13__publish_akari_levels.sql   # 照明入门及15关，保留旧定义及永久资格
+│   │   └── V14__expand_akari_tutorial_and_boards.sql # 教学及第10～15关追加版本2，不改旧定义
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -212,7 +215,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── akari/  # 照明16关规则、会话及页面控制器
 │   │   │   │   ├── rules.js  # 变尺寸照明、覆盖、互斥及数字约束
 │   │   │   │   ├── session.js  # 账号草稿、权威时钟及终盘重试
-│   │   │   │   └── controller.js  # 入门及15关选关、教学、冲突及下一关
+│   │   │   │   ├── controller.js  # 入门及15关选关、教学、冲突及下一关
+│   │   │   │   └── tutorial.js  # 七步目标与提示，兼容旧三步教学
 │   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
 │   │   │   │   ├── controller.js  # 所属业务/游戏控制器与生命周期
 │   │   │   │   ├── effects.js  # 爆炸顺序、时间线与音效

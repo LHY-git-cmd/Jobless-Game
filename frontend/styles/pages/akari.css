@@ -24,6 +24,8 @@
 .akari-toolbar > span { color:var(--muted); }.akari-toolbar > div { display:flex; align-items:center; gap:12px; margin-left:auto; }
 .akari-toolbar strong { color:var(--gold); font-variant-numeric:tabular-nums; }
 .akari-guide { padding:16px 20px; border-left:3px solid var(--gold); background:var(--surface-raised); line-height:1.9; }
+.akari-guide p { margin:0; }.akari-guide h3 { margin:8px 0; color:var(--gold); font-size:20px; }
+.akari-guide .akari-guide-target { margin-top:10px; color:var(--gold); }
 .akari-instructions { font-size:14px; }
 .akari-board-wrap { position:relative; min-width:0; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--board-dark); }
 .akari-viewport { overflow:auto; overscroll-behavior:contain; padding:12px; max-width:100%; max-height:min(70dvh,620px); }
@@ -36,6 +38,9 @@
 .akari-board .akari-cell.bulb { background-image:url('../../assets/bulb.webp'); background-repeat:no-repeat; background-position:center; background-size:82%; }
 .akari-board .akari-cell.bulb::before { content:none; }
 .akari-board .akari-cell.error { outline:3px solid var(--akari-error); outline-offset:-4px; }
+.akari-board .akari-cell.tutorial-focus { box-shadow:inset 0 0 0 2px #8ab8d0; }
+.akari-board .akari-cell.tutorial-target { outline:3px solid var(--gold); outline-offset:-4px; position:relative; z-index:1; }
+.akari-board .akari-cell.tutorial-target.error { outline-color:var(--akari-error); }
 .akari-board .akari-cell:focus-visible { outline:3px solid var(--gold); outline-offset:-3px; position:relative; z-index:1; }
 .akari-board .akari-cell:active:not(:disabled) { box-shadow:inset 0 0 0 3px var(--gold); }
 .akari-pause { position:absolute; inset:0; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--surface); padding:16px; text-align:center; }
