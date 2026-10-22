@@ -208,7 +208,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── session.js  # 正式扫雷会话，legacy内为旧三关计时
 │   │   │   │   └── stars.js  # 可得星级、历史星与新增星汇聚
 │   │   │   ├── sudoku/  # 数独规则与笔记
-│   │   │   │   └── rules.js  # 所属游戏规则算法
+│   │   │   │   ├── rules.js  # 4×4/9×9数独规则、手动笔记和冲突检查
+│   │   │   │   ├── controller.js  # 五档选题、参考图棋盘、教学及星级动画
+│   │   │   │   └── session.js  # 正式尝试、账号草稿、暂停及终盘重试
 │   │   │   ├── catalog.js  # 三游戏元数据及稳定导航地址
 │   │   │   └── formal-board.js  # 正式照明/数独/竞速棋盘
 │   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
@@ -265,7 +267,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   └── mine-practice.css  # 所属页面/组件样式，声明顺序保留
 │   │   ├── pages/  # 当前HTML页面入口与装配
 │   │   │   ├── journey.css  # 所属页面/组件样式，声明顺序保留
-│   │   │   └── mine.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── mine.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   └── sudoku.css  # 参考图数独面板、棋盘状态和窄屏数字键
 │   │   └── base.css  # 按原声明顺序装配8段公共样式
 │   ├── test/  # 按功能分组的Node行为及结构契约
 │   │   ├── features/  # 按业务归档的账号/音频/论坛等能力
@@ -298,7 +301,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   └── mine-stars.test.js  # 所属模块的行为回归测试
 │   │   │   ├── sudoku/  # 数独规则与笔记
 │   │   │   │   ├── sudoku.test.js  # 所属模块的行为回归测试
-│   │   │   │   └── sudoku-variant.test.js  # 可变尺寸、笔记边界和无内置答案判题
+│   │   │   │   ├── sudoku-variant.test.js  # 可变尺寸、笔记边界和无内置答案判题
+│   │   │   │   └── sudoku-session.test.js  # 显式开始、草稿恢复、嵌套暂停及结算重试
 │   │   │   └── game-catalog.test.js  # 所属模块的行为回归测试
 │   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
 │   │   │   ├── completion.test.js  # 所属模块的行为回归测试
@@ -373,6 +377,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_mine_redesign.py       # 五档扫雷真实浏览器/临时SQLite及隔离本地预览
         ├── verify_mine_stars.py          # 三颗星/时间降星/汇聚/手机操作及换号取消专项浏览器验收
         ├── verify_mine_pause.py          # 规则/选关/真实标签切换/离页暂停与继续、活动时长星级验收
+        ├── verify_sudoku.py              # 数独13关、教学、奖励/断网、窄屏及隔离本地预览
+        ├── verify_sudoku_interactions.py # 数独键盘/冲突、真实离页、重开、换号及减少动画验收
         ├── verify_frontend_structure.py  # 整改前后同状态像素比对、三个分榜及新版入口/资源验收
         ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图

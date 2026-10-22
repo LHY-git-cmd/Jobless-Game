@@ -1,14 +1,15 @@
-/** 独立选关页：扫雷五档正式游戏，其他游戏保留占位；账号成长集中在顶部头像。 */
+/** 独立选关页：扫雷/数独五档正式游戏，照明保留占位；账号成长集中在顶部头像。 */
 import { initAuth } from '../features/account/auth.js';
 import { Events } from '../shared/events.js';
 import { api } from '../features/progression/client.js';
 import { gameFromSearch, gameLink } from '../games/catalog.js';
 import { createMineJourney } from '../games/mine/controller.js';
+import { createSudokuJourney } from '../games/sudoku/controller.js';
 
 const $ = id => document.getElementById(id);
 const game = gameFromSearch(location.search);
 const auth = initAuth();
-let mineJourney;
+let gameJourney;
 let uid, epoch = 0, readVersion = 0, cosmetics = [], equipped = 'default', themeBusy = false;
 
 /** URL决定游戏身份，刷新和返回不恢复任何已下线的题目。 */
@@ -26,11 +27,11 @@ function renderGame() {
     for (const digit of ['1', '2', '', '', '5', '6', '7', '', '9']) { const cell = document.createElement('span'); cell.textContent = digit; grid.append(cell); }
     $('catalog-art').append(grid);
   }
-  if(game.id==='mine') {
+  if(game.id==='mine'||game.id==='sudoku') {
     $('catalog-empty').hidden=true;
-    const host=document.createElement('div');host.className='mine-host';host.id='mine-journey';
+    const host=document.createElement('div');host.className=game.id==='mine'?'mine-host':'sudoku-host';host.id=game.id+'-journey';
     $('catalog-empty').after(host);
-    mineJourney=createMineJourney({host,auth,onReward:()=>void refresh()});
+    gameJourney=(game.id==='mine'?createMineJourney:createSudokuJourney)({host,auth,onReward:()=>void refresh()});
   }
 }
 
@@ -40,7 +41,7 @@ function renderQualifications(value) {
   for (const item of value.requirements) {
     const link = document.createElement('a');
     link.href = gameLink(gameFromSearch(`?level=${encodeURIComponent(item.level_id)}`).id);
-    link.textContent = `${item.name}　${item.completed ? '已通过' : item.level_id.startsWith('mine-') ? '前往简单关挑战' : '新关卡待开放'}`;
+    link.textContent = `${item.name}　${item.completed ? '已通过' : /^(mine|sudoku)-/.test(item.level_id) ? '前往简单关挑战' : '新关卡待开放'}`;
     $('journey-qualifications').append(link);
   }
 }
@@ -118,14 +119,14 @@ async function identityChanged() {
   uid = next; epoch++; readVersion++; themeBusy = false; cosmetics = []; equipped = 'default';
   document.documentElement.dataset.theme = 'default'; $('journey-login').hidden = Boolean(uid); $('theme-preview-reset').hidden = true;
   $('journey-qualifications').replaceChildren(); renderCosmetics();
-  await Promise.all([refresh(),mineJourney?.setUser(uid)]);
+  await Promise.all([refresh(),gameJourney?.setUser(uid)]);
 }
 
 renderGame();
-$('journey-refresh').addEventListener('click', () => {void refresh();void mineJourney?.refresh();});
+$('journey-refresh').addEventListener('click', () => {void refresh();void gameJourney?.refresh();});
 $('journey-login').addEventListener('click', () => void auth.requireLogin(refresh));
 $('theme-preview-reset').addEventListener('click', () => { document.documentElement.dataset.theme = equipped; $('theme-preview-reset').hidden = true; $('theme-message').textContent = ''; });
 document.addEventListener(Events.AUTH_CHANGED, () => void identityChanged());
-window.addEventListener('pagehide', () => { epoch++; readVersion++; mineJourney?.destroy(); });
+window.addEventListener('pagehide', () => { epoch++; readVersion++; gameJourney?.destroy(); });
 window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
 void auth.ready.then(identityChanged);
