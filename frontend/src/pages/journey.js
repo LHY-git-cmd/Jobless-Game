@@ -10,6 +10,10 @@ import { createAkariJourney } from '../games/akari/controller.js';
 const $ = id => document.getElementById(id);
 const game = gameFromSearch(location.search);
 const auth = initAuth();
+// 登录/退出位于工具栏首行；保留原按钮及事件，第二行按刷新、消息、设置排列。
+const accountControls = document.querySelector('.journey-header-actions .auth-controls');
+accountControls.prepend(document.querySelector('[data-player-profile] .auth-open'),
+  accountControls.querySelector('.auth-logout'), $('journey-refresh'));
 let gameJourney;
 let uid, epoch = 0, readVersion = 0, cosmetics = [], equipped = 'default', themeBusy = false;
 
@@ -18,7 +22,6 @@ function renderGame() {
   document.title = `${game.name}选关 · 无职游戏`;
   document.body.dataset.game = game.id;
   $('levels-title').textContent = game.id==='mine'?'扫雷':`${game.name}关卡`;
-  document.querySelector('.site-nav [aria-current="page"]').href = gameLink(game.id);
   $('catalog-empty-title').textContent = `${game.name}关卡重新设计中`;
   if (game.art) {
     const image = document.createElement('img'); image.src = `./assets/${game.art}`; image.alt = ''; image.width = image.height = 96;

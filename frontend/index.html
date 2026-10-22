@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="无职游戏：扫雷、照明与数独三关解谜游戏。"
+      content="无职游戏：选择闯关模式，或与朋友开启双人竞技。"
     />
     <meta name="theme-color" content="#102b3c" />
     <title>无职游戏</title>
@@ -16,7 +16,7 @@
     />
     <link rel="stylesheet" href="./styles/base.css" />
     <link rel="stylesheet" href="./styles/components/energy.css"><link rel="stylesheet" href="./styles/components/navigation.css" />
-    <link rel="modulepreload" href="./src/pages/journey.js" />
+    <link rel="stylesheet" href="./styles/pages/modes.css" />
   </head>
   <body>
     <div class="world-background" aria-hidden="true"></div>
@@ -43,32 +43,27 @@
               暂别忙碌，潜入这片蔚蓝。<br />在数字与光影之间，找到你的答案。
             </p>
             <button type="button" class="explore-link" id="challenge-action">
-              <span id="challenge-action-label">选择你的挑战</span
+              <span id="challenge-action-label">选择你的模式</span
               ><span id="challenge-action-icon" aria-hidden="true">↓</span>
             </button>
           </div>
         </div>
         <div class="level-select" id="level-select">
-          <div class="section-heading"><h2>冒险启程</h2><span>选择游戏，开启下一段旅程</span></div>
-          <div class="level-grid">
-            <a id="mine-entry" class="level-card mine-card" data-game="mine" href="./journey.html?game_id=mine" aria-label="扫雷，进入新版选关页">
-              <span class="level-art"><img src="./assets/minesweeper/v2/theme.webp" width="320" height="320" alt=""></span>
-              <span class="level-content"><span class="level-title">扫雷</span><span class="level-description">步步推理，避开暗藏的危险。</span><span class="level-meta">新版选关<span>关卡准备中</span></span></span>
-              <span class="level-arrow" aria-hidden="true">选择关卡 →</span>
+          <div class="section-heading"><h2>选择模式</h2><span>独自解谜，或与朋友一较高下</span></div>
+          <div class="level-grid mode-grid">
+            <a id="challenge-entry" class="level-card mode-card" href="./challenge.html">
+              <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 39h10V29h10V19h12M13 9v14M13 9h14l-4 5 4 5H13"/></svg></span>
+              <span class="level-content"><span class="level-title">闯关模式</span><span class="level-description">扫雷、照明、数独，循序解开每一道谜题。</span><span class="level-meta">自由选关<span>收集星星，记录成长</span></span></span>
+              <span class="level-arrow" aria-hidden="true">开始闯关 →</span>
             </a>
-            <a id="akari-entry" class="level-card light-card" data-game="akari" href="./journey.html?game_id=akari" aria-label="照明，进入新版选关页">
-              <span class="level-art"><img src="./assets/bulb.webp" width="320" height="320" alt=""></span>
-              <span class="level-content"><span class="level-title">照明</span><span class="level-description">点亮一盏灯，驱散每一处黑暗。</span><span class="level-meta">新版选关<span>关卡准备中</span></span></span>
-              <span class="level-arrow" aria-hidden="true">选择关卡 →</span>
-            </a>
-            <a id="sudoku-entry" class="level-card sudoku-card" data-game="sudoku" href="./journey.html?game_id=sudoku" aria-label="数独，进入新版选关页">
-              <span class="level-art sudoku-art" aria-hidden="true"><span>1</span><span>2</span><span></span><span></span><span>5</span><span>6</span><span>7</span><span></span><span>9</span></span>
-              <span class="level-content"><span class="level-title">数独</span><span class="level-description">在九宫格里，发现秩序之美。</span><span class="level-meta">新版选关<span>关卡准备中</span></span></span>
-              <span class="level-arrow" aria-hidden="true">选择关卡 →</span>
+            <a id="competitive-entry" class="level-card mode-card" href="./pk.html">
+              <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8h16v11a8 8 0 0 1-16 0V8ZM16 11H9v5a8 8 0 0 0 9 8M32 11h7v5a8 8 0 0 1-9 8M24 27v10M16 40h16M19 37h10"/></svg></span>
+              <span class="level-content"><span class="level-title">竞技模式</span><span class="level-description">邀请朋友或自动匹配，开启双人照明竞速。</span><span class="level-meta">双人对决<span>同题挑战，比拼速度</span></span></span>
+              <span class="level-arrow" aria-hidden="true">进入竞技 →</span>
             </a>
           </div>
         </div>
-        <footer class="landing-footer"><a class="mine-practice-entry" href="./pk.html">双人照明竞速 ↗</a><span>慢一点，答案就在思考之间。</span></footer>
+        <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span></footer>
       </section>
     </main>
     <script type="module" src="./src/pages/home.js"></script>

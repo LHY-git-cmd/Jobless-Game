@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b3c"><meta name="description" content="闯关模式：选择扫雷、照明或数独，开始你的解谜之旅。">
+  <title>闯关模式 · 无职游戏</title>
+  <link rel="icon" href="./favicon.ico"><link rel="stylesheet" href="./styles/base.css">
+  <link rel="stylesheet" href="./styles/components/energy.css"><link rel="stylesheet" href="./styles/components/navigation.css">
+  <link rel="stylesheet" href="./styles/pages/modes.css">
+</head>
+<body>
+  <div class="world-background" aria-hidden="true"></div>
+  <main class="page">
+    <section id="landing" aria-labelledby="landing-title">
+      <header class="landing-header">
+        <div class="player-profile" data-player-profile aria-label="账号与成长"></div>
+        <nav class="site-nav" aria-label="主导航"><a href="./index.html">首页</a><a href="./challenge.html" aria-current="page">闯关模式</a></nav>
+        <div class="auth-controls" aria-label="账号"></div>
+      </header>
+      <div class="landing-intro">
+        <div class="landing-hero">
+          <p class="eyebrow"><span aria-hidden="true"></span> 一步一步，解开谜题</p>
+          <h1 id="landing-title">闯关模式<span>选择你的游戏，开启下一段旅程。</span></h1>
+          <p class="hero-description">在数字与光影之间，找到你的答案。<br>挑战关卡，收集属于你的星星。</p>
+          <a class="explore-link" href="./index.html">返回首页 <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+      <div class="level-select" id="level-select">
+        <div class="section-heading"><h2>选择游戏</h2><span>从好奇出发，让思考带路</span></div>
+        <div class="level-grid">
+          <a id="mine-entry" class="level-card mine-card" data-game="mine" href="./journey.html?game_id=mine" aria-label="扫雷，选择关卡">
+            <span class="level-art"><img src="./assets/minesweeper/v2/theme.webp" width="320" height="320" alt=""></span>
+            <span class="level-content"><span class="level-title">扫雷</span><span class="level-description">步步推理，避开暗藏的危险。</span><span class="level-meta">五档难度<span>从入门到地狱</span></span></span>
+            <span class="level-arrow" aria-hidden="true">选择关卡 →</span>
+          </a>
+          <a id="akari-entry" class="level-card light-card" data-game="akari" href="./journey.html?game_id=akari" aria-label="照明，选择关卡">
+            <span class="level-art"><img src="./assets/bulb.webp" width="320" height="320" alt=""></span>
+            <span class="level-content"><span class="level-title">照明</span><span class="level-description">点亮一盏灯，驱散每一处黑暗。</span><span class="level-meta">入门教学<span>15关光影谜题</span></span></span>
+            <span class="level-arrow" aria-hidden="true">选择关卡 →</span>
+          </a>
+          <a id="sudoku-entry" class="level-card sudoku-card" data-game="sudoku" href="./journey.html?game_id=sudoku" aria-label="数独，选择关卡">
+            <span class="level-art sudoku-art" aria-hidden="true"><span>1</span><span>2</span><span></span><span></span><span>5</span><span>6</span><span>7</span><span></span><span>9</span></span>
+            <span class="level-content"><span class="level-title">数独</span><span class="level-description">在九宫格里，发现秩序之美。</span><span class="level-meta">五档难度<span>从四格到九宫</span></span></span>
+            <span class="level-arrow" aria-hidden="true">选择关卡 →</span>
+          </a>
+        </div>
+      </div>
+      <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span></footer>
+    </section>
+  </main>
+  <script type="module" src="./src/pages/home.js"></script>
+</body>
+</html>

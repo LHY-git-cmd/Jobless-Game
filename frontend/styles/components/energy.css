@@ -4,7 +4,21 @@
 .player-profile:has(.player-energy:not([hidden])) { grid-template-columns:70px auto auto; }
 
 .landing-intro { grid-template-columns:minmax(0,1fr); }
+/* 关卡页右上角：登录/退出在首行，刷新、消息和设置固定在同一行。 */
+.catalog-page .journey-header-actions { grid-column:2; grid-row:1; min-width:0; align-self:start; justify-self:end; }
+.catalog-page .landing-header .journey-header-actions .auth-controls { display:grid; grid-template-columns:repeat(3,44px); gap:8px; align-items:center; justify-items:end; }
+.catalog-page .journey-header-actions .auth-open,
+.catalog-page .journey-header-actions .auth-logout { grid-column:1/-1; grid-row:1; }
+.catalog-page .journey-header-actions .journey-refresh { grid-column:1; grid-row:2; }
+.catalog-page .journey-header-actions .notification-bell { grid-column:2; grid-row:2; width:44px; padding-inline:4px; }
+.catalog-page .journey-header-actions .auth-settings { grid-column:3; grid-row:2; }
+.catalog-page .journey-header-actions .auth-controls:has(.auth-open:not(.hidden)) { grid-template-columns:88px; }
+.journey-refresh { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; padding:0; border-color:#eadab480; background:#102b3c99; color:var(--gold); }
+@media(max-width:700px) {
+  .catalog-page .landing-header { grid-template-columns:minmax(0,1fr) auto; column-gap:8px; }
+}
 @media(max-width:600px) {
+  .catalog-page .player-energy { flex-wrap:wrap; }
   .player-profile:has(.player-energy:not([hidden])) { grid-template-columns:54px auto; }
   .player-energy { grid-column:1/-1; grid-row:3; border-left:0; padding:8px 0 0; display:flex; align-items:center; gap:10px; }
   .player-energy strong { font-size:15px; }

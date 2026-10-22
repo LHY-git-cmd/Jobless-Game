@@ -265,7 +265,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── pages/  # 当前HTML页面入口与装配
 │   │   │   ├── forum-post.js  # 帖子详情页面入口
 │   │   │   ├── forum.js  # 论坛列表页面入口
-│   │   │   ├── home.js  # 当前首页入口（legacy内同名为旧首页工厂）
+│   │   │   ├── home.js  # 首页模式入口与闯关游戏目录共享装配
 │   │   │   ├── journey.js  # 当前选关页与扫雷装配
 │   │   │   ├── pk.js  # 竞速房间/匹配页面入口
 │   │   │   └── ranking.js  # 三个独立分榜页面入口
@@ -292,6 +292,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
 │   │   │   └── mine-practice.css  # 所属页面/组件样式，声明顺序保留
 │   │   ├── pages/  # 当前HTML页面入口与装配
+│   │   │   ├── modes.css  # 首页双模式入口与响应式卡片
 │   │   │   ├── journey.css  # 所属页面/组件样式，声明顺序保留
 │   │   │   ├── mine.css  # 所属页面/组件样式，声明顺序保留
 │   │   │   ├── akari.css  # 照明选关和深蓝暖金棋盘，手机区域内滚动
@@ -350,7 +351,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── favicon.ico
 │   ├── forum-post.html  # 独立页面入口，URL保持不变
 │   ├── forum.html  # 独立页面入口，URL保持不变
-│   ├── index.html  # 首页，页面URL保持不变
+│   ├── index.html  # 首页：闯关模式和竞技模式两个独立入口
+│   ├── challenge.html  # 闯关模式：扫雷、照明、数独游戏目录
 │   ├── journey.css  # 旧URL兼容入口
 │   ├── journey.html  # 三款游戏独立选关与正式游戏，页面URL保持不变
 │   ├── mine-journey.css  # 旧URL兼容入口
