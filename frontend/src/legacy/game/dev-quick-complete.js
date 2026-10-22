@@ -1,5 +1,5 @@
 /** 临时开发验收：仅解当前关卡；生产开关关闭，不参与正常规则实现，后续可删除。 */
-import { SUDOKU_SOLUTION } from "../../games/sudoku/rules.js";
+import { SUDOKU_SOLUTION } from "./sudoku-answer.js";
 import { inspectAkari } from "../../games/akari/rules.js";
 
 /** 只将当前棋盘变为合法终盘；通关、计时和提交继续走 main 的正常处理。 */

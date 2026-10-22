@@ -2,7 +2,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { SUDOKU_PUZZLE, SUDOKU_SOLUTION } from "../../src/games/sudoku/rules.js";
+import { SUDOKU_PUZZLE } from "../../src/games/sudoku/rules.js";
+import { SUDOKU_SOLUTION } from '../../src/legacy/game/sudoku-answer.js';
 import { createGameController } from "../../src/legacy/game/controller.js";
 /** 页面所需的最小 DOM，disabled 控件不会触发点击。 */
 class Element {

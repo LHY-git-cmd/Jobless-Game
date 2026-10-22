@@ -19,7 +19,10 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── backend/                              # FastAPI 登录、独立关卡、排行榜、Flyway 与部署支持
 │   ├── content/                          # 冻结关卡、规则门槛与独立PK题库
 │   │   ├── game-catalog-v1.json           # 十关照明、三题PK、历史初级扫雷/数独与建议参数v1
-│   │   └── mine-catalog-v2.json           # 教学与四档各三规格，共十三项扫雷、时限及逐星经验
+│   │   ├── mine-catalog-v2.json           # 教学与四档各三规格，共十三项扫雷、时限及逐星经验
+│   │   ├── sudoku-catalog-v2.json         # 数独五档十三题、尺寸、推理技巧、时限及逐星经验
+│   │   └── sudoku-audit-v2.json           # 开发机离线唯一解和逐步推理记录，不下发浏览器
+│   ├── sudoku_content.py                 # 有界离线构造、两解搜索及四档逻辑分级器
 │   ├── content_check.py                  # 开发机唯一解、初级单候选与只生成新文件的题库工具
 │   ├── cleanup_game_history.py           # 有界历史清理，保留永久成长与资格
 │   ├── export_game_contract.py           # 从实际v1路由和DTO导出/核对契约草案
@@ -132,6 +135,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、登录/排行/论坛V4并发和外键联调
 │       ├── test_forum.py                 # 论坛权限、文字/请求体、幂等、归属、通知及事务回滚
 │       ├── test_game_content.py          # 题库唯一解、评分边界、无死锁与初级难度
+│       ├── test_sudoku_content.py        # 数独唯一性、真实技巧分级和伪造推理拒绝
 │       ├── test_mine_redesign.py         # 五档矩形扫雷、教学步骤、首击安全、经验补差及冻结时间
 │       ├── test_mine_pause.py            # 服务器暂停/继续、防重版本、账号隔离及有效时长结算
 │       ├── test_progression_v1.py        # 尝试/成长/资格/主题/版本/权限及回滚契约
@@ -153,6 +157,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── mine-multilevel-mvp-report.md       # MVP实际效果、测试统计、预览地址与边界说明
 │   ├── mine-difficulty-redesign-plan.md    # 已确认的扫雷五档、教学、矩形棋盘及账号奖励计划
 │   ├── mine-difficulty-redesign-report.md  # 扫雷重制效果、验收统计、本地预览及发布条件
+│   ├── sudoku-implementation-plan.md       # 数独五档13关、推理分级、参考图界面及计时成长待确认计划
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
@@ -216,6 +221,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── result-dialog.js
 │   │   │   │   ├── session.js  # 正式扫雷会话，legacy内为旧三关计时
 │   │   │   │   ├── sudoku-controller.js
+│   │   │   │   ├── sudoku-answer.js       # 历史验收答案隔离，正式页面不导入
 │   │   │   │   └── ui.js
 │   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
 │   │   │   │   ├── controller.js  # 所属业务/游戏控制器与生命周期
@@ -290,6 +296,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   └── mine-stars.test.js  # 所属模块的行为回归测试
 │   │   │   ├── sudoku/  # 数独规则与笔记
 │   │   │   │   └── sudoku.test.js  # 所属模块的行为回归测试
+│   │   │   │   └── sudoku-variant.test.js  # 可变尺寸、笔记边界和无内置答案判题
 │   │   │   └── game-catalog.test.js  # 所属模块的行为回归测试
 │   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
 │   │   │   ├── completion.test.js  # 所属模块的行为回归测试

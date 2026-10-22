@@ -4,7 +4,8 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SUDOKU_PUZZLE, SUDOKU_SOLUTION, createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote, normalizeSudokuNotes, sudokuConflicts, checkSudoku } from "../../../src/games/sudoku/rules.js";
+import { SUDOKU_PUZZLE, createSudoku, selectSudokuCell, setSudokuValue, toggleSudokuNote, normalizeSudokuNotes, sudokuConflicts, checkSudoku } from "../../../src/games/sudoku/rules.js";
+import { SUDOKU_SOLUTION } from '../../../src/legacy/game/sudoku-answer.js';
 
 const units = [
   ...Array.from({ length: 9 }, (_, row) => Array.from({ length: 9 }, (_, col) => row * 9 + col)),
