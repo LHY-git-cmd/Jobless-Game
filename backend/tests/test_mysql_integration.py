@@ -364,6 +364,37 @@ class MySQLIntegrationTests(TestCase):
             self.assertEqual(len(db.scalars(select(progression.ProgressionGrant).where(progression.ProgressionGrant.user_id==uid)).all()),3)
             self.assertIsNotNone(db.get(progression.PlayerQualification,(uid,'sudoku-beginner-001')))
 
+    def test_v13_akari_catalog_completion_and_qualification(self):
+        """真实V13发布16项冻结题目，所有尺寸可结算且重放不重复授奖。"""
+        from backend.app.services import progression_service as service
+        from backend.app.common.game_catalog import AKARI_LEVELS
+        from backend.content_check import akari_solutions
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'akari-v13-test'})
+        raw=self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            for definition in AKARI_LEVELS:
+                self.assertEqual(db.get(progression.GameLevelVersion,(definition['level_id'],1)).definition,definition)
+            self.assertIsNotNone(db.get(progression.GameLevelVersion,('akari-001',1)))
+        total_xp=0
+        for level in AKARI_LEVELS:
+            service.limiter.clear()
+            with self.sessions() as db:
+                attempt=service.dispatch(raw,db,'attempt_create',data={
+                    'level_id':level['level_id'],'level_version':1,'mode':'campaign'},key=str(uuid4())).data
+            payload={'bulbs':akari_solutions(level['puzzle']['map'])[0]}
+            with self.sessions() as db:
+                result=service.dispatch(raw,db,'completion_put',rid=attempt['attempt_id'],data=payload,received_at=utc_now()).data
+                uid=db.get(progression.GameAttempt,attempt['attempt_id']).user_id
+            with self.sessions() as db:
+                replay=service.dispatch(raw,db,'completion_put',rid=attempt['attempt_id'],data=payload,received_at=utc_now()).data
+                self.assertEqual(replay,result)
+            total_xp+=result['awarded_xp']
+            self.assertEqual(result['stars'],1 if level['number']==0 else 3)
+        with self.sessions() as db:
+            summary=db.get(progression.PlayerProgression,uid)
+            self.assertEqual((summary.total_stars,summary.xp),(46,total_xp))
+            self.assertIsNotNone(db.get(progression.PlayerQualification,(uid,'akari-001')))
+
     def test_v7_v8_cancel_pair_competition_has_one_outcome(self):
         """真实MySQL上竞争取消/配对：只能取消成功或配对成功，不能双重占用。"""
         from backend.app.services import pk_service as service

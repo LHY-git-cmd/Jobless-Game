@@ -73,7 +73,7 @@ class ProgressionAPI(TestCase):
     def test_metadata_no_puzzle_and_attempt_idempotency_precedes_conflict(self):
         """目录不发题；同键重试优先于已有活跃尝试判断。"""
         data = self.client.get('/api/v1/levels?game_id=akari').json()
-        self.assertEqual(len(data['items']), 10)
+        self.assertEqual(len(data['items']), 16)
         self.assertNotIn('puzzle', data['items'][0])
         key = str(uuid4())
         first = self.create(key=key)

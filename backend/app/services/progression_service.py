@@ -134,8 +134,8 @@ def progression(db, uid, lock=False):
 
 
 def progress_rows(db, uid, lock=False):
-    """关卡数有限，当前读取最多50条。"""
-    return {r.level_id: r for r in repo.rows(db, PlayerLevelProgress, PlayerLevelProgress.user_id == uid, lock=lock)}
+    """含保留的旧版记录，最多100条覆盖当前有限目录，避免新增16关后丢摘要。"""
+    return {r.level_id: r for r in repo.rows(db, PlayerLevelProgress, PlayerLevelProgress.user_id == uid, lock=lock, limit=100)}
 
 
 def requirements(level, summary, progress):
@@ -293,6 +293,9 @@ def create_attempt(db, uid, data, key, **_):
         board = {'outcome':'active','clock_enabled':True}
         if level['puzzle'].get('tutorial'):
             board.update(tutorial_step=0,tutorial_values=deepcopy(level['puzzle']['values']),tutorial_notes=[0]*16)
+    elif level['game_id'] == 'akari' and level.get('rules_version',1) >= 2:
+        # 新照明沿用已存在的权威时钟；旧尝试继续保持原有连续计时语义。
+        board = {'outcome':'active','clock_enabled':True}
     attempt = GameAttempt(attempt_id=str(uuid4()), user_id=uid, level_id=level['level_id'], level_version=level['level_version'],
               game_id=level['game_id'], mode=data['mode'], status='active', revision=0, started_at=now,
               expires_at=now + timedelta(days=POLICY['attempt_days']), board=board)
@@ -445,10 +448,10 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
         fail(409, 'attempt_terminal', '本次尝试已结束。')
     limiter.check((uid, 'submissions'), 30)
     level = level_definition(db, attempt.level_id, attempt.level_version)
-    if attempt.game_id=='sudoku' and attempt.board.get('clock_enabled'):
+    if attempt.game_id in ('sudoku','akari') and attempt.board.get('clock_enabled'):
         if attempt.board.get('clock_paused_at'):
             fail(409,'attempt_paused','游戏已暂停，请继续游戏后再提交。')
-        if level['puzzle'].get('tutorial') and (attempt.board.get('tutorial_step',0)<5 or data.get('values')!=attempt.board['tutorial_values']):
+        if attempt.game_id=='sudoku' and level['puzzle'].get('tutorial') and (attempt.board.get('tutorial_step',0)<5 or data.get('values')!=attempt.board['tutorial_values']):
             fail(409,'tutorial_step','请先完成全部教学步骤。')
     valid = (attempt.game_id == 'akari' and set(data) == {'bulbs'} and validate_akari(level['puzzle'], data['bulbs'])) or (
              attempt.game_id == 'sudoku' and set(data) == {'values'} and validate_sudoku(level['puzzle'], data['values'])) or (
@@ -492,6 +495,8 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
     qualification_id = 'mine-beginner-001' if attempt.level_id == 'mine-v2-easy-10' else attempt.level_id
     if attempt.level_id=='sudoku-v2-easy-01':
         qualification_id='sudoku-beginner-001'
+    if attempt.level_id=='akari-v2-001':
+        qualification_id='akari-001'
     if qualification_id in QUALIFICATIONS and not repo.get(db, PlayerQualification, (uid, qualification_id)):
         db.add(PlayerQualification(user_id=uid, requirement_id=qualification_id, level_version=attempt.level_version,
                attempt_id=rid, completed_at=received_at))

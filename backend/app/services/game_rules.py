@@ -67,6 +67,9 @@ def stars_for(level, duration_ms):
     """按题目自身的有序毫秒门槛计算星级。"""
     if level.get('max_stars') == 1:
         return 1
+    # 新照明按通关发星；计时仅供记录，不影响星数或是否允许通关。
+    if level.get('game_id') == 'akari' and level.get('rules_version',1) >= 2:
+        return 3
     return 3 if duration_ms <= level['t3_ms'] else 2 if duration_ms <= level['t2_ms'] else 1
 
 

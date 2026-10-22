@@ -11,7 +11,7 @@ class ContentTests(TestCase):
 
     def test_ten_campaign_and_independent_pk_puzzles(self):
         """十关及独立PK池都通过离线搜索，不能把随机棋盘直接发布。"""
-        campaign = [v for v in LEVELS.values() if v['game_id'] == 'akari']
+        campaign = [v for v in LEVELS.values() if v['game_id'] == 'akari' and v.get('rules_version',1) == 1]
         self.assertEqual(len(campaign), 10)
         self.assertTrue(PK_PUZZLES)
         for level in campaign + PK_PUZZLES:
