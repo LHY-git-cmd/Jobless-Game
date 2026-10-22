@@ -6,7 +6,7 @@ import { createAkariSession } from '../../../src/games/akari/session.js';
 /** 小题盘具有两个独立区域，能分别验证未满足数字和最终通关。 */
 function fixture(puzzleOverride={}) {
   const memory=new Map(),calls=[];
-  let attempt,starts=0,time=10000,offline=false;
+  let attempt,starts=0,time=10000,offline=false,started=10000,pausedAt=null,pausedTotal=0;
   const levels=[{level_id:'akari-v2-001',level_version:1,number:1,rows:3,cols:3}];
   const storage={getItem:key=>memory.get(key),setItem:(key,value)=>memory.set(key,value)};
   /** 只模拟资源协议；照明和通关运算使用正式规则。 */
@@ -17,12 +17,16 @@ function fixture(puzzleOverride={}) {
     if(path==='me/level-progress?game_id=akari&limit=50')return {data:{items:[]}};
     if(path==='attempts'||path.endsWith('/restart')) {
       starts++;
+      started=time;pausedAt=null;pausedTotal=0;
       attempt={attempt_id:String(starts),level_id:levels[0].level_id,level_version:options.body.level_version||levels[0].level_version,status:'active',
         puzzle:{rows:3,cols:3,map:['..1','###','1..'],checksum:'fixed',...puzzleOverride},
         timing:{elapsed_ms:0,paused:false,revision:0},
         links:{self:`/api/v1/attempts/${starts}`,completion:`/api/v1/attempts/${starts}/completion`}};
     } else if(path.endsWith('/clock')) {
-      attempt.timing={elapsed_ms:time-10000,paused:options.body.paused,revision:attempt.timing.revision+1};
+      // 测试时钟模拟服务端排除暂停区间，不能把暂停中的墙上时间计入成绩。
+      if(options.body.paused&&pausedAt===null)pausedAt=time;
+      else if(!options.body.paused&&pausedAt!==null){pausedTotal+=time-pausedAt;pausedAt=null;}
+      attempt.timing={elapsed_ms:(pausedAt??time)-started-pausedTotal,paused:options.body.paused,revision:attempt.timing.revision+1};
     } else if(path.endsWith('/completion')) {
       if(offline)throw new Error('离线');
       if(options.method==='PUT')attempt.status='completed';
@@ -69,6 +73,16 @@ test('规则和隐藏页面暂停独立，全部解除才能修改，重开只�
   await model.setPaused('hidden',true);await model.setPaused('rules',false);assert.equal(model.state.paused,true);
   await model.setPaused('hidden',false);assert.equal(model.state.paused,false);
   await model.restart();assert.equal(model.state.board.bulbs.size,0);assert.equal(f.starts,2);
+});
+
+test('手动暂停冻结时间及编辑，隐藏原因解除后继续只累计活动时间',async()=>{
+  const f=fixture(),model=createAkariSession({uid:1,...f});await model.load();await model.open();
+  f.tick(5000);await model.setPaused('manual',true);f.tick(9000);
+  assert.equal(model.elapsed(),5000);await model.toggle(1);assert.equal(model.state.board.bulbs.size,0);
+  await model.setPaused('hidden',true);await model.setPaused('manual',false);
+  assert.equal(model.state.paused,true);f.tick(3000);assert.equal(model.elapsed(),5000);
+  await model.setPaused('hidden',false);f.tick(2000);assert.equal(model.elapsed(),7000);
+  await model.toggle(1);assert.equal(model.state.board.bulbs.has(1),true);
 });
 
 test('退出后迟到响应不可回填棋盘或发奖',async()=>{

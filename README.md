@@ -14,7 +14,7 @@
 
 前端保留多页和原生 ES Module。当前HTML统一加载 `src/pages/` 入口；业务位于 `src/features/`、游戏位于 `src/games/`、公共能力位于 `src/shared/`，已下线实现归入 `src/legacy/`。样式位于 `styles/`，测试按对应模块分组；根 `src/main.js` 和CSS只保留旧URL转接。首页只装配账号、体力和入口滚动，不恢复旧三关。三卡地址保持 `journey.html?game_id=mine/akari/sudoku`，三款游戏使用独立控制器和正式会话。具体约定见 [前端说明](./frontend/README.md) 与 [目录整改报告](./docs/frontend-structure-report.md)。
 
-照明提供5×5七步入门及第1～15关，其中第10～15关全部10×10，不显示难度系数。16题具有唯一解，离线验证直接约束、联合约束及单层矛盾反证的递进。入门高亮目标格，实际练习放灯、撤灯、黑墙阻光、互照冲突和数字规则，最后独立完成；前5关附短说明。支持冲突反馈、规则暂停、账号草稿恢复、终盘断网重试和下一关。普通关按通关时间评1～3星，1/2/3星累计经验统一2/4/6，升星补差额；入门固定1星、2经验。超过二星时限仍可一星通关，结果以弹窗展示，并提供返回首页和下一关；新第1关认可旧照明永久资格。发布需执行V13、V14及新增V16评分迁移，保留旧题目和旧成绩。验收脚本为 `python artifacts/frontend/verify_akari_levels.py`，只使用独立Chrome与临时SQLite；见 [照明实施计划](./docs/akari-implementation-plan.md)。
+照明提供5×5七步入门及第1～15关，其中第10～15关全部10×10，不显示难度系数。16题具有唯一解，离线验证直接约束、联合约束及单层矛盾反证的递进。入门高亮目标格，实际练习放灯、撤灯、黑墙阻光、互照冲突和数字规则，最后独立完成。规则讲解集中在入门，普通关不再显示解题提示和规则按钮。棋盘上方显示可得星数及三星条件，暂停图标可冻结计时并遮住棋盘，继续后只累计活动用时。支持冲突反馈、账号草稿恢复、终盘断网重试和下一关。普通关按通关时间评1～3星，1/2/3星累计经验统一2/4/6，升星补差额；入门固定1星、2经验。超过二星时限仍可一星通关，结果以弹窗展示，并提供返回首页和下一关；新第1关认可旧照明永久资格。发布需执行V13、V14及新增V16评分迁移，保留旧题目和旧成绩。验收脚本为 `python artifacts/frontend/verify_akari_levels.py`，只使用独立Chrome与临时SQLite；见 [照明实施计划](./docs/akari-implementation-plan.md)。
 
 旧的 [扫雷练习地址](./frontend/mine-practice.html) 兼容跳转新版扫雷选关，不再展示原九关。旧本地存档、历史成长和资格保留。新版扫雷浏览器验收使用 `python artifacts/frontend/verify_mine_redesign.py`，只访问临时SQLite及独立Chrome；历史空目录验收脚本保留为材料，原MVP背景见 [历史实施报告](./docs/mine-multilevel-mvp-report.md)。
 

@@ -19,9 +19,19 @@
 .akari-topbar > span { color:var(--gold); font:600 22px/1.4 "Songti SC",SimSun,serif; letter-spacing:2px; }
 .akari-heading { display:flex; align-items:center; gap:20px; padding:32px 0 16px; }
 .akari-heading h2 { font-size:36px; margin:8px 0; letter-spacing:4px; }.akari-heading p { margin:0; }
-.akari-toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin:16px 0; }
-.akari-toolbar > span { color:var(--muted); }.akari-toolbar > div { display:flex; align-items:center; gap:12px; margin-left:auto; }
+.akari-toolbar { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:16px; margin:16px 0; }
+.akari-toolbar > span { grid-column:1; color:var(--muted); }
+.akari-available { grid-column:2; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.akari-available > span:first-child { color:var(--muted); font-size:13px; white-space:nowrap; }
+.akari-tools-right { grid-column:3; justify-self:end; }
+.akari-three-star { margin:0 0 8px; color:var(--muted); text-align:right; font-size:12px; line-height:1.6; }
+.akari-time-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; white-space:nowrap; }
 .akari-toolbar strong { color:var(--gold); font-variant-numeric:tabular-nums; }
+/* 暂停覆盖棋盘；按钮名称、悬停说明与播放图标随暂停状态同步。 */
+#akari-pause-toggle { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; padding:0; }
+#akari-pause-toggle svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+#akari-pause-toggle .akari-resume-icon, #akari-pause-toggle.is-paused .akari-pause-icon { display:none; }
+#akari-pause-toggle.is-paused .akari-resume-icon { display:block; }
 .akari-guide { padding:16px 20px; border-left:3px solid var(--gold); background:var(--surface-raised); line-height:1.9; }
 .akari-guide p { margin:0; }.akari-guide h3 { margin:8px 0; color:var(--gold); font-size:20px; }
 .akari-guide .akari-guide-target { margin-top:10px; color:var(--gold); }
@@ -62,7 +72,13 @@
   .akari-intro { align-items:flex-start; gap:12px; }.akari-intro img { width:60px; height:60px; }.akari-intro h2 { font-size:24px; }
   .akari-play { padding:14px; }.akari-topbar { gap:8px; }.akari-topbar > span { font-size:17px; letter-spacing:0; }
   .akari-topbar button { padding-inline:10px; font-size:14px; }.akari-heading { padding-top:24px; }.akari-heading h2 { font-size:30px; }
-  .akari-toolbar { gap:12px; }.akari-toolbar > div { gap:10px; }.akari-viewport { padding:8px; }
+  .akari-toolbar { grid-template-columns:minmax(0,1fr) auto; gap:12px; }
+  .akari-toolbar > span { grid-column:1/-1; grid-row:2; }
+  .akari-available { grid-column:1; grid-row:1; justify-self:center; }
+  .akari-available .mine-rating svg { width:18px; height:18px; }
+  .akari-tools-right { grid-column:2; grid-row:1; }
+  .akari-time-row { gap:6px; font-size:12px; }
+  .akari-viewport { padding:8px; }
 }
 @media(max-width:480px) {
   .akari-result .journey-actions { flex-direction:column; align-items:stretch; }
