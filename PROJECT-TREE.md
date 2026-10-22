@@ -159,7 +159,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── mine-multilevel-mvp-report.md       # MVP实际效果、测试统计、预览地址与边界说明
 │   ├── mine-difficulty-redesign-plan.md    # 已确认的扫雷五档、教学、矩形棋盘及账号奖励计划
 │   ├── mine-difficulty-redesign-report.md  # 扫雷重制效果、验收统计、本地预览及发布条件
-│   ├── sudoku-implementation-plan.md       # 数独五档13关、推理分级、参考图界面及计时成长待确认计划
+│   ├── sudoku-implementation-plan.md       # 已确认的数独五档13关、推理分级、参考图界面及计时成长计划
+│   ├── sudoku-implementation-report.md     # 数独实现、真实MySQL/浏览器证据、旧失败及本地体验
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划

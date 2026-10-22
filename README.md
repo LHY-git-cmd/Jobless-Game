@@ -2,13 +2,13 @@
 
 远程仓库：[LHY-git-cmd/Jobless-Game](https://github.com/LHY-git-cmd/Jobless-Game)。
 
-手机端优先的解谜游戏。首页保留扫雷、照明、数独三张卡片，分别进入对应的选关页。扫雷已接入入门、简单、中等、困难、地狱五档；照明和数独继续显示重制占位。界面沿用海岛背景、深蓝和暖金色。
+手机端优先的解谜游戏。首页保留扫雷、照明、数独三张卡片，分别进入对应的选关页。扫雷和数独已接入入门、简单、中等、困难、地狱五档；照明继续显示重制占位。界面沿用海岛背景、深蓝和暖金色。
 
 设计、开发与部署前请阅读 [项目硬约束](./README-CONSTRAINTS.md)，其中明确了 2 核、2GB 内存与宝塔共存的资源边界，以及后续登录功能的账号、迁移和验收要求。
 
 完整目录结构与文件夹用途见 [项目目录树](./PROJECT-TREE.md)。后续目录结构、所列文件或用途变更时，必须同步更新该文档。
 
-前端保留多页和原生 ES Module。当前HTML统一加载 `src/pages/` 入口；业务位于 `src/features/`、游戏位于 `src/games/`、公共能力位于 `src/shared/`，已下线实现归入 `src/legacy/`。样式位于 `styles/`，测试按对应模块分组；根 `src/main.js` 和CSS只保留旧URL转接。首页只装配账号、历史记录和入口滚动，不恢复旧三关。三卡地址保持 `journey.html?game_id=mine/akari/sudoku`，扫雷使用独立控制器和正式会话，其他游戏保留占位。具体约定见 [前端说明](./frontend/README.md) 与 [目录整改报告](./docs/frontend-structure-report.md)。
+前端保留多页和原生 ES Module。当前HTML统一加载 `src/pages/` 入口；业务位于 `src/features/`、游戏位于 `src/games/`、公共能力位于 `src/shared/`，已下线实现归入 `src/legacy/`。样式位于 `styles/`，测试按对应模块分组；根 `src/main.js` 和CSS只保留旧URL转接。首页只装配账号、历史记录和入口滚动，不恢复旧三关。三卡地址保持 `journey.html?game_id=mine/akari/sudoku`，扫雷和数独使用独立控制器和正式会话，照明保留占位。具体约定见 [前端说明](./frontend/README.md) 与 [目录整改报告](./docs/frontend-structure-report.md)。
 
 旧的 [扫雷练习地址](./frontend/mine-practice.html) 兼容跳转新版扫雷选关，不再展示原九关。旧本地存档、历史成长和资格保留。新版扫雷浏览器验收使用 `python artifacts/frontend/verify_mine_redesign.py`，只访问临时SQLite及独立Chrome；历史空目录验收脚本保留为材料，原MVP背景见 [历史实施报告](./docs/mine-multilevel-mvp-report.md)。
 
@@ -20,11 +20,15 @@
 
 后端按控制层、业务层、数据访问层、模型层和公共层组织，调用方向为 Controller → Service → Repository。层级职责和扩展约定见 [后端架构说明](./backend/README.md#五层架构)。
 
-新版选关页按游戏独立显示，扫雷五档已接入，其他游戏后续设计。已有星级、经验、等级、资格和主题权益保留，已装备主题跟随账号保存。[双人竞速](./frontend/pk.html)保留独立入口。
+数独入口为 `journey.html?game_id=sudoku`：4×4五步教学及简单、中等、困难、地狱各3道9×9固定题，共13关。所有题离线验证唯一解，并按单候选、隐藏单数、数对/区块及鱼/翼/强链实际推理分档，高档须通过低档停滞检查。普通题三星/二星时限依次为5/10、10/20、20/40、35/70分钟；逐星累计经验依次2/4/6、3/6/9、4/8/12、5/10/15，教学固定1星2经验。满星共37星128经验，只补历史最高差额。
+
+数独游戏画面按用户参考图制作，支持手动候选笔记、同数及行列宫高亮、重复数字检查、键盘和触屏输入；允许反复修改，不设错误次数失败，不提供答案提示。规则、选关、标签页隐藏及跨页离开暂停，服务端负责有效用时和终盘奖励。未完成答案和笔记按账号/题目保存在本浏览器，不承诺跨浏览器恢复；终盘断网保留原负载重试，未抵达服务端时仍可能累计活动时间。新简单第1题正式通关满足原数独资格，教学不授资格。详细设计见 [数独计划](./docs/sudoku-implementation-plan.md)，验证和已知问题见 [实施报告](./docs/sudoku-implementation-report.md)。
+
+新版选关页按游戏独立显示，扫雷和数独五档已接入，照明后续设计。已有星级、经验、等级、资格和主题权益保留，已装备主题跟随账号保存。[双人竞速](./frontend/pk.html)保留独立入口。
 
 双人竞速必须正式通过扫雷初级（新版简单10×10通关同样认可）、照明第1关、数独初级三项，旧客户端成绩与本地练习不自动补资格。支持房间码邀请和普通照明FIFO匹配；双方准备后5秒倒计时、10分钟竞速、一秒平局窗口，断线宽限30秒，PK不发成长奖励。中间照明/数独草稿按账号保存在本浏览器，服务器负责正式起点、判题、奖励、资格与结果。
 
-这些新能力默认关闭；扫雷重制需先在专用环境完成Flyway V1～V11，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`。本次未改写现有站点配置或部署生产。实际实现、测试统计和待完成的目标机容量验收见 [成长竞速实施报告](./docs/game-progression-pk-report.md)，操作命令见 [后端说明](./backend/README.md)。
+这些新能力默认关闭；当前扫雷/数独需先在专用环境完成Flyway V1～V12，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`。本次未改写现有站点配置或部署生产。实际实现、测试统计和待完成的目标机容量验收见 [成长竞速实施报告](./docs/game-progression-pk-report.md)，操作命令见 [后端说明](./backend/README.md)。
 
 顶部导航按“排行榜 / 无职游戏 / 论坛”排列。排行榜只提供扫雷、照明、数独三个独立分榜，原排行榜入口默认展示扫雷分榜。文字论坛只填写正文即可发布帖子，支持评论、评论下回复及各自点赞；游客可读，登录后参与，复用游戏账号和头像。
 
@@ -70,6 +74,8 @@
 背景音乐使用用户后续提供的 `backmusic-墨澜音 - 阿尔法脑波音乐 (记忆力提升).mp3`，网页资源为 `frontend/assets/audio/background.mp3`，按设置音量循环播放。首次进入可能需要点击或键盘操作后开始，胜利音播放期间暂停背景，音效结束或关闭结算后在背景开关开启时从原位置恢复。页间跳转保存播放位置；多文档跳转可能短暂停顿，下一页仍受浏览器自动播放规则限制。原始 NCM 不作为网页资源。
 
 ## 本地预览
+
+数独独立预览：在项目根目录运行 `python artifacts/frontend/verify_sudoku.py --preview --port 8003`，打开 `http://127.0.0.1:8003/journey.html?game_id=sudoku`。预览使用忽略的 `artifacts/frontend/sudoku-preview.sqlite3`，账号与其他预览隔离，使用正常登录流程创建测试账号。真实浏览器验收分别运行 `python artifacts/frontend/verify_sudoku.py` 与 `python artifacts/frontend/verify_sudoku_interactions.py`；两者仅访问各自临时数据库。
 
 完整登录运行方式见 [后端运行与部署](./backend/README.md)：配置 MySQL、执行 Flyway 后，在项目根目录运行 `python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001 --workers 1 --limit-concurrency 32`，打开 `http://127.0.0.1:8001/`。Python 依赖与环境示例位于 `backend/`。
 
