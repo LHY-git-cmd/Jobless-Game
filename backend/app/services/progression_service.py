@@ -205,8 +205,8 @@ def mine_timing(attempt,now=None):
 def mine_clock(db,uid,rid,data,**_):
     """比较交换阻止旧标签页迟到暂停；同编号重试不重复累计暂停时长。"""
     attempt=owned_attempt(db,uid,rid)
-    if attempt.game_id!='mine':
-        fail(422,'invalid_clock','此游戏不支持扫雷暂停计时。')
+    if attempt.game_id!='mine' and not attempt.board.get('clock_enabled'):
+        fail(422,'invalid_clock','此游戏不支持暂停计时。')
     if attempt.status!='active' or attempt.board['outcome']!='active':
         return attempt_resource(db,attempt)
     board=deepcopy(attempt.board)
@@ -238,6 +238,9 @@ def attempt_resource(db, attempt, status=200):
             'puzzle': deepcopy(level['puzzle']), 'links': {'self': base, 'completion': base + '/completion'}}
     if attempt.game_id == 'mine':
         data['board'] = mine_public(attempt.board)
+        data['timing'] = mine_timing(attempt)
+    elif attempt.board.get('clock_enabled'):
+        data['board'] = {k:deepcopy(v) for k,v in attempt.board.items() if k in ('outcome','tutorial_step','tutorial_values','tutorial_notes')}
         data['timing'] = mine_timing(attempt)
     headers = {'ETag': etag(attempt.revision)}
     if status == 201:
@@ -286,6 +289,10 @@ def create_attempt(db, uid, data, key, **_):
                  'revealed': [], 'requested': [], 'outcome': 'active'}
         if puzzle.get('tutorial'):
             board['tutorial_step'] = 0
+    elif level['game_id'] == 'sudoku' and level.get('rules_version',1) >= 2:
+        board = {'outcome':'active','clock_enabled':True}
+        if level['puzzle'].get('tutorial'):
+            board.update(tutorial_step=0,tutorial_values=deepcopy(level['puzzle']['values']),tutorial_notes=[0]*16)
     attempt = GameAttempt(attempt_id=str(uuid4()), user_id=uid, level_id=level['level_id'], level_version=level['level_version'],
               game_id=level['game_id'], mode=data['mode'], status='active', revision=0, started_at=now,
               expires_at=now + timedelta(days=POLICY['attempt_days']), board=board)
@@ -373,7 +380,7 @@ def tutorial_action(db, uid, rid, tutorial_action, **_):
     attempt = owned_attempt(db, uid, rid)
     action = tutorial_action
     level = level_definition(db, attempt.level_id, attempt.level_version)
-    if not level['puzzle'].get('tutorial') or action not in ('number','flag'):
+    if attempt.game_id!='mine' or not level['puzzle'].get('tutorial') or action not in ('number','flag'):
         fail(422, 'invalid_tutorial_action', '教学动作不合法。')
     target = {'number': 2, 'flag': 3}[action]
     board = deepcopy(attempt.board)
@@ -399,6 +406,32 @@ def grant_cosmetics(db, uid, summary):
     return unlocked
 
 
+def sudoku_tutorial(db,uid,rid,tutorial_action,data,**_):
+    """逐步核对教学真实输入，重放只读原步骤，不允许跳步或覆盖终盘。"""
+    attempt=owned_attempt(db,uid,rid)
+    level=level_definition(db,attempt.level_id,attempt.level_version)
+    steps=[('row',1,2),('erase',1,0),('note',1,2),('column',6,1),('box',1,2)]
+    target=next((i for i,v in enumerate(steps) if v[0]==tutorial_action),None)
+    if attempt.game_id!='sudoku' or not level['puzzle'].get('tutorial') or target is None:
+        fail(422,'invalid_tutorial_action','教学动作不合法。')
+    _,index,value=steps[target]
+    if data!={'index':index,'value':value}:
+        fail(409,'tutorial_input','请按引导选择目标格并输入对应数字。')
+    board=deepcopy(attempt.board)
+    if board['tutorial_step']>target:
+        return attempt_resource(db,attempt)
+    if attempt.status!='active' or board['tutorial_step']!=target:
+        fail(409,'tutorial_step','请先完成当前教学步骤。')
+    if board.get('clock_paused_at'):
+        fail(409,'attempt_paused','游戏已暂停，请继续游戏后再操作。')
+    if tutorial_action=='note':
+        board['tutorial_notes'][index]=1<<(value-1)
+    else:
+        board['tutorial_values'][index]=value;board['tutorial_notes'][index]=0
+    board['tutorial_step']=target+1;attempt.board=board;attempt.revision+=1
+    return attempt_resource(db,attempt)
+
+
 def complete_attempt(db, uid, rid, data, received_at, **_):
     """判题、里程碑、资格、外观和不可变快照在一个事务内提交。"""
     attempt = owned_attempt(db, uid, rid)
@@ -412,13 +445,18 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
         fail(409, 'attempt_terminal', '本次尝试已结束。')
     limiter.check((uid, 'submissions'), 30)
     level = level_definition(db, attempt.level_id, attempt.level_version)
+    if attempt.game_id=='sudoku' and attempt.board.get('clock_enabled'):
+        if attempt.board.get('clock_paused_at'):
+            fail(409,'attempt_paused','游戏已暂停，请继续游戏后再提交。')
+        if level['puzzle'].get('tutorial') and (attempt.board.get('tutorial_step',0)<5 or data.get('values')!=attempt.board['tutorial_values']):
+            fail(409,'tutorial_step','请先完成全部教学步骤。')
     valid = (attempt.game_id == 'akari' and set(data) == {'bulbs'} and validate_akari(level['puzzle'], data['bulbs'])) or (
              attempt.game_id == 'sudoku' and set(data) == {'values'} and validate_sudoku(level['puzzle'], data['values'])) or (
              attempt.game_id == 'mine' and not data and attempt.board['outcome'] == 'won')
     if not valid:
         fail(422, 'invalid_completion', '终盘尚未满足全部规则。')
     terminal_at = datetime.fromisoformat(attempt.board['finished_at']) if attempt.game_id == 'mine' and attempt.board.get('finished_at') else received_at
-    duration = max(0,elapsed_ms(attempt.started_at, terminal_at)-attempt.board.get('clock_paused_ms',0)) if attempt.game_id=='mine' else elapsed_ms(attempt.started_at,terminal_at)
+    duration = max(0,elapsed_ms(attempt.started_at, terminal_at)-attempt.board.get('clock_paused_ms',0))
     current = stars_for(level, duration) if attempt.mode == 'campaign' else 0
     summary = repo.get(db, PlayerProgression, uid)
     if summary is None:
@@ -452,6 +490,8 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
     summary.total_stars += progress.best_stars - previous
     summary.revision += 1
     qualification_id = 'mine-beginner-001' if attempt.level_id == 'mine-v2-easy-10' else attempt.level_id
+    if attempt.level_id=='sudoku-v2-easy-01':
+        qualification_id='sudoku-beginner-001'
     if qualification_id in QUALIFICATIONS and not repo.get(db, PlayerQualification, (uid, qualification_id)):
         db.add(PlayerQualification(user_id=uid, requirement_id=qualification_id, level_version=attempt.level_version,
                attempt_id=rid, completed_at=received_at))
@@ -531,7 +571,7 @@ def cosmetics(db, uid, **_):
 
 
 ACTIONS = {'attempt_create': create_attempt, 'attempt_get': get_attempt, 'attempt_abandon': abandon_attempt,
-           'reveal': reveal, 'mine_clock': mine_clock, 'tutorial_action': tutorial_action, 'completion_put': complete_attempt, 'completion_get': get_completion,
+           'reveal': reveal, 'mine_clock': mine_clock, 'tutorial_action': tutorial_action, 'sudoku_tutorial': sudoku_tutorial, 'completion_put': complete_attempt, 'completion_get': get_completion,
            'level_progress': list_progress, 'appearance_get': appearance, 'appearance_put': put_appearance,
            'cosmetics': cosmetics}
 READ_ACTIONS = {'attempt_get', 'completion_get', 'level_progress', 'appearance_get', 'cosmetics', 'progression', 'eligibility'}

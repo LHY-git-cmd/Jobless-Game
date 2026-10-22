@@ -8,7 +8,7 @@ from ..common.database import get_db
 from ..common.concurrency import bounded_db_call
 from ..common.game_catalog import LEVELS, metadata, published_levels
 from ..common.security import utc_now
-from ..models.schemas.progression import AttemptCreate, AttemptPatch, CompletionPut, AppearancePut, EmptyDTO, MineClockPut
+from ..models.schemas.progression import AttemptCreate, AttemptPatch, CompletionPut, AppearancePut, EmptyDTO, MineClockPut, SudokuTutorialPut
 from ..services import progression_service as service
 from .auth_controller import enforce_same_origin
 
@@ -124,6 +124,12 @@ async def reveal(attempt_id: str, cell_index: int, payload: EmptyDTO, request: R
 async def tutorial_action(attempt_id: str, action: str, payload: EmptyDTO, request: Request, db: Session = Depends(get_db)):
     """教学的理解数字/标记动作按服务器步骤验证，重放不重复推进。"""
     return await run(request, db, 'tutorial_action', rid=attempt_id, tutorial_action=action)
+
+
+@router.put('/attempts/{attempt_id}/sudoku-tutorial-actions/{action}')
+async def sudoku_tutorial_action(attempt_id: str, action: str, payload: SudokuTutorialPut, request: Request, db: Session = Depends(get_db)):
+    """数独教学核验实际填数/清除/笔记，拒绝自报完成步骤。"""
+    return await run(request,db,'sudoku_tutorial',rid=attempt_id,tutorial_action=action,data=payload.model_dump())
 
 
 @router.put('/attempts/{attempt_id}/completion', status_code=201)

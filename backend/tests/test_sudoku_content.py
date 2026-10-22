@@ -36,7 +36,9 @@ class SudokuContent(TestCase):
                 self.assertEqual(grade(values), level['difficulty'])
                 identity = canonical(values)
                 self.assertNotIn(identity, identities); identities.add(identity)
-                chains += any(v['technique'] == 'coloring' for v in record['trace'])
+                if any(v['technique'] == 'coloring' for v in record['trace']):
+                    self.assertFalse(solve(values,9,4,coloring=False)['solved'])
+                    chains += 1
         self.assertGreaterEqual(chains, 1)
 
     def test_forged_trace_is_rejected(self):

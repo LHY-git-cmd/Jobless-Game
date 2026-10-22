@@ -109,7 +109,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V8__create_matchmaking_tickets.sql # 排队票及占用票据关联
 │   │   ├── V9__index_game_history_retention.sql # 终态时间索引，支持有界清理
 │   │   ├── V10__publish_mine_difficulties.sql # 扫雷五档原七项不可变关卡与独立奖励定义
-│   │   └── V11__expand_mine_board_choices.sql # 中等/困难/地狱新增六个矩形棋盘，不改旧定义
+│   │   ├── V11__expand_mine_board_choices.sql # 中等/困难/地狱新增六个矩形棋盘，不改旧定义
+│   │   └── V12__publish_sudoku_difficulties.sql # 数独教学与四档各三题，保留历史定义
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -136,6 +137,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_forum.py                 # 论坛权限、文字/请求体、幂等、归属、通知及事务回滚
 │       ├── test_game_content.py          # 题库唯一解、评分边界、无死锁与初级难度
 │       ├── test_sudoku_content.py        # 数独唯一性、真实技巧分级和伪造推理拒绝
+│       ├── test_sudoku_api.py            # 数独13题判题、教学、暂停、奖励及资格隔离
 │       ├── test_mine_redesign.py         # 五档矩形扫雷、教学步骤、首击安全、经验补差及冻结时间
 │       ├── test_mine_pause.py            # 服务器暂停/继续、防重版本、账号隔离及有效时长结算
 │       ├── test_progression_v1.py        # 尝试/成长/资格/主题/版本/权限及回滚契约
@@ -295,7 +297,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── mine-session.test.js  # 所属模块的行为回归测试
 │   │   │   │   └── mine-stars.test.js  # 所属模块的行为回归测试
 │   │   │   ├── sudoku/  # 数独规则与笔记
-│   │   │   │   └── sudoku.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── sudoku.test.js  # 所属模块的行为回归测试
 │   │   │   │   └── sudoku-variant.test.js  # 可变尺寸、笔记边界和无内置答案判题
 │   │   │   └── game-catalog.test.js  # 所属模块的行为回归测试
 │   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入

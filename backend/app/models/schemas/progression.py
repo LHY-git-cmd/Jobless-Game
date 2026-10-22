@@ -25,7 +25,13 @@ class AttemptPatch(StrictDTO):
 class CompletionPut(StrictDTO):
     """实际允许字段进一步由绑定游戏校验。"""
     bulbs: list[StrictInt] | None = Field(default=None, max_length=400)
-    values: list[StrictInt] | None = Field(default=None, min_length=81, max_length=81)
+    values: list[StrictInt] | None = Field(default=None, min_length=16, max_length=81)
+
+
+class SudokuTutorialPut(StrictDTO):
+    """仅接受教学输入，不接受步骤号、时间或标准答案。"""
+    index: StrictInt = Field(ge=0,le=15)
+    value: StrictInt = Field(ge=0,le=4)
 
 
 class EmptyDTO(StrictDTO):

@@ -327,6 +327,43 @@ class MySQLIntegrationTests(TestCase):
             self.assertEqual((db.get(progression.PlayerProgression, uid).xp, db.get(progression.PlayerProgression, uid).total_stars), (6,3))
             self.assertEqual(len(db.scalars(select(progression.ProgressionGrant).where(progression.ProgressionGrant.user_id==uid)).all()), 3)
 
+    def test_v12_sudoku_catalog_and_concurrent_reward(self):
+        """真实V12十三题定义一致，同局重试及历史双尝试并发只授一次奖励。"""
+        from backend.app.services import progression_service as service
+        from backend.app.common.game_catalog import SUDOKU_LEVELS
+        from backend.sudoku_content import solutions
+        from threading import Barrier
+        from copy import deepcopy
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'sudoku-v12-test'})
+        raw=self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            for definition in SUDOKU_LEVELS:
+                self.assertEqual(db.get(progression.GameLevelVersion,(definition['level_id'],1)).definition,definition)
+            attempt=service.dispatch(raw,db,'attempt_create',data={
+                'level_id':'sudoku-v2-easy-01','level_version':1,'mode':'campaign'},key=str(uuid4())).data
+            original=db.get(progression.GameAttempt,attempt['attempt_id']);uid=original.user_id;second_id=str(uuid4())
+            # 防御性夹具模拟旧版本遗留的同题双活跃局，正常创建接口禁止此状态。
+            db.add(progression.GameAttempt(attempt_id=second_id,user_id=uid,level_id=original.level_id,
+                level_version=1,game_id='sudoku',mode='campaign',status='active',revision=0,
+                started_at=original.started_at,expires_at=original.expires_at,board=deepcopy(original.board)))
+            db.commit()
+        barrier=Barrier(3);payload={'values':solutions(attempt['puzzle']['values'])[0]}
+
+        def complete(rid):
+            """独立连接实际争用InnoDB账号锁，收到已存在结果时读取同一快照。"""
+            with self.sessions() as db:
+                barrier.wait(timeout=10)
+                return service.dispatch(raw,db,'completion_put',rid=rid,data=payload,received_at=utc_now()).data
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            results=list(executor.map(complete,[attempt['attempt_id'],attempt['attempt_id'],second_id]))
+        self.assertEqual(results[0],results[1])
+        self.assertEqual(sorted(v['awarded_xp'] for v in (results[0],results[2])),[0,6])
+        with self.sessions() as db:
+            summary=db.get(progression.PlayerProgression,uid)
+            self.assertEqual((summary.total_stars,summary.xp),(3,6))
+            self.assertEqual(len(db.scalars(select(progression.ProgressionGrant).where(progression.ProgressionGrant.user_id==uid)).all()),3)
+            self.assertIsNotNone(db.get(progression.PlayerQualification,(uid,'sudoku-beginner-001')))
+
     def test_v7_v8_cancel_pair_competition_has_one_outcome(self):
         """真实MySQL上竞争取消/配对：只能取消成功或配对成功，不能双重占用。"""
         from backend.app.services import pk_service as service

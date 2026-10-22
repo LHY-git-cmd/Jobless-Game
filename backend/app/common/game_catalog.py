@@ -9,13 +9,15 @@ POLICY = CATALOG['policy']
 LEVELS = {level['level_id']: level for level in CATALOG['levels']}
 MINE_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/mine-catalog-v2.json').read_text(encoding='utf-8'))['levels']
 LEVELS.update({level['level_id']: level for level in MINE_LEVELS})
+SUDOKU_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/sudoku-catalog-v2.json').read_text(encoding='utf-8'))['levels']
+LEVELS.update({level['level_id']: level for level in SUDOKU_LEVELS})
 PK_PUZZLES = CATALOG['pk_puzzles']
 QUALIFICATIONS = ('mine-beginner-001', 'akari-001', 'sudoku-beginner-001')
 
 
 def published_levels():
     """旧扫雷定义用于恢复及永久资格，新选关展示教学及四档各三种棋盘。"""
-    return [level for level in LEVELS.values() if level['level_id'] != 'mine-beginner-001']
+    return [level for level in LEVELS.values() if level['level_id'] not in ('mine-beginner-001','sudoku-beginner-001')]
 
 
 def metadata(level):

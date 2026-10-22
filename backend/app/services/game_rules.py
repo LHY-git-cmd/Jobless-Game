@@ -48,14 +48,19 @@ def validate_akari(puzzle, bulbs):
 
 def validate_sudoku(puzzle, values):
     """只核对范围、给定数字和行列宫，不在线求解。"""
-    if not isinstance(values, list) or len(values) != 81 or any(type(v) is not int or not 1 <= v <= 9 for v in values):
+    size = puzzle.get('rows',9)
+    box = 2 if size == 4 else 3
+    if size not in (4,9) or puzzle.get('cols',size) != size:
+        return False
+    if not isinstance(values, list) or len(values) != size*size or any(type(v) is not int or not 1 <= v <= size for v in values):
         return False
     if any(clue and clue != values[i] for i, clue in enumerate(puzzle['values'])):
         return False
-    groups = ([r * 9 + c for c in range(9)] for r in range(9))
-    all_groups = list(groups) + [[r * 9 + c for r in range(9)] for c in range(9)]
-    all_groups += [[(br + r) * 9 + bc + c for r in range(3) for c in range(3)] for br in (0, 3, 6) for bc in (0, 3, 6)]
-    return all({values[i] for i in group} == set(range(1, 10)) for group in all_groups)
+    groups = ([r * size + c for c in range(size)] for r in range(size))
+    all_groups = list(groups) + [[r * size + c for r in range(size)] for c in range(size)]
+    all_groups += [[(br+r)*size+bc+c for r in range(box) for c in range(box)]
+                   for br in range(0,size,box) for bc in range(0,size,box)]
+    return all({values[i] for i in group} == set(range(1,size+1)) for group in all_groups)
 
 
 def stars_for(level, duration_ms):

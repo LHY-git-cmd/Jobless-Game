@@ -182,8 +182,14 @@ def main():
             answers = akari_solutions(level['puzzle']['map'])
             assert len(answers) == 1 and validate_akari(level['puzzle'], answers[0]), level['level_id']
         elif level['game_id'] == 'sudoku':
-            assert len(sudoku_solutions(level['puzzle']['values'])) == 1
-            assert sudoku_singles(level['puzzle']['values'])
+            if level.get('rules_version',1)>=2:
+                from .sudoku_content import solutions,grade
+                size=level['puzzle']['rows']
+                assert len(solutions(level['puzzle']['values'],size))==1
+                if size==9: assert grade(level['puzzle']['values'])==level['difficulty']
+            else:
+                assert len(sudoku_solutions(level['puzzle']['values'])) == 1
+                assert sudoku_singles(level['puzzle']['values'])
     print(f'Content verified: {len(LEVELS)} campaign/qualification levels, {len(PK_PUZZLES)} PK puzzles')
 
 

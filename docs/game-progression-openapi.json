@@ -1914,6 +1914,166 @@
         }
       }
     },
+    "/api/v1/attempts/{attempt_id}/sudoku-tutorial-actions/{action}": {
+      "put": {
+        "tags": [
+          "progression"
+        ],
+        "summary": "Sudoku Tutorial Action",
+        "description": "数独教学核验实际填数/清除/笔记，拒绝自报完成步骤。",
+        "operationId": "sudoku_tutorial_action_api_v1_attempts__attempt_id__sudoku_tutorial_actions__action__put",
+        "parameters": [
+          {
+            "name": "attempt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attempt Id"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Action"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SudokuTutorialPut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "RFC9457 Problem Details；429/503带Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/attempts/{attempt_id}/completion": {
       "put": {
         "tags": [
@@ -4992,7 +5152,7 @@
                 },
                 "type": "array",
                 "maxItems": 81,
-                "minItems": 81
+                "minItems": 16
               },
               {
                 "type": "null"
@@ -5113,6 +5273,30 @@
         ],
         "title": "SubmissionPut",
         "description": "有界终盘布局，非法布局允许修正后再提交。"
+      },
+      "SudokuTutorialPut": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "maximum": 15.0,
+            "minimum": 0.0,
+            "title": "Index"
+          },
+          "value": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "index",
+          "value"
+        ],
+        "title": "SudokuTutorialPut",
+        "description": "仅接受教学输入，不接受步骤号、时间或标准答案。"
       },
       "Problem": {
         "type": "object",
