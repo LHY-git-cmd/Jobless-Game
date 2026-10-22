@@ -113,6 +113,32 @@ class MySQLIntegrationTests(TestCase):
         self.keys.append(name)
         return name
 
+    def test_growth_rankings_use_real_indexes_and_public_paging(self):
+        """真实 MySQL5.7/Flyway 验证 V17 索引、星数并列分页和服务端等级。"""
+        from unittest.mock import patch
+        from backend.app.services.progression_service import account_level
+        indexes = {item['name'] for item in inspect(self.engine).get_indexes('player_progression')}
+        self.assertTrue({'ix_progression_stars', 'ix_progression_xp'} <= indexes)
+        with self.sessions() as db:
+            for stars, xp in [(8, 90), (8, 180), (3, 90)]:
+                name = self.new_name()
+                user = User(username=name, username_key=name, password_hash='test-only', created_at=utc_now())
+                db.add(user)
+                db.flush()
+                db.add(progression.PlayerProgression(user_id=user.id, total_stars=stars, xp=xp, revision=0))
+            db.commit()
+        with patch.object(get_settings(), 'progression_enabled', True):
+            first = self.client.get('/api/rankings/growth/stars?page_size=1&page=2')
+            self.assertEqual(first.status_code, 200, first.text)
+            self.assertEqual(first.json()['total'], 3)
+            self.assertEqual(first.json()['entries'][0]['rank'], 1)
+            third = self.client.get('/api/rankings/growth/stars?page_size=1&page=3').json()['entries'][0]
+            self.assertEqual((third['rank'], third['total_stars']), (3, 3))
+            levels = self.client.get('/api/rankings/growth/level').json()['entries']
+            self.assertEqual([item['xp'] for item in levels], [180, 90, 90])
+            self.assertEqual([item['rank'] for item in levels], [1, 2, 2])
+            self.assertEqual([item['level'] for item in levels], [account_level(item['xp']) for item in levels])
+
     def test_real_cookie_expiry_and_logout(self):
         name = self.new_name()
         response = self.client.post("/api/auth/login", json={"username": name, "password": " secret "})

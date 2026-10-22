@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from ..common.config import get_settings
 from ..common.database import get_db
 from ..models.schemas.ranking import Category, CompleteRequest, RestartRequest, StartRequest, ProgressResponse, RankingsResponse, PersonalRecordsResponse
+from ..models.schemas.ranking import GrowthCategory, GrowthRankingsResponse
+from ..common.exceptions import AppError
 from ..services import ranking_service as service
 from .auth_controller import enforce_same_origin
 
@@ -55,6 +57,15 @@ async def rankings(category: Category, page: int = Query(default=1, ge=1, le=100
                    page_size: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
     """公共榜单按有限页大小读取，避免无限返回全部玩家。"""
     return await service.execute(service.rankings_transaction, category, page, page_size, db)
+
+
+@router.get('/rankings/growth/{category}', response_model=GrowthRankingsResponse)
+async def growth_rankings(category: GrowthCategory, page: int = Query(default=1, ge=1, le=100000),
+                          page_size: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
+    """公开星数和等级榜；成长未开启时不访问尚未迁移的成长表。"""
+    if not get_settings().progression_enabled:
+        raise AppError(404, '成长排行榜暂未开放。')
+    return await service.execute(service.growth_rankings_transaction, category, page, page_size, db)
 
 
 @router.get("/records/me", response_model=PersonalRecordsResponse)

@@ -14,6 +14,8 @@ from backend.app.common.exceptions import AppError
 from backend.app.common.security import utc_now
 from backend.app.models.entities import User
 from backend.app.models.entities.ranking import CompletionRecord, LeaderboardEntry
+from backend.app.models.entities.progression import PlayerProgression
+from backend.app.services.progression_service import account_level
 from backend.app.models.schemas.ranking import StartRequest, RestartRequest, CompleteRequest
 from backend.app.services import ranking_service as service
 from backend.app import main
@@ -46,6 +48,15 @@ class RankingTests(TestCase):
     def start(self):
         """通过正常业务建立一轮挑战。"""
         return service.start_transaction("token", StartRequest(request_id=uuid4()), self.db)
+
+    def seed_growth(self):
+        """同星、同经验跨页样例；只有真实成长摘要参与成长榜。"""
+        for uid, stars, xp in [(1, 8, 90), (2, 8, 180), (3, 3, 180), (4, 2, 179)]:
+            if uid != 1:
+                self.db.add(User(id=uid, username=f"玩家{uid}", username_key=f"p{uid}",
+                                 password_hash="test-only", created_at=utc_now()))
+            self.db.add(PlayerProgression(user_id=uid, total_stars=stars, xp=xp, revision=0))
+        self.db.commit()
 
     def complete(self, state, category, seconds, development=False):
         """按服务端给出的尝试标识提交某一关。"""
@@ -190,6 +201,41 @@ class RankingAPITests(TestCase):
         self.settings_patch.stop()
         main.app.dependency_overrides.clear()
         RankingTests.tearDown(self)
+
+    def test_growth_stars_are_public_and_ties_span_pages(self):
+        """星数降序、同星并列，第二页名次仍从全榜计算且不泄露认证字段。"""
+        RankingTests.seed_growth(self)
+        self.config.progression_enabled = True
+        response = self.client.get('/api/rankings/growth/stars?page_size=1&page=2')
+        self.assertEqual(response.status_code, 200, response.text)
+        value = response.json()
+        self.assertEqual(value['total'], 4)
+        self.assertEqual(value['entries'][0]['rank'], 1)
+        self.assertEqual(value['entries'][0]['total_stars'], 8)
+        self.assertEqual(set(value['entries'][0]), {'rank', 'user_id', 'username', 'avatar_id', 'total_stars', 'level', 'xp'})
+        third = self.client.get('/api/rankings/growth/stars?page_size=1&page=3').json()
+        self.assertEqual(third['entries'][0]['rank'], 3)
+
+    def test_growth_levels_follow_authoritative_experience(self):
+        """等级复用账号阈值；同等级按经验排序，相同经验并列。"""
+        RankingTests.seed_growth(self)
+        self.config.progression_enabled = True
+        value = self.client.get('/api/rankings/growth/level').json()
+        self.assertEqual([row['xp'] for row in value['entries']], [180, 180, 179, 90])
+        self.assertEqual([row['rank'] for row in value['entries']], [1, 1, 3, 4])
+        for row in value['entries']:
+            self.assertEqual(row['level'], account_level(row['xp']))
+
+    def test_growth_bounds_empty_board_and_disabled_feature(self):
+        """未开放时不查成长表；空榜不伪造零分玩家，拒绝未知类别及无限页大小。"""
+        self.config.progression_enabled = False
+        with patch.object(service.repository, 'growth_ranking_rows', side_effect=AssertionError('disabled query')):
+            self.assertEqual(self.client.get('/api/rankings/growth/stars').status_code, 404)
+        self.config.progression_enabled = True
+        self.assertEqual(self.client.get('/api/rankings/growth/stars').json()['entries'], [])
+        for path in ['/api/rankings/growth/points', '/api/rankings/growth/stars?page=0',
+                     '/api/rankings/growth/level?page_size=51']:
+            self.assertEqual(self.client.get(path).status_code, 422)
 
     def test_public_read_and_private_write_contract(self):
         """公开榜单不要求登录，个人记录和写入必须认证及同源。"""

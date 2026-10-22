@@ -29,6 +29,8 @@ class GameLevelVersion(Base):
 class PlayerProgression(Base):
     """每账号一行摘要，等级由版本阈值计算。"""
     __tablename__ = 'player_progression'
+    __table_args__ = (Index('ix_progression_stars', 'total_stars', 'user_id'),
+                      Index('ix_progression_xp', 'xp', 'user_id'))
     user_id: Mapped[int] = mapped_column(UID, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
     xp: Mapped[int] = mapped_column(Integer, default=0)
     total_stars: Mapped[int] = mapped_column(Integer, default=0)

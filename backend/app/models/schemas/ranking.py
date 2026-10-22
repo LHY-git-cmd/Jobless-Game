@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 Game = Literal["mine", "akari", "sudoku"]
 Category = Game
+GrowthCategory = Literal["stars", "level"]
 
 
 class StartRequest(BaseModel):
@@ -79,3 +80,23 @@ class RankingsResponse(BaseModel):
     page_size: int
     total: int
     entries: list[RankingEntryResponse]
+
+
+class GrowthRankingEntryResponse(BaseModel):
+    """成长榜只公开展示身份、累计星数和服务端等级，不含会话与奖励凭据。"""
+    rank: int
+    user_id: int
+    username: str
+    avatar_id: int
+    total_stars: int
+    level: int
+    xp: int
+
+
+class GrowthRankingsResponse(BaseModel):
+    """星数与等级共用有限分页；竞技积分未实现，不属于此接口。"""
+    category: GrowthCategory
+    page: int
+    page_size: int
+    total: int
+    entries: list[GrowthRankingEntryResponse]

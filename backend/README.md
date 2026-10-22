@@ -1,6 +1,6 @@
 # 登录后端运行与部署
 
-采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供三个独立关卡、通关记录、三个单项排行榜以及文字论坛和站内消息。
+采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供独立关卡、通关记录、星数和等级排行榜以及文字论坛和站内消息。竞技积分榜展示未开放说明。
 
 新增正式成长与双人照明竞速使用 `/api/v1`，与旧成绩和本地练习分开。先在专用库执行 Flyway V1～V9，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`；全部默认 `false`。页面入口是 `/journey.html` 和 `/pk.html`。HTTP部署仍遵循原Cookie配置，正式HTTPS必须开启Secure。
 
@@ -129,6 +129,8 @@ cd /www/wwwroot/jobless-game
 
 ## 排行榜与挑战
 
+当前页面改为星数、等级和待开放积分三个榜单入口。星数按 `total_stars` 降序、同星并列；等级采用正式成长阈值计算，按 `xp` 降序、同经验并列。并列时按用户编号倒序稳定分页，仅有 `player_progression` 摘要的玩家入榜。索引由增量 V17 创建，适用于 MySQL 5.7；每页最多 50 条，名次跨页计算，不使用窗口函数。积分榜暂不发起数据请求，也不结算竞技积分。原用时榜 API 继续兼容旧客户端。
+
 排行榜与挑战 API：
 
 | 接口 | 行为 |
@@ -138,9 +140,10 @@ cd /www/wwwroot/jobless-game
 | `POST /api/challenges/{run_id}/restart` | 校验 revision 和 request_id，仅重置指定关卡，其他关卡不受影响 |
 | `POST /api/challenges/{run_id}/complete` | 校验当前进度及 attempt_id，可按任意顺序保存单关，不生成总成绩 |
 | `GET /api/rankings/{category}?page=1&page_size=20` | 公开分页；category 为 mine/akari/sudoku；单页上限 50，total 返回 422 |
+| `GET /api/rankings/growth/{category}?page=1&page_size=20` | 当前公开成长榜；category 为 stars/level；需开启 progression；单页上限 50 |
 | `GET /api/records/me?category=mine` | 默认扫雷，可切换照明/数独，返回本人最佳与最近三次，total 返回 422 |
 
-沿用 `challenge_progress`（每人最多一行，存储三个独立尝试）、`completion_records`（每人每类最多四条）和 `leaderboard_entries`（每人每类一行）。停止创建和公开整轮成绩，既有总榜字段、数据及已执行迁移保留，本次无需数据库迁移。写入按用户行锁串行化，在同一事务维护单项最佳、最新记录和摘要。查询先用索引读取有限页，再统计更快人数得到跨页并列名次，不使用窗口函数或持久化名次。
+旧挑战接口沿用 `challenge_progress`（每人最多一行，存储三个独立尝试）、`completion_records`（每人每类最多四条）和 `leaderboard_entries`（每人每类一行）。停止创建和公开整轮成绩，既有总榜字段、数据及已执行迁移保留；成长榜索引另由 V17 增量迁移提供。写入按用户行锁串行化，在同一事务维护单项最佳、最新记录和摘要。查询先用索引读取有限页，再统计更快人数得到跨页并列名次，不使用窗口函数或持久化名次。
 
 `duration_seconds` 必须为 0～604800 的整数；未完成用 null，不能把 0 当作未完成。重开要求匹配当前 `revision`，通关要求匹配当前关卡的尝试和进度标识，不接受未来版本；其他关重开导致的版本增长不作废本关待提交成绩。重复上传相同数据不会追加记录，修改已经接收的成绩返回 409。未登录返回 401、尝试或进度冲突 409、开发标记未启用 403、校验错误 422；写请求要求同源，实际请求体不超过 4KiB，数据库繁忙沿用 503。
 

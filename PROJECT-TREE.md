@@ -121,7 +121,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V13__publish_akari_levels.sql   # 照明入门及15关，保留旧定义及永久资格
 │   │   ├── V14__expand_akari_tutorial_and_boards.sql # 教学及第10～15关追加版本2，不改旧定义
 │   │   ├── V15__create_player_energy.sql # 账号体力状态与随尝试回收的扣返凭证
-│   │   └── V16__align_akari_timed_rewards.sql # 追加照明15关按用时评分版本，保留旧奖励
+│   │   ├── V16__align_akari_timed_rewards.sql # 追加照明15关按用时评分版本，保留旧奖励
+│   │   └── V17__index_growth_rankings.sql # 星数与等级/经验排行榜分页索引
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -268,7 +269,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── home.js  # 首页模式入口与闯关游戏目录共享装配
 │   │   │   ├── journey.js  # 当前选关页与扫雷装配
 │   │   │   ├── pk.js  # 竞速房间/匹配页面入口
-│   │   │   └── ranking.js  # 三个独立分榜页面入口
+│   │   │   └── ranking.js  # 星数与等级分页榜，竞技积分未开放说明
 │   │   ├── shared/  # 无业务反向依赖的DOM/HTTP/事件/生命周期/时间/UUID
 │   │   │   ├── dom.js  # DOM语义名称查询
 │   │   │   ├── events.js  # 共享事件或竞速SSE订阅
@@ -361,10 +362,10 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── navigation.css  # 旧URL兼容入口
 │   ├── package.json  # Node内置测试命令，无构建依赖
 │   ├── pk.html  # 独立页面入口，URL保持不变
-│   ├── ranking-akari.html  # 独立页面入口，URL保持不变
-│   ├── ranking-mine.html  # 独立页面入口，URL保持不变
-│   ├── ranking-sudoku.html  # 独立页面入口，URL保持不变
-│   ├── ranking.html  # 独立页面入口，URL保持不变
+│   ├── ranking-akari.html  # 旧照明榜地址，现展示成长榜入口
+│   ├── ranking-mine.html  # 旧扫雷榜地址，现展示成长榜入口
+│   ├── ranking-sudoku.html  # 旧数独榜地址，现展示成长榜入口
+│   ├── ranking.html  # 星数/等级排行榜与待开放的竞技积分榜
 │   └── styles.css  # 旧URL兼容入口
 │
 ├── source/                               # 原始素材和将其转换为网页资源的处理脚本
