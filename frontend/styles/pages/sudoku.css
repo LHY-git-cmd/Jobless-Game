@@ -49,6 +49,12 @@
 .sudoku-tools-right p{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin:0;font-size:13px;color:var(--muted);white-space:nowrap}
 .sudoku-tools-right strong{font:500 20px/1 Georgia,serif;color:var(--gold);font-variant-numeric:tabular-nums}
 .sudoku-tools-right button{font-size:13px;min-height:48px;padding:10px 14px}
+#sudoku-pause-toggle{display:grid;place-items:center;width:48px;min-width:48px;height:48px;padding:0}
+#sudoku-pause-toggle svg{width:20px;height:20px}
+.sudoku-pause-icon{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round}
+.sudoku-resume-icon{fill:currentColor}
+#sudoku-pause-toggle .sudoku-resume-icon,#sudoku-pause-toggle.is-paused .sudoku-pause-icon{display:none}
+#sudoku-pause-toggle.is-paused .sudoku-resume-icon{display:block}
 #sudoku-notes[aria-pressed="true"]{background:var(--sudoku-same);color:#20563f;border-color:var(--sudoku-same)}
 .sudoku-board-wrap{position:relative;max-width:540px;margin-inline:auto;isolation:isolate}
 .sudoku-board{display:grid;grid-template-columns:repeat(var(--sudoku-size,9),minmax(0,1fr));width:100%;border:3px solid var(--gold);border-radius:4px;overflow:hidden;background:var(--sudoku-grid)}
@@ -71,8 +77,6 @@
 .sudoku-pause strong{font-size:24px;color:var(--gold)}
 .sudoku-pause p{margin:0;color:var(--muted);font-size:14px}
 .sudoku-input{max-width:540px;margin:22px auto 0}
-#sudoku-selection{font-size:16px;color:var(--muted);margin:0 0 12px;line-height:1.7}
-#sudoku-input-hint{font-size:13px;color:var(--muted);line-height:1.8;margin:0 0 16px}
 .sudoku-keypad{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:7px}
 .sudoku-keypad[data-size="4"]{grid-template-columns:repeat(4,minmax(0,1fr))}
 .sudoku-keypad button{min-width:0;min-height:52px;padding:8px 2px;font-size:24px;color:var(--gold)}
@@ -97,7 +101,7 @@
   .sudoku-topbar{gap:6px;padding-bottom:24px;margin-bottom:24px}.sudoku-topbar>span{font-size:18px;letter-spacing:1px}.sudoku-topbar button{font-size:13px;padding:10px 8px}
   .sudoku-heading h2{font-size:34px}.sudoku-heading>p:last-child{font-size:13px}.sudoku-toolbar{margin-top:24px}.sudoku-tools-right p{font-size:13px}.sudoku-tools-right strong{font-size:18px}
   .sudoku-keypad{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.sudoku-keypad button{min-height:46px;font-size:22px}.sudoku-actions{gap:10px}.sudoku-actions button{font-size:15px}.sudoku-keyboard-help{display:none}
-  #sudoku-selection{font-size:14px}#sudoku-input-hint{font-size:12px}.sudoku-feedback{padding-inline:18px}.sudoku-host{border-radius:14px}.sudoku-tutorial{padding:14px}.sudoku-tutorial p:last-child{font-size:13px}
+  .sudoku-feedback{padding-inline:18px}.sudoku-host{border-radius:14px}.sudoku-tutorial{padding:14px}.sudoku-tutorial p:last-child{font-size:13px}
 }
 @media(max-width:440px){
   .sudoku-toolbar{grid-template-columns:1fr;gap:12px}.sudoku-available{grid-column:1;grid-row:1}.sudoku-tools-right{grid-column:1;grid-row:2;gap:10px}
