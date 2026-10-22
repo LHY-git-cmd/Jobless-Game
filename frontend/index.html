@@ -15,7 +15,7 @@
       href="./favicon.ico?v=20261018-island"
     />
     <link rel="stylesheet" href="./styles/base.css" />
-    <link rel="stylesheet" href="./styles/components/navigation.css" />
+    <link rel="stylesheet" href="./styles/components/energy.css"><link rel="stylesheet" href="./styles/components/navigation.css" />
     <link rel="modulepreload" href="./src/pages/journey.js" />
   </head>
   <body>
@@ -47,96 +47,6 @@
               ><span id="challenge-action-icon" aria-hidden="true">↓</span>
             </button>
           </div>
-          <aside
-            class="personal-records"
-            id="personal-records"
-            aria-labelledby="records-title"
-          >
-            <header class="records-header">
-              <div>
-                <p class="records-eyebrow">解谜档案 / MY JOURNEY</p>
-                <h2 id="records-title">我的通关记录</h2>
-              </div>
-              <button
-                type="button"
-                id="records-refresh"
-                class="records-refresh hidden"
-                aria-label="刷新我的通关记录"
-              >
-                刷新
-              </button>
-            </header>
-            <div
-              class="records-tabs"
-              role="tablist"
-              aria-label="选择通关记录类型"
-            >
-              <button
-                type="button"
-                id="records-mine"
-                role="tab"
-                aria-selected="true"
-                aria-controls="records-panel"
-                tabindex="0"
-              >
-                扫雷
-              </button>
-              <button
-                type="button"
-                id="records-akari"
-                role="tab"
-                aria-selected="false"
-                aria-controls="records-panel"
-                tabindex="-1"
-              >
-                照明
-              </button>
-              <button
-                type="button"
-                id="records-sudoku"
-                role="tab"
-                aria-selected="false"
-                aria-controls="records-panel"
-                tabindex="-1"
-              >
-                数独
-              </button>
-            </div>
-            <div
-              class="records-panel"
-              id="records-panel"
-              role="tabpanel"
-              aria-labelledby="records-mine"
-              aria-busy="false"
-              tabindex="0"
-            >
-              <p id="records-status" class="records-status" role="status">
-                登录后查看
-              </p>
-              <button type="button" id="records-login" class="records-login">
-                登录查看记录
-              </button>
-              <button type="button" id="records-retry" class="hidden">
-                重新加载
-              </button>
-              <div class="records-best hidden" id="records-best">
-                <div class="records-best-heading">
-                  <span id="records-best-label">历史最佳</span
-                  ><span class="records-best-mark" aria-hidden="true">◇</span>
-                </div>
-                <strong id="records-best-time"></strong
-                ><span id="records-best-date" class="records-best-date"></span>
-              </div>
-              <section
-                id="records-recent"
-                class="records-recent hidden"
-                aria-labelledby="records-recent-title"
-              >
-                <h3 id="records-recent-title">最近三次</h3>
-                <ol id="records-list" class="records-list"></ol>
-              </section>
-            </div>
-          </aside>
         </div>
         <div class="level-select" id="level-select">
           <div class="section-heading"><h2>冒险启程</h2><span>选择游戏，开启下一段旅程</span></div>

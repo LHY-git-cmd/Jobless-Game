@@ -62,6 +62,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── login_limiter.py          # 有界单进程登录频率保护
 │   │   │   ├── game_rules.py             # 照明/数独终盘验证、毫秒星级及版本化逐星经验
 │   │   │   ├── progression_service.py    # 矩形扫雷/教学/首击安全、冻结计时及幂等奖励/资格事务
+│   │   │   ├── energy_service.py         # 账号体力、30分钟恢复、普通扣返及免费教学
 │   │   │   ├── pk_service.py             # 双人房间、统一计时、平局及FIFO匹配事务
 │   │   │   ├── pk_runtime.py             # 有限SSE队列、接收窗口及单进程运行索引
 │   │   │   ├── pk_lifecycle.py           # 唯一调度任务、重启作废和有界状态转换
@@ -117,7 +118,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V11__expand_mine_board_choices.sql # 中等/困难/地狱新增六个矩形棋盘，不改旧定义
 │   │   ├── V12__publish_sudoku_difficulties.sql # 数独教学与四档各三题，保留历史定义
 │   │   ├── V13__publish_akari_levels.sql   # 照明入门及15关，保留旧定义及永久资格
-│   │   └── V14__expand_akari_tutorial_and_boards.sql # 教学及第10～15关追加版本2，不改旧定义
+│   │   ├── V14__expand_akari_tutorial_and_boards.sql # 教学及第10～15关追加版本2，不改旧定义
+│   │   └── V15__create_player_energy.sql # 账号体力状态与随尝试回收的扣返凭证
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -147,6 +149,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_sudoku_api.py            # 数独13题判题、教学、暂停、奖励及资格隔离
 │       ├── test_akari_content.py          # 照明16关唯一性、逻辑递进及冻结迁移一致性
 │       ├── test_akari_api.py              # 照明目录、16关判题、权威时钟及历史资格
+│       ├── test_energy.py                 # 体力恢复边界、扣返幂等、零体力重开回滚及账号隔离
 │       ├── test_mine_redesign.py         # 五档矩形扫雷、教学步骤、首击安全、经验补差及冻结时间
 │       ├── test_mine_pause.py            # 服务器暂停/继续、防重版本、账号隔离及有效时长结算
 │       ├── test_progression_v1.py        # 尝试/成长/资格/主题/版本/权限及回滚契约
@@ -171,6 +174,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── sudoku-implementation-plan.md       # 已确认的数独五档13关、推理分级、参考图界面及计时成长计划
 │   ├── sudoku-implementation-report.md     # 数独实现、真实MySQL/浏览器证据、旧失败及本地体验
 │   ├── akari-implementation-plan.md        # 已授权的照明入门及15关实施和验收方案
+│   ├── energy-implementation-plan.md       # 已授权的账号体力、原子扣返与首页面板调整方案
+│   ├── energy-implementation-report.md     # 体力机制、测试证据及本地预览/发布边界
 │   ├── akari-implementation-report.md      # 照明关卡、逻辑递进、测试及发布条件
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
@@ -192,6 +197,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── avatar.js  # 头像URL与选择状态
 │   │   │   │   ├── client.js  # 所属业务的同源接口访问
 │   │   │   │   ├── profile.js  # 服务器成长显示及权威结算同步
+│   │   │   │   ├── energy.js  # 权威体力、恢复倒计时、账号及旧修订隔离
 │   │   │   │   └── validation.js  # 用户名和密码校验
 │   │   │   ├── audio/  # 背景/胜利音、偏好及设置窗口
 │   │   │   │   ├── dialog.js  # 音频设置窗口
@@ -207,6 +213,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   └── events.js  # 共享事件或竞速SSE订阅
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
 │   │   │   │   ├── client.js  # 所属业务的同源接口访问
+│   │   │   │   ├── attempt-energy.js  # 三游戏体力快照事件及原子重开幂等适配
 │   │   │   │   └── journey-store.js  # 按账号、尝试与版本保存草稿
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
 │   │   │       ├── client.js  # 所属业务的同源接口访问
@@ -270,6 +277,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── styles/  # 样式装配、组件、页面与历史样式
 │   │   ├── components/  # 按原级联顺序拆分的公共组件及响应式样式
 │   │   │   ├── account.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── energy.css  # 头像旁体力、手机适配及首页移除记录后的布局
 │   │   │   ├── forum.css  # 所属页面/组件样式，声明顺序保留
 │   │   │   ├── layout.css  # 所属页面/组件样式，声明顺序保留
 │   │   │   ├── legacy-games.css  # 所属页面/组件样式，声明顺序保留
@@ -291,6 +299,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── account/  # 登录、头像、档案与账号接口
 │   │   │   │   ├── auth.test.js  # 所属模块的行为回归测试
 │   │   │   │   ├── avatar.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── energy.test.js  # 体力修订、恢复节点、网络失败及换号隔离
 │   │   │   │   └── player-profile.test.js  # 所属模块的行为回归测试
 │   │   │   ├── audio/  # 背景/胜利音、偏好及设置窗口
 │   │   │   │   ├── audio-settings.test.js  # 所属模块的行为回归测试
@@ -301,6 +310,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── notifications/  # 可见性轮询、站内消息与账号隔离
 │   │   │   │   └── notifications.test.js  # 所属模块的行为回归测试
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
+│   │   │   │   ├── attempt-energy.test.js  # 原子重开失败不弃旧局、同键重试
 │   │   │   │   └── progression-client.test.js  # 所属模块的行为回归测试
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
 │   │   │       └── personal-records.test.js  # 所属模块的行为回归测试
@@ -397,6 +407,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_sudoku.py              # 数独13关、教学、奖励/断网、窄屏及隔离本地预览
         ├── verify_sudoku_interactions.py # 数独键盘/冲突、真实离页、重开、换号及减少动画验收
         ├── verify_akari_levels.py        # 照明16关真实点击、教学、断网恢复、下一关与44px窄屏验收
+        ├── verify_energy.py              # 三游戏体力、首页面板移除、恢复节点、零体力及隔离预览
         ├── verify_frontend_structure.py  # 整改前后同状态像素比对、三个分榜及新版入口/资源验收
         ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图

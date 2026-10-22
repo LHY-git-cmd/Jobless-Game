@@ -1,9 +1,7 @@
-/** 首页只装配账号、历史记录和新版选关入口；不再启动或恢复旧三个单关。 */
+/** 首页只装配账号和新版选关入口；不再启动或恢复旧三个单关。 */
 import { initAuth } from '../features/account/auth.js';
-import { initPersonalRecords } from '../features/ranking/personal-records.js';
 
-const auth = initAuth();
-initPersonalRecords({ onLogin: continuation => auth.requireLogin(() => continuation(auth.currentUser)) });
+initAuth();
 
 /** 介绍区按钮只滚动到三个入口，不创建游戏或改动已有存档。 */
 document.getElementById('challenge-action').addEventListener('click', () => {
