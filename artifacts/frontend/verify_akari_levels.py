@@ -54,7 +54,7 @@ def main():
                     """切关本身不建局，点击开始后才进入正式尝试。"""
                     progression_service.limiter.clear()
                     if ev("!document.getElementById('akari-play').hidden"):click('#akari-back')
-                    click(f'#akari-levels [data-level="{level["level_id"]}"]');click('#akari-start')
+                    click(f'#akari-levels [data-level="{level["level_id"]}"]');click('#akari-enter-confirm')
                     wait(f"document.querySelectorAll('#akari-board [data-index]').length==={level['puzzle']['rows']**2}&&!document.getElementById('akari-restart').disabled")
 
                 def bulb(index):
@@ -65,10 +65,17 @@ def main():
                 cmd('Page.enable');cmd('Network.enable');cmd('Runtime.enable')
                 cmd('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1150,'deviceScaleFactor':1,'mobile':False})
                 cmd('Page.navigate',{'url':base+'journey.html?game_id=akari'})
-                wait("document.querySelectorAll('#akari-levels [data-level]').length===16&&!document.getElementById('akari-start').disabled")
+                wait("document.querySelectorAll('#akari-levels [data-level]').length===16&&document.querySelector('#akari-levels button:not(:disabled)')")
+                assert ev("document.getElementById('akari-start')===null"),'底部不再保留开始或继续游戏入口'
                 assert ev("document.getElementById('akari-selector').textContent.includes('难度系数')")==False
                 shot('akari-levels-desktop.png');checks.append('游客16关目录和编号，无难度系数')
-                click('#akari-start');wait("!document.getElementById('auth-dialog').classList.contains('hidden')")
+                click('#akari-levels [data-level="akari-v2-002"]')
+                wait("document.getElementById('akari-enter-dialog').open")
+                assert ev("document.getElementById('akari-enter-title').textContent.includes('第2关')")
+                click('#akari-enter-cancel');wait("!document.getElementById('akari-enter-dialog').open")
+                assert ev("document.getElementById('akari-play').hidden")
+                click('#akari-levels [data-level="akari-v2-tutorial"]');click('#akari-enter-confirm')
+                wait("!document.getElementById('auth-dialog').classList.contains('hidden')")
                 ev("document.getElementById('auth-username').value='照明验收';document.getElementById('auth-password').value='akari-browser-test';document.querySelector('.auth-submit').click()")
                 wait("document.querySelectorAll('#akari-board [data-index]').length===25&&!document.getElementById('akari-restart').disabled")
                 assert ev("(()=>{const r=document.getElementById('akari-board').getBoundingClientRect();return Math.abs(r.width-r.height)<1;})()"),'入门应为5×5方形，不应保留旧10行'

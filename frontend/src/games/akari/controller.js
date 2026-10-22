@@ -15,12 +15,12 @@ export function akariTime(ms) {
 /** 账号生命周期由journey页面管理；本控制器只拥有照明区域。 */
 export function createAkariJourney({host,auth,onReward=()=>{}}) {
   const scope=createScope();
-  let model,identity,ready=Promise.resolve(),dead=false,selectionOnly=false,errorMessage='',boardKey='',pendingFocus=null;
+  let model,identity,ready=Promise.resolve(),dead=false,selectionOnly=false,errorMessage='',boardKey='',pendingFocus=null,pendingLevel=null;
   host.innerHTML=`
     <section id="akari-selector" aria-label="照明选关">
       <div class="akari-intro"><div><p class="eyebrow">AKARI / 让光抵达每一个角落</p><h2>从一盏灯，点亮整片世界。</h2><p>入门与十五道谜题，沿着光线，一步步找到答案。</p></div><img src="./assets/bulb.webp" alt="" width="88" height="88"></div>
       <div id="akari-levels" class="akari-levels" role="group" aria-label="选择照明关卡"></div>
-      <div class="akari-start-row"><p id="akari-selection-note">正在加载关卡…</p><button id="akari-start" class="journey-primary" type="button" disabled>开始游戏 →</button></div>
+      <p id="akari-selection-note" class="akari-selection-note">正在加载关卡…</p>
     </section>
     <section id="akari-play" class="akari-play" aria-labelledby="akari-title" hidden>
       <div class="akari-topbar"><button id="akari-back" type="button">返回选关</button><span>无职游戏</span><button id="akari-restart" type="button">重新开始</button></div>
@@ -33,6 +33,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
       <div id="akari-result" class="akari-result" role="status" hidden><p class="eyebrow">每一束光，都算数。</p><h3 id="akari-result-title"></h3><div id="akari-result-stars" class="mine-rating"></div><p id="akari-result-description"></p><div class="journey-actions"><button id="akari-next" class="journey-primary" type="button">下一关 →</button><button id="akari-retry-settlement" class="journey-primary" type="button" hidden>重试保存成绩</button></div></div>
     </section>
     <div class="akari-feedback"><p id="akari-message" role="status" aria-live="polite"></p><button id="akari-reload" type="button" hidden>重新加载</button></div>
+    <dialog id="akari-enter-dialog" class="journey-rules" aria-labelledby="akari-enter-title" aria-describedby="akari-enter-description"><h2 id="akari-enter-title">是否闯关？</h2><p id="akari-enter-description"></p><div class="journey-actions"><button id="akari-enter-cancel" type="button" autofocus>暂不闯关</button><button id="akari-enter-confirm" class="journey-primary" type="button">确认闯关</button></div></dialog>
     <dialog id="akari-rules-dialog" class="journey-rules" aria-labelledby="akari-rules-title"><h2 id="akari-rules-title">照明规则</h2><ol><li>在白格放灯，灯光沿横竖方向传播，遇黑墙或边界停止。</li><li>照亮全部白格。灯泡之间不能互相照射。</li><li>数字黑墙上下左右的灯泡数量必须恰好等于数字；斜角不计算。</li><li>三个条件同时满足才通关。可随时撤灯修改，不限时，也不要求最少灯泡。</li></ol><p>阅读规则期间暂停计时。</p><button id="akari-rules-close" class="journey-primary" type="button">知道了，继续</button></dialog>
     <dialog id="akari-restart-dialog" class="journey-rules" aria-labelledby="akari-restart-title"><h2 id="akari-restart-title">重新开始本关？</h2><p>本关灯泡将清空，其他关卡的进度会保留。</p><div class="journey-actions"><button id="akari-restart-cancel" type="button">继续当前局</button><button id="akari-restart-confirm" class="journey-primary" type="button">确认重开</button></div></dialog>`;
   const $=id=>host.querySelector('#'+id);
@@ -58,8 +59,9 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     const fragment=document.createDocumentFragment();
     for(const level of state.levels) {
       const progress=state.progress.find(v=>v.level_id===level.level_id),button=document.createElement('button');
-      button.type='button';button.className='akari-level';button.dataset.level=level.level_id;button.disabled=state.busy;
+      button.type='button';button.className='akari-level';button.dataset.level=level.level_id;button.disabled=state.busy||!state.enabled;
       button.setAttribute('aria-pressed',String(state.selected===level.level_id));
+      button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-controls','akari-enter-dialog');
       const title=document.createElement('strong'),size=document.createElement('span'),stars=document.createElement('span'),note=document.createElement('small');
       title.textContent=level.name;size.textContent=`${level.rows} × ${level.cols}`;stars.className='mine-rating';
       paintStars(stars,progress?.best_stars||0,`历史最高${progress?.best_stars||0}星`,level.max_stars||3);
@@ -70,8 +72,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     if(focused&&!state.busy)$('akari-levels').querySelector(`[data-level="${focused}"]`)?.focus({preventScroll:true});
     const selected=state.levels.find(v=>v.level_id===state.selected);
     $('akari-selection-note').textContent=selected?`${selected.name} · ${selected.focus||'照亮全部白格，满足数字并避免灯泡互照'}。通关不限时，可随时修改。`:'暂时没有可用关卡。';
-    $('akari-start').disabled=state.busy||!state.enabled||!selected;
-    $('akari-start').textContent=state.busy?'正在准备…':state.progress.find(v=>v.level_id===state.selected)?.current_attempt?'继续游戏 →':model.hasSaved(state.selected)?'查看上局 →':'开始游戏 →';
+    $('akari-enter-confirm').disabled=state.busy||!state.enabled||!selected;
   }
   /** 汇总错误文本，明确区分全亮与全部约束满足。 */
   function feedback(inspection,board) {
@@ -156,14 +157,31 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
   /** 时钟更新不触发棋盘或选关重建。 */
   function timing(){if(model?.state.attempt)$('akari-clock').textContent=akariTime(model.elapsed());}
   /** 返回时保留当前局，独立记录选关暂停原因。 */
-  function back(){selectionOnly=true;collection.cancel();emit(Events.SETTLEMENT_CLOSED);void run(()=>model.setPaused('selection',true));render(model.state);$('akari-start').focus();}
+  function back(){selectionOnly=true;collection.cancel();emit(Events.SETTLEMENT_CLOSED);void run(()=>model.setPaused('selection',true));render(model.state);focusSelected();}
+  /** 弹窗取消或返回选关后，把键盘焦点放回对应关卡卡片。 */
+  function focusSelected(){if(model)$('akari-levels').querySelector(`[data-level="${model.state.selected}"]`)?.focus({preventScroll:true});}
+  /** 只展示所选关卡及续玩说明，确认前不创建尝试或开始计时。 */
+  function askToEnter(id){
+    const state=model.state,level=state.levels.find(item=>item.level_id===id);
+    if(!level||state.busy||!state.enabled)return;
+    model.select(id);pendingLevel=id;
+    const continuing=state.progress.some(item=>item.level_id===id&&item.current_attempt);
+    $('akari-enter-title').textContent=`是否挑战${level.name}？`;
+    $('akari-enter-description').textContent=`${level.rows} × ${level.cols} · ${level.focus||'照亮每个角落'}。${continuing?'确认后继续上次的棋局。':'确认后进入本关，通关不限时。'}`;
+    $('akari-enter-dialog').showModal();
+  }
   /** 显式选择后打开，登录异步完成仍保留用户刚才选中的关卡。 */
   async function openSelected(id){
     await ready;if(dead)return;model.select(id);selectionOnly=false;
     await model.setPaused('selection',false,{sync:false});await play(()=>model.open());
   }
-  scope.listen($('akari-levels'),'click',event=>{const button=event.target.closest('[data-level]');if(button)model.select(button.dataset.level);});
-  scope.listen($('akari-start'),'click',()=>{const selected=model.state.selected;void auth.requireLogin(()=>openSelected(selected));});
+  scope.listen($('akari-levels'),'click',event=>{const button=event.target.closest('[data-level]');if(button)askToEnter(button.dataset.level);});
+  scope.listen($('akari-enter-cancel'),'click',()=>$('akari-enter-dialog').close());
+  scope.listen($('akari-enter-dialog'),'close',()=>{pendingLevel=null;if(!$('akari-selector').hidden)focusSelected();});
+  scope.listen($('akari-enter-confirm'),'click',()=>{
+    const selected=pendingLevel;if(!selected||model.state.busy)return;
+    $('akari-enter-dialog').close();void auth.requireLogin(()=>openSelected(selected));
+  });
   scope.listen($('akari-back'),'click',back);
   scope.listen($('akari-board'),'click',event=>{const cell=event.target.closest('[data-index]');if(cell)void run(()=>model.toggle(Number(cell.dataset.index)));});
   scope.listen($('akari-board'),'keydown',event=>{
@@ -199,7 +217,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     async setUser(uid){
       if(identity===uid&&model)return;
       collection.cancel(false);identity=uid;model?.destroy();selectionOnly=false;boardKey='';pendingFocus=null;errorMessage='';
-      $('akari-rules-dialog').close();$('akari-restart-dialog').close();
+      pendingLevel=null;$('akari-enter-dialog').close();$('akari-rules-dialog').close();$('akari-restart-dialog').close();
       $('akari-board').replaceChildren();$('akari-result-title').textContent='';$('akari-result-description').textContent='';$('akari-result-stars').replaceChildren();
       $('akari-play').hidden=true;$('akari-selector').hidden=false;
       let storage;try{storage=window.localStorage;}catch{/* 存储不可用由会话明确提示。 */}
