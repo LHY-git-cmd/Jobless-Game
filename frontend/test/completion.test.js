@@ -1,4 +1,4 @@
-/** 真实页面流程回归：DOM 与接口用替身，计时、游戏规则、通关和保存逻辑使用真实模块。 */
+/** 历史单关流程回归：使用冻结DOM夹具，验证保留的旧存档/控制器，不依赖当前首页。 */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -43,7 +43,7 @@ class Element {
 async function settle() { for (let i=0;i<5;i++) await new Promise(resolve => setImmediate(resolve)); }
 
 test("独立关卡、冻结计时、保存重试与当前关开发验收", async (t) => {
-  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const html = await readFile(new URL("./fixtures/legacy-game.html", import.meta.url), "utf8");
   const nodes = new Map();
   /** 重建页面节点，模拟刷新时旧 DOM 与页面内存全部丢失。 */
   function resetNodes() {
