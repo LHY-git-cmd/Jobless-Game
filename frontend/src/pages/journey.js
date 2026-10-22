@@ -79,7 +79,8 @@ async function refresh() {
       $('journey-qualifications').textContent = '新的资格关卡正在准备。';
       $('journey-status').textContent = uid ? '账号资料暂不可用。' : '登录后可查看账号资料。';
     }
-    if (features.cosmetics) {
+    // 主题面板当前隐藏，不再与游戏恢复/账号体力同时抢占有限数据库槽位。
+    if (features.cosmetics && !document.querySelector('.journey-bottom').hidden) {
       try {
         const [items, appearance] = await Promise.all([api(uid ? 'me/cosmetics' : 'cosmetics'), uid ? api('me/appearance') : Promise.resolve(null)]);
         if (!current()) return;

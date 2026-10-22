@@ -5,6 +5,7 @@ export const Events = Object.freeze({
   AUTHORIZED_START: 'authorized-start',
   RECORDS_UPDATED: 'records-updated',
   PROGRESSION_CONFIRMED: 'progression-confirmed',
+  ENERGY_CHANGED: 'energy-changed',
   SETTLEMENT_OPENED: 'settlement-opened',
   SETTLEMENT_CLOSED: 'settlement-closed',
   USER_PROFILE_UPDATED: 'user-profile-updated',

@@ -1,0 +1,11 @@
+/* 账号体力与首页记录面板移除后的布局，独立于旧公共样式基线。 */
+.player-energy { grid-column:3; grid-row:1/3; display:grid; align-content:center; gap:3px; padding-left:14px; border-left:1px solid #b8d6db55; color:var(--gold); white-space:nowrap; }
+.player-energy-main { display:flex; align-items:center; gap:6px; }.player-energy svg { width:21px; height:21px; fill:currentColor; }.player-energy strong { font-size:18px; }.player-energy-main>span { font-size:12px; }.player-energy small { font-size:11px; color:var(--muted); }
+.player-profile:has(.player-energy:not([hidden])) { grid-template-columns:70px auto auto; }
+
+.landing-intro { grid-template-columns:minmax(0,1fr); }
+@media(max-width:600px) {
+  .player-profile:has(.player-energy:not([hidden])) { grid-template-columns:54px auto; }
+  .player-energy { grid-column:1/-1; grid-row:3; border-left:0; padding:8px 0 0; display:flex; align-items:center; gap:10px; }
+  .player-energy strong { font-size:15px; }
+}

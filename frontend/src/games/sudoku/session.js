@@ -1,6 +1,7 @@
 /** 数独正式会话：账号草稿、版本化时钟、教学输入及可恢复的幂等终盘提交。 */
 import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
+import { publishAttemptEnergy,restartAttempt } from '../../features/progression/attempt-energy.js';
 import { createSudoku,selectSudokuCell,setSudokuValue,toggleSudokuNote,normalizeSudokuNotes,checkSudoku } from './rules.js';
 
 // 每局最多保留最近100次实际编辑，限制草稿体积；选格和切换模式不占撤回次数。
@@ -36,6 +37,7 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
   /** 用服务器给定盘重建，忽略草稿中的题目数字和无效值。 */
   function adopt(attempt){
     if(dead)return;
+    publishAttemptEnergy(uid,attempt);
     state.attempt=attempt;state.selected=attempt.level_id;state.result=null;
     const saved=store.load(attempt),draft=saved?.draft;
     // 手动暂停随当前局保存；新局没有该标记，后台/选关暂停原因仍独立管理。
@@ -89,6 +91,7 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
   /** 成功快照同时更新本地卡片与顶部账号；恢复旧结果不重播奖励动画。 */
   function confirmed(result,restored=false){
     if(dead)return;
+    publishAttemptEnergy(uid,result);
     state.result=result;state.pending=false;state.attempt.status='completed';state.grid.complete=true;
     state.history=[];
     frozen=result.duration_ms;store.clearPending(state.attempt);
@@ -220,9 +223,9 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
     /** 调用方先确认重开，条件放弃避免覆盖其他页面刚完成的棋局。 */
     async restart(){return perform(async()=>{
       const attempt=state.attempt;
-      if(attempt){const latest=await request(attempt.links.self);if(dead)return;
-        if(latest.data.status==='active')await request(attempt.links.self,{method:'PATCH',body:{status:'abandoned'},headers:{'If-Match':latest.etag}});
-        if(dead)return;state.selected=attempt.level_id;store.clearStart(attempt.level_id);
+      if(attempt){
+        const restarted=await restartAttempt({attempt,store,request});if(dead)return;
+        pendingClock=null;await restore(restarted.response.data.links.self);if(!dead)restarted.clear();return;
       }
       state.pending=false;state.result=null;await begin();
     });},

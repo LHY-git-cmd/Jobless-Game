@@ -2,6 +2,7 @@
 import { createSudokuSession } from './session.js';
 import { sudokuConflicts } from './rules.js';
 import { createScope } from '../../shared/lifecycle.js';
+import { energyHint } from '../../features/progression/attempt-energy.js';
 import { Events,emit } from '../../shared/events.js';
 // 轻量复用已有星级和汇聚视图；不依赖扫雷会话或控制器。
 import { availableMineStars as availableStars,paintMineStars as paintStars,createStarCollection } from '../mine/stars.js';
@@ -78,7 +79,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     }
     const progress=state.progress.find(v=>v.level_id===level.level_id);
     $('sudoku-options-title').textContent=DESCRIPTIONS[level.difficulty];
-    $('sudoku-reward-note').textContent=level.max_stars===1?'认识行、列与宫，学会填数和笔记。完成获得1星、2经验。':`三星 ≤ ${sudokuTime(level.t3_ms)} · 二星 ≤ ${sudokuTime(level.t2_ms)} · 其余通关一星。经验 ${level.star_xp.join(' / ')}，提升星级补差额。`;
+    $('sudoku-reward-note').textContent=(level.max_stars===1?'认识行、列与宫，学会填数和笔记。完成获得1星、2经验。':`三星 ≤ ${sudokuTime(level.t3_ms)} · 二星 ≤ ${sudokuTime(level.t2_ms)} · 其余通关一星。经验 ${level.star_xp.join(' / ')}，提升星级补差额。`)+energyHint(level.difficulty==='tutorial');
     $('sudoku-start').textContent=state.busy?'正在准备…':progress?.current_attempt?'继续游戏 →':model.hasSaved(level.level_id)?'查看上局 →':'开始游戏 →';
   }
   /** 只在布局或操作状态变化时绘制棋盘，保留键盘焦点，时钟不重建格子。 */
@@ -184,7 +185,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
   scope.listen($('sudoku-retry-settlement'),'click',()=>void run(()=>model.complete()));
   scope.listen($('sudoku-clock-retry'),'click',()=>void run(()=>model.setPaused('manual',false)));
   scope.listen($('sudoku-reload'),'click',()=>void run(()=>model.load()));
-  scope.listen($('sudoku-restart'),'click',()=>{collection.cancel();if(model.state.attempt.status==='active'){$('sudoku-restart-dialog').showModal();void run(()=>model.setPaused('restart',true));}else{emit(Events.SETTLEMENT_CLOSED);void play(()=>model.restart());}});
+  scope.listen($('sudoku-restart'),'click',()=>{collection.cancel();$('sudoku-restart-dialog').querySelector('p').textContent='本题的填写和笔记将清空，其他题目进度保留。'+energyHint(model.state.attempt.puzzle.tutorial,true);$('sudoku-restart-dialog').showModal();void run(()=>model.setPaused('restart',true));});
   scope.listen($('sudoku-restart-cancel'),'click',()=>$('sudoku-restart-dialog').close());
   scope.listen($('sudoku-restart-dialog'),'close',()=>void run(()=>model.setPaused('restart',false)));
   scope.listen($('sudoku-restart-confirm'),'click',()=>{$('sudoku-restart-dialog').close();emit(Events.SETTLEMENT_CLOSED);void play(()=>model.restart());});

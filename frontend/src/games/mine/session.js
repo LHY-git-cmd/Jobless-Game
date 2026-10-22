@@ -1,6 +1,7 @@
 /** 正式扫雷会话：显式开始、权威揭格、账号草稿、教学及可重试结算。 */
 import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
+import { publishAttemptEnergy,restartAttempt } from '../../features/progression/attempt-energy.js';
 
 /** request与时钟可注入测试；本地仅保存选格/旗标和正式尝试的引用。 */
 export function createMineSession({uid,storage,request=api,onChange=()=>{},onReward=()=>{},now=Date.now}={}) {
@@ -22,6 +23,7 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
   }
   /** 采用服务器棋盘并恢复同一次尝试的草稿，旗标永远不替代权威揭格。 */
   function adopt(value) {
+    publishAttemptEnergy(uid,value);
     state.attempt=value;state.selected=value.level_id;state.result=null;
     const progress=state.progress.find(v=>v.level_id===value.level_id);
     if(progress)progress.current_attempt=value.status==='active'?value.links.self:null;
@@ -77,6 +79,7 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     const response=await request(attempt.links.completion,{method:'PUT',body:{}});
     if(!current())return;
     state.result=response.data;state.attempt.status='completed';store.clearPending(attempt);
+    publishAttemptEnergy(uid,response.data);
     const progress=state.progress.find(v=>v.level_id===attempt.level_id);
     if(progress){progress.best_stars=response.data.best_stars;progress.current_attempt=null;}
     onReward(response.data);publish();
@@ -193,10 +196,9 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     async restart(){return perform(async current=>{
       const attempt=state.attempt;
       if(attempt){
-        const latest=await request(attempt.links.self);if(!current())return;
-        if(latest.data.status==='active')await request(attempt.links.self,{method:'PATCH',body:{status:'abandoned'},headers:{'If-Match':latest.etag}});
-        if(!current())return;
-        state.selected=attempt.level_id;store.clearStart(attempt.level_id);
+        const restarted=await restartAttempt({attempt,store,request});if(!current())return;
+        pendingClock=null;await restore(restarted.response.data.links.self,current);
+        if(current())restarted.clear();return;
       }
       await begin(current);
     });},

@@ -3,6 +3,7 @@ import { createAkariSession } from './session.js';
 import { akariTutorialSteps } from './tutorial.js';
 import { inspectAkari, akariCell } from './rules.js';
 import { createScope } from '../../shared/lifecycle.js';
+import { energyHint } from '../../features/progression/attempt-energy.js';
 import { Events, emit } from '../../shared/events.js';
 import { paintMineStars as paintStars, createStarCollection } from '../mine/stars.js';
 
@@ -35,7 +36,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     <div class="akari-feedback"><p id="akari-message" role="status" aria-live="polite"></p><button id="akari-reload" type="button" hidden>重新加载</button></div>
     <dialog id="akari-enter-dialog" class="journey-rules" aria-labelledby="akari-enter-title" aria-describedby="akari-enter-description"><h2 id="akari-enter-title">是否闯关？</h2><p id="akari-enter-description"></p><div class="journey-actions"><button id="akari-enter-cancel" type="button" autofocus>暂不闯关</button><button id="akari-enter-confirm" class="journey-primary" type="button">确认闯关</button></div></dialog>
     <dialog id="akari-rules-dialog" class="journey-rules" aria-labelledby="akari-rules-title"><h2 id="akari-rules-title">照明规则</h2><ol><li>在白格放灯，灯光沿横竖方向传播，遇黑墙或边界停止。</li><li>照亮全部白格。灯泡之间不能互相照射。</li><li>数字黑墙上下左右的灯泡数量必须恰好等于数字；斜角不计算。</li><li>三个条件同时满足才通关。可随时撤灯修改，不限时，也不要求最少灯泡。</li></ol><p>阅读规则期间暂停计时。</p><button id="akari-rules-close" class="journey-primary" type="button">知道了，继续</button></dialog>
-    <dialog id="akari-restart-dialog" class="journey-rules" aria-labelledby="akari-restart-title"><h2 id="akari-restart-title">重新开始本关？</h2><p>本关灯泡将清空，其他关卡的进度会保留。</p><div class="journey-actions"><button id="akari-restart-cancel" type="button">继续当前局</button><button id="akari-restart-confirm" class="journey-primary" type="button">确认重开</button></div></dialog>`;
+    <dialog id="akari-restart-dialog" class="journey-rules" aria-labelledby="akari-restart-title"><h2 id="akari-restart-title">重新开始本关？</h2><p>本关灯泡将清空，其他关卡的进度会保留。</p><p id="akari-restart-energy"></p><div class="journey-actions"><button id="akari-restart-cancel" type="button">继续当前局</button><button id="akari-restart-confirm" class="journey-primary" type="button">确认重开</button></div></dialog>`;
   const $=id=>host.querySelector('#'+id);
   const collection=createStarCollection({onComplete:reward=>{
     if(dead||reward.userId!==identity)return;
@@ -142,6 +143,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     $('akari-guide-target').hidden=!Number.isInteger(guide?.index);
     $('akari-guide-target').textContent=Number.isInteger(guide?.index)?`当前操作：第${Math.floor(guide.index/state.attempt.puzzle.cols)+1}行第${guide.index%state.attempt.puzzle.cols+1}列 · ${guide.bulb?'放灯':'撤灯'}（金色粗框）`:'';
     $('akari-restart').disabled=state.busy||state.pending;$('akari-rules').disabled=state.busy;
+    $('akari-restart-energy').textContent=energyHint(state.attempt.puzzle.tutorial,true);
     $('akari-pause').hidden=!state.paused||state.pending||Boolean(state.result);
     $('akari-resume').disabled=state.busy;
     renderBoard(state);timing();
@@ -167,7 +169,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     model.select(id);pendingLevel=id;
     const continuing=state.progress.some(item=>item.level_id===id&&item.current_attempt);
     $('akari-enter-title').textContent=`是否挑战${level.name}？`;
-    $('akari-enter-description').textContent=`${level.rows} × ${level.cols} · ${level.focus||'照亮每个角落'}。${continuing?'确认后继续上次的棋局。':'确认后进入本关，通关不限时。'}`;
+    $('akari-enter-description').textContent=`${level.rows} × ${level.cols} · ${level.focus||'照亮每个角落'}。${continuing?'确认后继续上次的棋局，不重复消耗体力。':energyHint(level.difficulty==='tutorial')}`;
     $('akari-enter-dialog').showModal();
   }
   /** 显式选择后打开，登录异步完成仍保留用户刚才选中的关卡。 */
@@ -200,7 +202,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
   scope.listen($('akari-resume'),'click',()=>void run(()=>model.setPaused('selection',false)));
   scope.listen($('akari-retry-settlement'),'click',()=>void run(()=>model.complete()));
   scope.listen($('akari-reload'),'click',()=>void run(()=>model.load()));
-  scope.listen($('akari-restart'),'click',()=>{if(model.state.attempt.status==='active'){$('akari-restart-dialog').showModal();void run(()=>model.setPaused('restart',true));}else void play(()=>model.restart());});
+  scope.listen($('akari-restart'),'click',()=>{$('akari-restart-dialog').showModal();void run(()=>model.setPaused('restart',true));});
   scope.listen($('akari-restart-cancel'),'click',()=>$('akari-restart-dialog').close());
   scope.listen($('akari-restart-dialog'),'close',()=>void run(()=>model.setPaused('restart',false)));
   scope.listen($('akari-restart-confirm'),'click',()=>{$('akari-restart-dialog').close();collection.cancel();emit(Events.SETTLEMENT_CLOSED);void play(()=>model.restart());});

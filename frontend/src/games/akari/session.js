@@ -1,6 +1,7 @@
 /** 照明正式会话：变尺寸题目、账号草稿、权威时钟和可恢复的幂等结算。 */
 import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
+import { publishAttemptEnergy,restartAttempt } from '../../features/progression/attempt-energy.js';
 import { createAkari, toggleBulb } from './rules.js';
 import { akariTutorialSteps } from './tutorial.js';
 
@@ -33,6 +34,7 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
   /** 只恢复正式地图中的合法白格坐标，不相信草稿中的规则或奖励。 */
   function adopt(attempt){
     if(dead)return;
+    publishAttemptEnergy(uid,attempt);
     const saved=store.load(attempt),cells=attempt.puzzle.map.join('');
     state.attempt=attempt;state.selected=attempt.level_id;state.result=null;state.board=createAkari(attempt.puzzle);
     state.board.bulbs=new Set((Array.isArray(saved?.draft?.bulbs)?saved.draft.bulbs:[]).filter(i=>Number.isInteger(i)&&i>=0&&cells[i]==='.'));
@@ -69,6 +71,7 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
   /** 只有成功快照更新正式成绩；恢复已有结果不重播奖励。 */
   function confirmed(result,restored=false){
     if(dead)return;
+    publishAttemptEnergy(uid,result);
     state.result=result;state.pending=false;state.attempt.status='completed';state.board.complete=true;frozen=result.duration_ms;
     store.clearPending(state.attempt);
     let progress=state.progress.find(v=>v.level_id===state.attempt.level_id);
@@ -175,9 +178,9 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
     /** 调用方确认后只放弃当前关；使用最新ETag防止覆盖其他标签页结果。 */
     async restart(){return perform(async()=>{
       const attempt=state.attempt;
-      if(attempt){const latest=await request(attempt.links.self);if(dead)return;
-        if(latest.data.status==='active')await request(attempt.links.self,{method:'PATCH',body:{status:'abandoned'},headers:{'If-Match':latest.etag}});
-        if(dead)return;state.selected=attempt.level_id;store.clearStart(attempt.level_id);
+      if(attempt){
+        const restarted=await restartAttempt({attempt,store,request});if(dead)return;
+        pendingClock=null;await restore(restarted.response.data.links.self);if(!dead)restarted.clear();return;
       }
       state.pending=false;state.result=null;pendingClock=null;await begin();
     });},

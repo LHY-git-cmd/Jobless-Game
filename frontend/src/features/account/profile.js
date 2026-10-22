@@ -1,6 +1,7 @@
 /** 首页账号档案：绿色经验环、底部等级牌及右侧真实星数，不在本地推算权益。 */
 import { requestJson } from '../../shared/http.js';
 import { Events } from '../../shared/events.js';
+import { initEnergyDisplay } from './energy.js';
 
 /** 只在登录或主动返回页面时读取，账号变化立即废弃旧响应，不轮询。 */
 export function createProfileProgress({ request = () => requestJson('/api/v1/me/progression'), onChange = () => {}, onUnauthorized = () => {} } = {}) {
@@ -63,6 +64,7 @@ export function initPlayerProfile({ host, userButton, openButton, avatarImage, u
   bar.setAttribute('aria-label', '累计经验');
   const label = document.createElement('span'); label.className = 'player-xp-label';
   experience.append(bar, label); host.replaceChildren(openButton, userButton, usernameLabel, stars, experience);
+  const energy=initEnergyDisplay(host);
   const model = createProfileProgress({
     onUnauthorized: () => document.dispatchEvent(new CustomEvent(Events.AUTH_EXPIRED)),
     onChange: state => {
@@ -97,5 +99,5 @@ export function initPlayerProfile({ host, userButton, openButton, avatarImage, u
     document.removeEventListener(Events.PROGRESSION_CONFIRMED,confirmed);
     window.removeEventListener('pageshow', visible);
   }, { once: true });
-  return model;
+  return {...model,setUser(user){model.setUser(user);energy.setUser(user);}};
 }

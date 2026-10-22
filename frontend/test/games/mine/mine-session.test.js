@@ -16,9 +16,9 @@ function fixture() {
     if(path==='features') return {data:{progression:true}};
     if(path==='levels?game_id=mine') return {data:{items:levels}};
     if(path==='me/level-progress?game_id=mine&limit=50') return {data:{items:levels.map(v=>({level_id:v.level_id,best_stars:0,current_attempt:null}))}};
-    if(path==='attempts') {
+    if(path==='attempts'||path.endsWith('/restart')) {
       starts++;
-      const level=levels.find(v=>v.level_id===options.body.level_id);
+      const level=levels.find(v=>v.level_id===(options.body.level_id||attempt?.level_id));
       attempt={attempt_id:'a',level_id:level.level_id,level_version:1,revision:0,status:'active',
         started_at:'2026-10-22T00:00:00Z',server_now:new Date(clockTime).toISOString(),ended_at:null,
         timing:{elapsed_ms:0,paused:false,paused_ms:0,revision:0},

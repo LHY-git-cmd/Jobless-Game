@@ -16,7 +16,7 @@ function fixture(){
     if(path==='features')return {data:{progression:true}};
     if(path==='levels?game_id=sudoku')return {data:{items:levels}};
     if(path==='me/level-progress?game_id=sudoku&limit=50')return {data:{items:[]}};
-    if(path==='attempts'){
+    if(path==='attempts'||path.endsWith('/restart')){
       starts++; attempt={attempt_id:String(starts),level_id:'sudoku-easy',level_version:1,status:'active',
         started_at:new Date(time).toISOString(),puzzle:{rows:4,cols:4,values:answer.map((v,i)=>i===1||i===6?0:v),checksum:'p'},
         board:{outcome:'active'},timing:{elapsed_ms:0,paused:false,revision:0},

@@ -15,9 +15,9 @@ function fixture(puzzleOverride={}) {
     if(path==='features')return {data:{progression:true}};
     if(path==='levels?game_id=akari')return {data:{items:levels}};
     if(path==='me/level-progress?game_id=akari&limit=50')return {data:{items:[]}};
-    if(path==='attempts') {
+    if(path==='attempts'||path.endsWith('/restart')) {
       starts++;
-      attempt={attempt_id:String(starts),level_id:levels[0].level_id,level_version:options.body.level_version,status:'active',
+      attempt={attempt_id:String(starts),level_id:levels[0].level_id,level_version:options.body.level_version||levels[0].level_version,status:'active',
         puzzle:{rows:3,cols:3,map:['..1','###','1..'],checksum:'fixed',...puzzleOverride},
         timing:{elapsed_ms:0,paused:false,revision:0},
         links:{self:`/api/v1/attempts/${starts}`,completion:`/api/v1/attempts/${starts}/completion`}};

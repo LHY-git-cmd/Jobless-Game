@@ -1,6 +1,7 @@
 /** 扫雷页面：五档选关、四步教学、权威棋盘及账号成长结算。 */
 import { createMineSession } from './session.js';
 import { createScope } from '../../shared/lifecycle.js';
+import { energyHint } from '../../features/progression/attempt-energy.js';
 import { Events, emit } from '../../shared/events.js';
 import { getAudioSettings } from '../../features/audio/settings.js';
 import { createExplosionSequence, createExplosionSound, explosionOrder } from './effects.js';
@@ -221,7 +222,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     rulesStarting=starting;
     const level=model.state.levels.find(v=>v.level_id===model.state.selected);
     $('mine-rules-reward').textContent=level?.difficulty==='tutorial'?'跟随四步引导完成，获得1星、2经验。':`三星 ≤ ${mineTime(level.t3_ms)}，二星 ≤ ${mineTime(level.t2_ms)}。重复成绩不重复奖励，提升星级补差额。`;
-    $('mine-rules-timing').textContent=starting?'点击“开始游戏”后开始计时。':'查看规则期间计时和可得星数已暂停，关闭规则后继续。';
+    $('mine-rules-timing').textContent=starting?'点击“开始游戏”后开始计时。'+energyHint(level?.difficulty==='tutorial'):'查看规则期间计时和可得星数已暂停，关闭规则后继续。';
     $('mine-rules-confirm').textContent=starting?'开始游戏':'继续游戏';$('mine-rules-dialog').showModal();
     if(!starting)void run(()=>model.setPaused('rules',true));
   }
@@ -269,8 +270,8 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
   scope.listen($('mine-retry-settlement'),'click',()=>void run(()=>model.complete()));
   scope.listen($('mine-restart'),'click',()=>{
     collection.cancel();
-    if(model.state.attempt?.board.outcome==='active')$('mine-restart-dialog').showModal();
-    else {stopAnimation();emit(Events.SETTLEMENT_CLOSED);void runPlay(()=>model.restart());}
+    $('mine-restart-dialog').querySelector('p').textContent='当前棋局将被放弃，其他关卡进度保留。'+energyHint(model.state.attempt?.puzzle.tutorial,true);
+    $('mine-restart-dialog').showModal();
   });
   scope.listen($('mine-restart-cancel'),'click',()=>$('mine-restart-dialog').close());
   scope.listen($('mine-restart-confirm'),'click',()=>{$('mine-restart-dialog').close();stopAnimation();emit(Events.SETTLEMENT_CLOSED);void runPlay(()=>model.restart());});
