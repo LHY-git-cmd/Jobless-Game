@@ -1,10 +1,11 @@
-/** 独立选关页：扫雷/数独五档正式游戏，照明保留占位；账号成长集中在顶部头像。 */
+/** 独立选关页：扫雷/数独五档及照明16关；账号成长集中在顶部头像。 */
 import { initAuth } from '../features/account/auth.js';
 import { Events } from '../shared/events.js';
 import { api } from '../features/progression/client.js';
 import { gameFromSearch, gameLink } from '../games/catalog.js';
 import { createMineJourney } from '../games/mine/controller.js';
 import { createSudokuJourney } from '../games/sudoku/controller.js';
+import { createAkariJourney } from '../games/akari/controller.js';
 
 const $ = id => document.getElementById(id);
 const game = gameFromSearch(location.search);
@@ -27,11 +28,11 @@ function renderGame() {
     for (const digit of ['1', '2', '', '', '5', '6', '7', '', '9']) { const cell = document.createElement('span'); cell.textContent = digit; grid.append(cell); }
     $('catalog-art').append(grid);
   }
-  if(game.id==='mine'||game.id==='sudoku') {
+  if(['mine','sudoku','akari'].includes(game.id)) {
     $('catalog-empty').hidden=true;
-    const host=document.createElement('div');host.className=game.id==='mine'?'mine-host':'sudoku-host';host.id=game.id+'-journey';
+    const host=document.createElement('div');host.className=game.id+'-host';host.id=game.id+'-journey';
     $('catalog-empty').after(host);
-    gameJourney=(game.id==='mine'?createMineJourney:createSudokuJourney)({host,auth,onReward:()=>void refresh()});
+    gameJourney=({mine:createMineJourney,sudoku:createSudokuJourney,akari:createAkariJourney}[game.id])({host,auth,onReward:()=>void refresh()});
   }
 }
 
@@ -41,7 +42,7 @@ function renderQualifications(value) {
   for (const item of value.requirements) {
     const link = document.createElement('a');
     link.href = gameLink(gameFromSearch(`?level=${encodeURIComponent(item.level_id)}`).id);
-    link.textContent = `${item.name}　${item.completed ? '已通过' : /^(mine|sudoku)-/.test(item.level_id) ? '前往简单关挑战' : '新关卡待开放'}`;
+    link.textContent = `${item.name}　${item.completed ? '已通过' : item.level_id.startsWith('akari-') ? '前往第1关挑战' : '前往简单关挑战'}`;
     $('journey-qualifications').append(link);
   }
 }

@@ -2,13 +2,15 @@
 
 远程仓库：[LHY-git-cmd/Jobless-Game](https://github.com/LHY-git-cmd/Jobless-Game)。
 
-手机端优先的解谜游戏。首页保留扫雷、照明、数独三张卡片，分别进入对应的选关页。扫雷和数独已接入入门、简单、中等、困难、地狱五档；照明继续显示重制占位。界面沿用海岛背景、深蓝和暖金色。
+手机端优先的解谜游戏。首页保留扫雷、照明、数独三张卡片，分别进入对应的选关页。扫雷和数独已接入入门、简单、中等、困难、地狱五档；照明提供入门及第1～15关。界面沿用海岛背景、深蓝和暖金色。
 
 设计、开发与部署前请阅读 [项目硬约束](./README-CONSTRAINTS.md)，其中明确了 2 核、2GB 内存与宝塔共存的资源边界，以及后续登录功能的账号、迁移和验收要求。
 
 完整目录结构与文件夹用途见 [项目目录树](./PROJECT-TREE.md)。后续目录结构、所列文件或用途变更时，必须同步更新该文档。
 
-前端保留多页和原生 ES Module。当前HTML统一加载 `src/pages/` 入口；业务位于 `src/features/`、游戏位于 `src/games/`、公共能力位于 `src/shared/`，已下线实现归入 `src/legacy/`。样式位于 `styles/`，测试按对应模块分组；根 `src/main.js` 和CSS只保留旧URL转接。首页只装配账号、历史记录和入口滚动，不恢复旧三关。三卡地址保持 `journey.html?game_id=mine/akari/sudoku`，扫雷和数独使用独立控制器和正式会话，照明保留占位。具体约定见 [前端说明](./frontend/README.md) 与 [目录整改报告](./docs/frontend-structure-report.md)。
+前端保留多页和原生 ES Module。当前HTML统一加载 `src/pages/` 入口；业务位于 `src/features/`、游戏位于 `src/games/`、公共能力位于 `src/shared/`，已下线实现归入 `src/legacy/`。样式位于 `styles/`，测试按对应模块分组；根 `src/main.js` 和CSS只保留旧URL转接。首页只装配账号、历史记录和入口滚动，不恢复旧三关。三卡地址保持 `journey.html?game_id=mine/akari/sudoku`，三款游戏使用独立控制器和正式会话。具体约定见 [前端说明](./frontend/README.md) 与 [目录整改报告](./docs/frontend-structure-report.md)。
+
+照明从4×4入门逐步增加到10×10第15关，不显示难度系数。16题具有唯一解，离线验证直接约束、联合约束及单层矛盾反证的递进。入门练习放灯及撤灯，前5关附短说明；支持数字/互照冲突反馈、规则暂停、账号草稿恢复、终盘断网重试和下一关。通关不限时，时间仅作记录，普通通关固定3星、入门1星，经验沿用已有里程碑机制；新第1关认可旧照明永久资格。发布需执行新增V13迁移，保留旧题目和旧成绩。验收脚本为 `python artifacts/frontend/verify_akari_levels.py`，只使用独立Chrome与临时SQLite；见 [照明实施计划](./docs/akari-implementation-plan.md)。
 
 旧的 [扫雷练习地址](./frontend/mine-practice.html) 兼容跳转新版扫雷选关，不再展示原九关。旧本地存档、历史成长和资格保留。新版扫雷浏览器验收使用 `python artifacts/frontend/verify_mine_redesign.py`，只访问临时SQLite及独立Chrome；历史空目录验收脚本保留为材料，原MVP背景见 [历史实施报告](./docs/mine-multilevel-mvp-report.md)。
 
@@ -28,7 +30,7 @@
 
 双人竞速必须正式通过扫雷初级（新版简单10×10通关同样认可）、照明第1关、数独初级三项，旧客户端成绩与本地练习不自动补资格。支持房间码邀请和普通照明FIFO匹配；双方准备后5秒倒计时、10分钟竞速、一秒平局窗口，断线宽限30秒，PK不发成长奖励。中间照明/数独草稿按账号保存在本浏览器，服务器负责正式起点、判题、奖励、资格与结果。
 
-这些新能力默认关闭；当前扫雷/数独需先在专用环境完成Flyway V1～V12，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`。本次未改写现有站点配置或部署生产。实际实现、测试统计和待完成的目标机容量验收见 [成长竞速实施报告](./docs/game-progression-pk-report.md)，操作命令见 [后端说明](./backend/README.md)。
+这些新能力默认关闭；当前扫雷/数独/照明需先在专用环境完成Flyway V1～V13，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`。本次未改写现有站点配置或部署生产。实际实现、测试统计和待完成的目标机容量验收见 [成长竞速实施报告](./docs/game-progression-pk-report.md)，操作命令见 [后端说明](./backend/README.md)。
 
 顶部导航按“排行榜 / 无职游戏 / 论坛”排列。排行榜只提供扫雷、照明、数独三个独立分榜，原排行榜入口默认展示扫雷分榜。文字论坛只填写正文即可发布帖子，支持评论、评论下回复及各自点赞；游客可读，登录后参与，复用游戏账号和头像。
 

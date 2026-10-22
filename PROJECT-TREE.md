@@ -21,8 +21,11 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── game-catalog-v1.json           # 十关照明、三题PK、历史初级扫雷/数独与建议参数v1
 │   │   ├── mine-catalog-v2.json           # 教学与四档各三规格，共十三项扫雷、时限及逐星经验
 │   │   ├── sudoku-catalog-v2.json         # 数独五档十三题、尺寸、推理技巧、时限及逐星经验
+│   │   ├── akari-catalog-v2.json          # 照明入门及第1～15关的冻结地图和参数
+│   │   ├── akari-audit-v2.json            # 照明离线逻辑推理及内部递进度量，不下发浏览器
 │   │   └── sudoku-audit-v2.json           # 开发机离线唯一解和逐步推理记录，不下发浏览器
 │   ├── sudoku_content.py                 # 有界离线构造、两解搜索及四档逻辑分级器
+│   ├── akari_content.py                  # 照明确定性逻辑、单层反证、唯一性及16关离线构建
 │   ├── content_check.py                  # 开发机唯一解、初级单候选与只生成新文件的题库工具
 │   ├── cleanup_game_history.py           # 有界历史清理，保留永久成长与资格
 │   ├── export_game_contract.py           # 从实际v1路由和DTO导出/核对契约草案
@@ -110,7 +113,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V9__index_game_history_retention.sql # 终态时间索引，支持有界清理
 │   │   ├── V10__publish_mine_difficulties.sql # 扫雷五档原七项不可变关卡与独立奖励定义
 │   │   ├── V11__expand_mine_board_choices.sql # 中等/困难/地狱新增六个矩形棋盘，不改旧定义
-│   │   └── V12__publish_sudoku_difficulties.sql # 数独教学与四档各三题，保留历史定义
+│   │   ├── V12__publish_sudoku_difficulties.sql # 数独教学与四档各三题，保留历史定义
+│   │   └── V13__publish_akari_levels.sql   # 照明入门及15关，保留旧定义及永久资格
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -138,6 +142,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_game_content.py          # 题库唯一解、评分边界、无死锁与初级难度
 │       ├── test_sudoku_content.py        # 数独唯一性、真实技巧分级和伪造推理拒绝
 │       ├── test_sudoku_api.py            # 数独13题判题、教学、暂停、奖励及资格隔离
+│       ├── test_akari_content.py          # 照明16关唯一性、逻辑递进及冻结迁移一致性
+│       ├── test_akari_api.py              # 照明目录、16关判题、权威时钟及历史资格
 │       ├── test_mine_redesign.py         # 五档矩形扫雷、教学步骤、首击安全、经验补差及冻结时间
 │       ├── test_mine_pause.py            # 服务器暂停/继续、防重版本、账号隔离及有效时长结算
 │       ├── test_progression_v1.py        # 尝试/成长/资格/主题/版本/权限及回滚契约
@@ -161,6 +167,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── mine-difficulty-redesign-report.md  # 扫雷重制效果、验收统计、本地预览及发布条件
 │   ├── sudoku-implementation-plan.md       # 已确认的数独五档13关、推理分级、参考图界面及计时成长计划
 │   ├── sudoku-implementation-report.md     # 数独实现、真实MySQL/浏览器证据、旧失败及本地体验
+│   ├── akari-implementation-plan.md        # 已授权的照明入门及15关实施和验收方案
+│   ├── akari-implementation-report.md      # 照明关卡、逻辑递进、测试及发布条件
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
@@ -201,8 +209,10 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │       ├── client.js  # 所属业务的同源接口访问
 │   │   │       └── personal-records.js  # 本人最佳及最近三次通关
 │   │   ├── games/  # 当前游戏规则与棋盘
-│   │   │   ├── akari/  # 照明规则
-│   │   │   │   └── rules.js  # 所属游戏规则算法
+│   │   │   ├── akari/  # 照明16关规则、会话及页面控制器
+│   │   │   │   ├── rules.js  # 变尺寸照明、覆盖、互斥及数字约束
+│   │   │   │   ├── session.js  # 账号草稿、权威时钟及终盘重试
+│   │   │   │   └── controller.js  # 入门及15关选关、教学、冲突及下一关
 │   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
 │   │   │   │   ├── controller.js  # 所属业务/游戏控制器与生命周期
 │   │   │   │   ├── effects.js  # 爆炸顺序、时间线与音效
@@ -269,6 +279,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── pages/  # 当前HTML页面入口与装配
 │   │   │   ├── journey.css  # 所属页面/组件样式，声明顺序保留
 │   │   │   ├── mine.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── akari.css  # 照明选关和深蓝暖金棋盘，手机区域内滚动
 │   │   │   └── sudoku.css  # 参考图数独面板、棋盘状态和窄屏数字键
 │   │   └── base.css  # 按原声明顺序装配8段公共样式
 │   ├── test/  # 按功能分组的Node行为及结构契约
@@ -295,6 +306,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── games/  # 当前游戏规则与棋盘
 │   │   │   ├── akari/  # 照明规则
 │   │   │   │   ├── akari-instance.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── akari-session.test.js  # 账号续玩、全部约束、暂停及断网结算
 │   │   │   │   └── akari.test.js  # 所属模块的行为回归测试
 │   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
 │   │   │   │   ├── mine-effects.test.js  # 所属模块的行为回归测试
@@ -323,7 +335,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── forum.html  # 独立页面入口，URL保持不变
 │   ├── index.html  # 首页，页面URL保持不变
 │   ├── journey.css  # 旧URL兼容入口
-│   ├── journey.html  # 选关与扫雷游戏，页面URL保持不变
+│   ├── journey.html  # 三款游戏独立选关与正式游戏，页面URL保持不变
 │   ├── mine-journey.css  # 旧URL兼容入口
 │   ├── mine-practice.css  # 旧URL兼容入口
 │   ├── mine-practice.html  # 旧练习地址跳转新版扫雷
@@ -380,6 +392,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_mine_pause.py          # 规则/选关/真实标签切换/离页暂停与继续、活动时长星级验收
         ├── verify_sudoku.py              # 数独13关、教学、奖励/断网、窄屏及隔离本地预览
         ├── verify_sudoku_interactions.py # 数独键盘/冲突、真实离页、重开、换号及减少动画验收
+        ├── verify_akari_levels.py        # 照明16关真实点击、教学、断网恢复、下一关与44px窄屏验收
         ├── verify_frontend_structure.py  # 整改前后同状态像素比对、三个分榜及新版入口/资源验收
         ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
