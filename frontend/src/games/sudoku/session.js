@@ -5,7 +5,7 @@ import { createSudoku,selectSudokuCell,setSudokuValue,toggleSudokuNote,normalize
 
 /** request、storage及now可注入；服务端负责时间和奖励，本地只保存未提交的布局。 */
 export function createSudokuSession({uid,storage,request=api,now=Date.now,onChange=()=>{},onReward=()=>{}}={}){
-  const state={levels:[],progress:[],enabled:false,selected:null,attempt:null,grid:null,result:null,pending:false,busy:false,paused:false,clockBusy:false,message:''};
+  const state={levels:[],progress:[],enabled:false,selected:null,attempt:null,grid:null,result:null,pending:false,busy:false,paused:false,manualPaused:false,clockBusy:false,message:''};
   const store=createJourneyStore(storage,`sudoku:${uid}`,message=>{state.message=message;});
   if(!storage&&uid)state.message='本地存储不可用，刷新可能丢失未提交的答案与笔记。';
   const reasons=new Set();
@@ -21,7 +21,7 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
     return (state.attempt.timing?.elapsed_ms||0)+(state.attempt.timing?.paused||state.attempt.status!=='active'?0:Math.max(0,now()-anchor));
   }
   /** 保存只包含玩家布局与模式，不保存本地伪造的奖励。 */
-  function save(){if(!dead&&state.attempt&&state.grid)store.save(state.attempt,{values:state.grid.values,notes:state.grid.notes,notesMode:state.grid.notesMode,selected:state.grid.selected});}
+  function save(){if(!dead&&state.attempt&&state.grid)store.save(state.attempt,{values:state.grid.values,notes:state.grid.notes,notesMode:state.grid.notesMode,selected:state.grid.selected,manualPaused:state.manualPaused});}
   /** 普通操作等待在途时钟，离页暂停则由独立队列发送keepalive。 */
   async function perform(work){
     if(dead||state.busy)return;
@@ -35,6 +35,9 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
     if(dead)return;
     state.attempt=attempt;state.selected=attempt.level_id;state.result=null;
     const saved=store.load(attempt),draft=saved?.draft;
+    // 手动暂停随当前局保存；新局没有该标记，后台/选关暂停原因仍独立管理。
+    state.manualPaused=draft?.manualPaused===true;
+    if(state.manualPaused)reasons.add('manual');else reasons.delete('manual');
     const grid=createSudoku(attempt.puzzle),size=grid.size;
     if(attempt.puzzle.tutorial){
       grid.values=[...attempt.board.tutorial_values];grid.notes=[...attempt.board.tutorial_notes];
@@ -187,8 +190,6 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
         if(grid.values.every(v=>v>0)&&checkSudoku(grid).status!=='conflict')await settle();
       });
     },
-    /** 检查只报告重复和空格，不提供正确数字。 */
-    check(){if(!editable())return;const result=checkSudoku(state.grid);state.message=result.status==='conflict'?'存在重复数字，请检查标红格子。':`没有重复数字，还剩 ${result.blanks} 个空格。`;publish();},
     /** 保存失败只重放已冻结的终盘。 */
     async complete(){return perform(async()=>{if(state.pending&&!state.result)await resumeSubmission();});},
     /** 调用方先确认重开，条件放弃避免覆盖其他页面刚完成的棋局。 */
@@ -204,6 +205,7 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
     async setPaused(reason,value,{sync=true,immediate=false}={}){
       if(dead)return;
       const before=reasons.size>0,time=elapsed();if(value)reasons.add(reason);else reasons.delete(reason);
+      if(reason==='manual'){state.manualPaused=value;save();}
       const paused=reasons.size>0;
       if(!sync||!state.attempt||state.attempt.status!=='active'||state.pending)return;
       if(before===paused&&state.paused===paused&&!pendingClock&&!state.clockBusy)return;

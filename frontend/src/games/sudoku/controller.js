@@ -19,7 +19,7 @@ export function sudokuTime(ms){const seconds=Math.floor(Math.max(0,ms)/1000);ret
 
 /** auth由页面共享；每次换号销毁旧会话、弹窗和奖励动画。 */
 export function createSudokuJourney({host,auth,onReward=()=>{}}){
-  const scope=createScope();let model,identity,ready=Promise.resolve(),dead=false,selectionOnly=false,errorMessage='',rulesStarting=false,boardKey='',pendingFocus=null;
+  const scope=createScope();let model,identity,ready=Promise.resolve(),dead=false,selectionOnly=false,errorMessage='',boardKey='',pendingFocus=null;
   host.innerHTML=`
     <div id="sudoku-selector" class="sudoku-selector">
       <div class="sudoku-intro"><div><p class="eyebrow">SUDOKU / 数字之间，自有秩序</p><h2>一格一格，解开谜题。</h2><p>从第一个确定的数字，到属于你的完整答案。</p></div><div class="sudoku-emblem" aria-hidden="true"><span>1</span><span></span><span>3</span><span></span><span>5</span><span></span><span>7</span><span></span><span>9</span></div></div>
@@ -31,14 +31,13 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     <section id="sudoku-play" class="sudoku-play" aria-label="数独游戏" hidden>
       <div class="sudoku-topbar"><button id="sudoku-back" type="button">返回选关</button><span>无职游戏</span><button id="sudoku-restart" type="button">重新开始</button></div>
       <div class="sudoku-heading"><p class="eyebrow" id="sudoku-kicker">SUDOKU</p><h2>数独</h2><p id="sudoku-description"></p></div>
-      <div class="sudoku-toolbar"><div class="sudoku-available"><span>可得星数</span><span id="sudoku-available-stars" class="mine-rating" aria-live="polite"></span></div><div class="sudoku-tools-right"><p><span id="sudoku-clock-label">本局用时</span><strong id="sudoku-clock">00:00</strong></p><div><button id="sudoku-notes" type="button" aria-pressed="false">笔记：关</button><button id="sudoku-rules" type="button">规则</button></div></div></div>
+      <div class="sudoku-toolbar"><div class="sudoku-available"><span>可得星数</span><span id="sudoku-available-stars" class="mine-rating" aria-live="polite"></span></div><div class="sudoku-tools-right"><p><span id="sudoku-clock-label">本局用时</span><strong id="sudoku-clock">00:00</strong></p><button id="sudoku-pause-toggle" type="button" aria-pressed="false">暂停</button></div></div>
       <div id="sudoku-tutorial" class="sudoku-tutorial" hidden><p id="sudoku-tutorial-count" class="eyebrow"></p><h3 id="sudoku-tutorial-title"></h3><p id="sudoku-tutorial-text"></p></div>
       <div class="sudoku-board-wrap"><div id="sudoku-board" class="sudoku-board" role="group" aria-label="数独棋盘"></div><div id="sudoku-pause" class="sudoku-pause" hidden><strong>棋局已暂停</strong><p>准备好后，继续这一盘。</p><button id="sudoku-clock-retry" type="button" class="journey-primary">继续游戏</button></div></div>
-      <div class="sudoku-input"><p id="sudoku-selection">请选择一个格子。</p><p id="sudoku-input-hint">填数模式：点击数字填写答案，开启笔记可记录候选数。</p><div id="sudoku-keypad" class="sudoku-keypad" role="group" aria-label="填写数字"></div><div class="sudoku-actions"><button id="sudoku-clear" type="button">清除选中格</button><button id="sudoku-check" type="button" class="journey-primary">检查进度</button></div><p class="sudoku-keyboard-help">方向键选格 · 数字键填写 · Delete 清除</p></div>
+      <div class="sudoku-input"><p id="sudoku-selection">请选择一个格子。</p><p id="sudoku-input-hint">填数模式：点击数字填写答案，开启笔记可记录候选数。</p><div id="sudoku-keypad" class="sudoku-keypad" role="group" aria-label="填写数字"></div><div class="sudoku-actions"><button id="sudoku-clear" type="button">清除选中格</button><button id="sudoku-notes" type="button" class="journey-primary" aria-pressed="false">笔记：关</button></div><p class="sudoku-keyboard-help">方向键选格 · 数字键填写 · Delete 清除</p></div>
       <div id="sudoku-result" class="sudoku-result" role="status" hidden><p class="eyebrow">每一步推理，都算数。</p><h3 id="sudoku-result-title"></h3><div id="sudoku-result-stars" class="mine-rating"></div><p id="sudoku-result-description"></p><button id="sudoku-retry-settlement" type="button" class="journey-primary" hidden>重试保存奖励</button></div>
     </section>
     <div class="sudoku-feedback"><p id="sudoku-message" role="status" aria-live="polite"></p><button id="sudoku-reload" type="button" hidden>重新加载</button></div>
-    <dialog id="sudoku-rules-dialog" class="journey-rules" aria-labelledby="sudoku-rules-title"><h2 id="sudoku-rules-title">数独怎么玩</h2><p id="sudoku-rule-size"></p><ol><li>每一行、每一列、每一个宫内，数字都不能重复。</li><li>题目数字不可修改。先选一个空格，再用下方数字键填写。</li><li>开启笔记可记录或取消候选数；关闭后填写正式答案。</li><li>红色表示出现重复。你可以随时清除、修改，不限制错误次数。</li></ol><p id="sudoku-rules-reward"></p><p id="sudoku-rules-timing"></p><button id="sudoku-rules-confirm" type="button" class="journey-primary">开始游戏</button></dialog>
     <dialog id="sudoku-restart-dialog" class="journey-rules" aria-labelledby="sudoku-restart-title"><h2 id="sudoku-restart-title">重新开始本题？</h2><p>本题的填写和笔记将清空，其他题目的进度会保留。</p><div class="journey-actions"><button id="sudoku-restart-cancel" type="button">继续当前局</button><button id="sudoku-restart-confirm" type="button" class="journey-primary">确认重开</button></div></dialog>`;
   const $=id=>host.querySelector('#'+id);
   const collection=createStarCollection({onComplete:reward=>{
@@ -124,7 +123,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
   function timing(){
     const state=model?.state;if(!state?.attempt)return;
     const level=state.levels.find(v=>v.level_id===state.attempt.level_id);$('sudoku-clock').textContent=sudokuTime(model.elapsed());
-    $('sudoku-clock-label').textContent=state.paused&&!state.pending&&!state.result?'本局用时 · 已暂停':'本局用时';
+    $('sudoku-clock-label').textContent=state.paused&&!state.pending&&!state.result?'已暂停':'本局用时';
     paintStars($('sudoku-available-stars'),availableStars(level,model.elapsed(),'active',state.result?.stars),'本局可得星数',level?.max_stars);
   }
   /** 统一更新模式、教学及结果；错误和服务端反馈保持可重试。 */
@@ -143,8 +142,10 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
       if($('sudoku-keypad').children.length!==grid.size){$('sudoku-keypad').replaceChildren();for(let digit=1;digit<=grid.size;digit++){const button=document.createElement('button');button.type='button';button.dataset.digit=digit;button.textContent=digit;$('sudoku-keypad').append(button);}}
       for(const button of $('sudoku-keypad').children){button.disabled=!editable||(grid.notesMode&&Boolean(grid.values[selected]));if(grid.notesMode)button.setAttribute('aria-pressed',String(Boolean(grid.notes[selected]&(1<<(Number(button.dataset.digit)-1)))));else button.removeAttribute('aria-pressed');}
       $('sudoku-keypad').setAttribute('aria-label',grid.notesMode?'记录候选数':'填写数字');$('sudoku-keypad').dataset.size=grid.size;
-      $('sudoku-clear').disabled=!editable;$('sudoku-clear').textContent=grid.notesMode&&selected!==null&&!grid.values[selected]?'清除本格笔记':'清除选中格';$('sudoku-check').disabled=!active;
-      $('sudoku-restart').disabled=state.busy||state.clockBusy;$('sudoku-rules').disabled=state.busy||state.pending||Boolean(state.result);
+      $('sudoku-clear').disabled=!editable;$('sudoku-clear').textContent=grid.notesMode&&selected!==null&&!grid.values[selected]?'清除本格笔记':'清除选中格';
+      $('sudoku-restart').disabled=state.busy||state.clockBusy;
+      $('sudoku-pause-toggle').disabled=state.busy||state.clockBusy||state.pending||state.attempt.status!=='active';
+      $('sudoku-pause-toggle').textContent=state.paused?'继续':'暂停';$('sudoku-pause-toggle').setAttribute('aria-pressed',String(state.paused));
       $('sudoku-pause').hidden=!state.paused||state.pending||Boolean(state.result);$('sudoku-clock-retry').disabled=state.busy||state.clockBusy;
       $('sudoku-tutorial').hidden=!state.attempt.puzzle.tutorial||Boolean(state.result);$('sudoku-tutorial').dataset.step=state.attempt.board.tutorial_step??'';
       if(state.attempt.puzzle.tutorial){const step=state.attempt.board.tutorial_step,content=TUTORIAL[Math.min(step,4)];$('sudoku-tutorial-count').textContent=`入门引导 · ${Math.min(step+1,5)} / 5`;$('sudoku-tutorial-title').textContent=content[0];$('sudoku-tutorial-text').textContent=content[1];}
@@ -157,31 +158,18 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     $('sudoku-message').textContent=errorMessage||state.message||(!state.enabled&&state.levels.length?'数独暂未开放，请稍后重试。':'');
     $('sudoku-reload').hidden=!errorMessage||Boolean(state.attempt);$('sudoku-reload').disabled=state.busy;
   }
-  /** 首次规则确认前不创建尝试；重看规则持有独立暂停原因。 */
-  function openRules(starting){
-    rulesStarting=starting;const level=model.state.levels.find(v=>v.level_id===model.state.selected);
-    $('sudoku-rule-size').textContent=level.difficulty==='tutorial'?'在4×4棋盘内填入1～4；每个宫为2×2格。':'在9×9棋盘内填入1～9；每个宫为3×3格。';
-    $('sudoku-rules-reward').textContent=level.max_stars===1?'跟随五步引导，完成获得1星、2经验。':`三星 ≤ ${sudokuTime(level.t3_ms)}，二星 ≤ ${sudokuTime(level.t2_ms)}，其他通关一星。提升星级补差额。`;
-    $('sudoku-rules-timing').textContent=starting?'点击开始后计时；查看规则或离开页面会暂停。':'规则阅读期间已暂停，关闭后继续。';
-    $('sudoku-rules-confirm').textContent=starting?'开始游戏':'继续游戏';$('sudoku-rules-dialog').showModal();
-    if(!starting)void run(()=>model.setPaused('rules',true));
-  }
   for(const [key,label,caption] of DIFFICULTIES){const button=document.createElement('button'),name=document.createElement('strong'),note=document.createElement('span');button.type='button';button.dataset.difficulty=key;name.textContent=label;note.textContent=caption;button.append(name,note);$('sudoku-difficulties').append(button);}
   scope.listen($('sudoku-difficulties'),'click',event=>{const button=event.target.closest('[data-difficulty]');if(!button)return;const level=model.state.levels.find(v=>v.difficulty===button.dataset.difficulty);if(level)model.select(level.level_id);});
   scope.listen($('sudoku-specs'),'click',event=>{const button=event.target.closest('[data-level]');if(button)model.select(button.dataset.level);});
   scope.listen($('sudoku-start'),'click',()=>{const selected=model.state.selected;void auth.requireLogin(async()=>{
     await ready;if(dead)return;model.select(selected);
-    const progress=model.state.progress.find(v=>v.level_id===selected);
-    if(progress?.current_attempt||model.hasSaved(selected)){selectionOnly=false;await model.setPaused('selection',false,{sync:false});return play(()=>model.open());}
-    openRules(true);
+    selectionOnly=false;await model.setPaused('selection',false,{sync:false});return play(()=>model.open());
   });});
-  scope.listen($('sudoku-rules'),'click',()=>openRules(false));
-  scope.listen($('sudoku-rules-confirm'),'click',()=>{$('sudoku-rules-dialog').close();if(rulesStarting){selectionOnly=false;void model.setPaused('selection',false,{sync:false});void play(()=>model.open());}});
-  scope.listen($('sudoku-rules-dialog'),'close',()=>{if(!rulesStarting)void run(()=>model.setPaused('rules',false));});
+  scope.listen($('sudoku-pause-toggle'),'click',()=>void run(()=>model.setPaused('manual',!model.state.paused)));
   scope.listen($('sudoku-back'),'click',()=>{selectionOnly=true;collection.cancel();emit(Events.SETTLEMENT_CLOSED);void run(()=>model.setPaused('selection',true));render(model.state);$('sudoku-start').focus();});
   scope.listen($('sudoku-board'),'click',event=>{const cell=event.target.closest('[data-index]');if(cell)model.choose(Number(cell.dataset.index));});
   scope.listen($('sudoku-keypad'),'click',event=>{const button=event.target.closest('[data-digit]');if(button)void run(()=>model.input(Number(button.dataset.digit)));});
-  scope.listen($('sudoku-notes'),'click',()=>model.toggleNotes());scope.listen($('sudoku-clear'),'click',()=>void run(()=>model.input(0)));scope.listen($('sudoku-check'),'click',()=>model.check());
+  scope.listen($('sudoku-notes'),'click',()=>model.toggleNotes());scope.listen($('sudoku-clear'),'click',()=>void run(()=>model.input(0)));
   scope.listen(document,'keydown',event=>{
     if(!model?.state.grid||selectionOnly||$('sudoku-play').hidden||document.querySelector('dialog[open]')||event.ctrlKey||event.altKey||event.metaKey||event.target.closest('input,textarea,select,[contenteditable="true"]'))return;
     const grid=model.state.grid,size=grid.size,index=grid.selected??0,col=index%size;
@@ -190,7 +178,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     else if(['Delete','Backspace'].includes(event.key)){event.preventDefault();void run(()=>model.input(0));}
   });
   scope.listen($('sudoku-retry-settlement'),'click',()=>void run(()=>model.complete()));
-  scope.listen($('sudoku-clock-retry'),'click',()=>void run(()=>model.setPaused('retry',false)));
+  scope.listen($('sudoku-clock-retry'),'click',()=>void run(()=>model.setPaused('manual',false)));
   scope.listen($('sudoku-reload'),'click',()=>void run(()=>model.load()));
   scope.listen($('sudoku-restart'),'click',()=>{collection.cancel();if(model.state.attempt.status==='active'){$('sudoku-restart-dialog').showModal();void run(()=>model.setPaused('restart',true));}else{emit(Events.SETTLEMENT_CLOSED);void play(()=>model.restart());}});
   scope.listen($('sudoku-restart-cancel'),'click',()=>$('sudoku-restart-dialog').close());
@@ -204,7 +192,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     /** 换号先销毁旧局和动画，避免跨账号异步显示。 */
     async setUser(uid){
       if(identity===uid&&model)return;collection.cancel(false);identity=uid;model?.destroy();selectionOnly=false;boardKey='';pendingFocus=null;errorMessage='';
-      $('sudoku-rules-dialog').close();$('sudoku-restart-dialog').close();
+      $('sudoku-restart-dialog').close();
       // 身份变化即移除旧账号内容，不能只隐藏带旧答案/笔记的父容器。
       $('sudoku-board').replaceChildren();$('sudoku-keypad').replaceChildren();$('sudoku-result-title').textContent='';$('sudoku-result-description').textContent='';
       $('sudoku-result-stars').replaceChildren();$('sudoku-play').hidden=true;$('sudoku-selector').hidden=false;

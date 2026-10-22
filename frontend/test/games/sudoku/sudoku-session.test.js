@@ -50,6 +50,18 @@ test('nested pause freezes inputs until every reason is removed',async()=>{
   await m.setPaused('hidden',false);assert.equal(m.state.paused,false);
 });
 
+test('manual pause survives hidden pages and reload until explicitly resumed',async()=>{
+  const f=fixture(),m=createSudokuSession({uid:1,...f});await m.load();await m.open();
+  await m.setPaused('manual',true);assert.equal(m.state.manualPaused,true);
+  await m.setPaused('hidden',true);await m.setPaused('hidden',false);
+  assert.equal(m.state.paused,true);m.destroy();
+  const restored=createSudokuSession({uid:1,...f});await restored.load();
+  assert.equal(restored.state.manualPaused,true);assert.equal(restored.state.paused,true);
+  await restored.setPaused('manual',false);assert.equal(restored.state.paused,false);
+  await restored.setPaused('manual',true);await restored.restart();
+  assert.equal(restored.state.manualPaused,false);assert.equal(restored.state.paused,false);
+});
+
 test('offline final submission persists exact payload and retries without a new attempt',async()=>{
   const f=fixture();let rewards=0;
   const m=createSudokuSession({uid:1,...f,onReward:()=>rewards++});await m.load();await m.open();

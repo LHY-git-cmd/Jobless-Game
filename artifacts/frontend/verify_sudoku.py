@@ -82,13 +82,11 @@ def main():
                     with sessions() as db:return db.scalar(select(GameAttempt).where(GameAttempt.level_id==level).order_by(GameAttempt.started_at.desc()))
 
                 def choose(level):
-                    """五档三题筛选不创建尝试，开始确认规则后再计时。"""
+                    """五档三题筛选不创建尝试，点击开始直接进入并计时。"""
                     progression_service.limiter.clear()
                     if ev("!document.getElementById('sudoku-play').hidden"):click('#sudoku-back')
                     click(f'#sudoku-difficulties [data-difficulty="{LEVELS[level]["difficulty"]}"]')
                     click(f'#sudoku-specs [data-level="{level}"]');click('#sudoku-start')
-                    wait("document.getElementById('sudoku-rules-dialog').open || !document.getElementById('sudoku-play').hidden")
-                    if ev("document.getElementById('sudoku-rules-dialog').open"):click('#sudoku-rules-confirm')
                     wait("!document.getElementById('sudoku-play').hidden && !document.getElementById('sudoku-restart').disabled")
                     wait(f"document.querySelectorAll('#sudoku-board [data-index]').length==={LEVELS[level]['puzzle']['rows']**2}")
 
@@ -119,7 +117,6 @@ def main():
                 click('#sudoku-difficulties [data-difficulty="tutorial"]');click('#sudoku-start')
                 wait("!document.getElementById('auth-dialog').classList.contains('hidden')")
                 ev("document.getElementById('auth-username').value='数独验收';document.getElementById('auth-password').value='sudoku-browser-test';document.querySelector('.auth-submit').click()")
-                wait("document.getElementById('sudoku-rules-dialog').open");click('#sudoku-rules-confirm')
                 wait("document.querySelectorAll('#sudoku-board [data-index]').length===16 && !document.getElementById('sudoku-restart').disabled")
                 fill(1,2);click('#sudoku-clear');wait("document.getElementById('sudoku-tutorial').dataset.step==='2'")
                 click('#sudoku-notes');fill(1,2);click('#sudoku-notes');fill(6,1);fill(1,2)
@@ -133,16 +130,18 @@ def main():
                 cmd('Page.reload');wait("document.querySelector('#sudoku-notes')?.textContent==='笔记：开'")
                 assert ev(f'document.querySelector(\'#sudoku-board [data-index="{blank}"] .sudoku-notes\')!==null')
                 click('#sudoku-notes');click('#sudoku-clear');wait("!document.getElementById('sudoku-restart').disabled")
-                click('#sudoku-rules');wait("document.getElementById('sudoku-clock-label').textContent.includes('已暂停')")
+                assert ev("!document.querySelector('#sudoku-check,#sudoku-rules,#sudoku-rules-dialog')")
+                assert ev("document.getElementById('sudoku-notes').closest('.sudoku-actions')!==null")
+                click('#sudoku-pause-toggle');wait("document.getElementById('sudoku-clock-label').textContent.includes('已暂停')")
                 before=ev("document.getElementById('sudoku-clock').textContent");time.sleep(1.1)
                 assert ev("document.getElementById('sudoku-clock').textContent")==before
-                cmd('Input.dispatchKeyEvent',{'type':'keyDown','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
-                wait("!document.getElementById('sudoku-rules-dialog').open && document.getElementById('sudoku-pause').hidden")
-                checks.append('笔记及选格刷新恢复；规则期间冻结，Esc恢复')
+                click('#sudoku-pause-toggle');wait("document.getElementById('sudoku-pause').hidden")
+                checks.append('底部笔记及选格刷新恢复；移除检查/规则，时间旁手动暂停并恢复')
                 shot('sudoku-playing-desktop.png')
                 for width,height in [(375,960),(320,850),(844,390)]:
                     cmd('Emulation.setDeviceMetricsOverride',{'width':width,'height':height,'deviceScaleFactor':1,'mobile':True})
                     assert ev('document.documentElement.scrollWidth<=innerWidth'),width
+                    assert ev("(()=>{const s=document.querySelector('.sudoku-available').getBoundingClientRect(),t=document.querySelector('.sudoku-toolbar').getBoundingClientRect();return Math.abs(s.left+s.width/2-t.left-t.width/2)<1;})()"),'可得星数必须居中'
                     ev("document.getElementById('sudoku-play').scrollIntoView({block:'start'})")
                     shot(f'sudoku-playing-{width}.png')
                 cmd('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1150,'deviceScaleFactor':1,'mobile':False})

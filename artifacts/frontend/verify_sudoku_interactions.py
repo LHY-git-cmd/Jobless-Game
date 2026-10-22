@@ -60,7 +60,7 @@ def main():
 
                 cmd('Page.enable');cmd('Network.enable');cmd('Page.navigate',{'url':base+'journey.html?game_id=sudoku'})
                 wait("!document.getElementById('sudoku-start').disabled");click('#sudoku-start');wait("document.getElementById('auth-dialog').open")
-                login('数独交互甲');wait("document.getElementById('sudoku-rules-dialog').open");click('#sudoku-rules-confirm')
+                login('数独交互甲')
                 wait("document.querySelectorAll('#sudoku-board .sudoku-cell').length===81 && !document.getElementById('sudoku-restart').disabled")
                 attempt=row();original=attempt.attempt_id;puzzle=attempt.board
                 givens=LEVELS[attempt.level_id]['puzzle']['values'];blank=next(i for i,v in enumerate(givens) if not v)
@@ -69,7 +69,7 @@ def main():
                 wait("document.querySelectorAll('#sudoku-board .conflict').length>=2")
                 assert ev('document.activeElement.dataset.index')==str(blank),'键盘输入重绘后必须保留格子焦点'
                 assert ev("document.querySelectorAll('#sudoku-board .same-value').length>=2")
-                click('#sudoku-check');wait("document.getElementById('sudoku-message').textContent.includes('重复')")
+                assert ev("document.querySelector('#sudoku-board .conflict').getAttribute('aria-label').includes('存在重复')")
                 (qa.OUTPUT/'sudoku-conflict-desktop.png').write_bytes(base64.b64decode(cmd('Page.captureScreenshot',{'format':'png'})['data']))
                 key('Delete');wait("document.querySelectorAll('#sudoku-board .conflict').length===0")
                 # 重建后实际焦点仍是已选格，方向键不能跨越左右边界。
@@ -81,7 +81,9 @@ def main():
                 assert ev(f'document.querySelector(\'#sudoku-board [data-index="{given}"]\').textContent')==str(givens[given])
                 checks.append('键盘填数/删除/方向焦点、题目数字保护、同数与冲突高亮')
 
-                click('#sudoku-rules');paused(True);click('#sudoku-rules-confirm');paused(False)
+                click('#sudoku-pause-toggle');paused(True)
+                cmd('Page.reload');wait("!document.getElementById('sudoku-pause').hidden && !document.getElementById('sudoku-clock-retry').disabled");paused(True)
+                click('#sudoku-clock-retry');paused(False)
                 target=cmd('Target.getTargetInfo')['targetInfo']['targetId'];other=cmd('Target.createTarget',{'url':'about:blank'})['targetId']
                 cmd('Target.activateTarget',{'targetId':other});wait('document.hidden');paused(True)
                 cmd('Target.activateTarget',{'targetId':target});wait('!document.hidden');paused(False);cmd('Target.closeTarget',{'targetId':other})
@@ -104,9 +106,8 @@ def main():
                 checks.append('取消重开保留笔记，确认重开仅放弃当前局并恢复计时')
 
                 # 暂停请求失败时必须禁用棋盘，恢复网络后原命令可重放。
-                cmd('Network.setBlockedURLs',{'urls':['*/api/v1/attempts/*/clock']});click('#sudoku-rules')
+                cmd('Network.setBlockedURLs',{'urls':['*/api/v1/attempts/*/clock']});click('#sudoku-pause-toggle')
                 wait("document.getElementById('sudoku-message').textContent.includes('连接失败')")
-                click('#sudoku-rules-confirm');wait("!document.getElementById('sudoku-rules-dialog').open")
                 assert ev("!document.getElementById('sudoku-pause').hidden")
                 cmd('Network.setBlockedURLs',{'urls':[]});click('#sudoku-clock-retry');wait("document.getElementById('sudoku-pause').hidden");paused(False)
                 checks.append('暂停网络失败禁用输入，恢复网络可继续原局')
@@ -118,7 +119,6 @@ def main():
                 click('.auth-logout');wait("!document.querySelector('.auth-open').classList.contains('hidden')")
                 assert ev("document.querySelectorAll('#sudoku-board .sudoku-cell').length===0"),'退出时必须立即移除旧账号棋盘DOM'
                 click('#sudoku-start');wait("document.getElementById('auth-dialog').open");login('数独交互乙')
-                wait("document.getElementById('sudoku-rules-dialog').open");click('#sudoku-rules-confirm')
                 wait("document.querySelectorAll('#sudoku-board .sudoku-cell').length===81 && !document.getElementById('sudoku-restart').disabled")
                 assert ev("document.querySelectorAll('#sudoku-board .sudoku-notes').length===0")
                 click('.auth-logout');wait("!document.querySelector('.auth-open').classList.contains('hidden')")
