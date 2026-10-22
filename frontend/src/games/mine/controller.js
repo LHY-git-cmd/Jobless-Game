@@ -23,6 +23,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
   let model,identity,selectionOnly=false,lastId=null,lastOutcome=null,animation=null,finished=true,dead=false,errorMessage='';
   let renderedBoard='';
   let identityReady=Promise.resolve();
+  let pendingLevel=null;
   const sound=createExplosionSound(new URL('../../../assets/audio/explosion.wav',import.meta.url));
   // 模板只包含开发者静态结构；接口文本和用户状态统一使用textContent。
   host.innerHTML=`
@@ -31,7 +32,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       <div id="mine-difficulties" class="mine-difficulties" role="group" aria-label="扫雷难度"></div>
       <div class="mine-options-heading"><h3 id="mine-options-title">选择棋盘</h3><span>全部难度自由选择</span></div>
       <div id="mine-specs" class="mine-specs" role="group" aria-labelledby="mine-options-title"></div>
-      <div class="mine-start-row"><p id="mine-reward-note">正在加载难度…</p><button id="mine-start" class="journey-primary" type="button" disabled>开始游戏 <span aria-hidden="true">→</span></button></div>
+      <div class="mine-start-row"><p id="mine-reward-note">正在加载难度…</p></div>
     </div>
     <section id="mine-play" class="mine-play" aria-label="扫雷游戏" hidden>
       <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><button id="mine-restart" type="button">${RESTART_ICON}重新开始</button><div class="mine-play-secondary"><div class="mine-game-brand"><img src="./assets/minesweeper/source-icon.webp" width="110" height="110" alt="扫雷"></div><div class="journey-actions"><button id="mine-rules" type="button">${BOOK_ICON}规则</button><button id="mine-sound" type="button">${SOUND_ICON}<span class="mine-sound-label">音效：开</span></button></div></div></div>
@@ -43,10 +44,10 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       <div id="mine-result" class="mine-result" role="status" hidden><p class="eyebrow" id="mine-result-kicker"></p><h3 id="mine-result-title"></h3><div id="mine-result-stars" class="mine-rating mine-result-stars"></div><p id="mine-result-description"></p><button id="mine-retry-settlement" type="button" hidden>重试保存奖励</button></div>
     </section>
     <div class="mine-feedback"><p id="mine-message" role="status" aria-live="polite"></p><button id="mine-reload" type="button" hidden>重新加载</button><button id="mine-clock-retry" type="button" hidden>重试继续游戏</button></div>
-    <dialog id="mine-rules-dialog" class="journey-rules" aria-labelledby="mine-rules-title"><h2 id="mine-rules-title">扫雷怎么玩</h2><p>揭开所有没有地雷的格子，即可通关。</p><ol><li>数字表示周围八个格子中的地雷数量。</li><li>怀疑有雷时，先标记；标记格不会被排开。</li><li>空白格会自动展开，普通关首次揭格保证安全。</li></ol><p id="mine-rules-reward"></p><p id="mine-rules-timing"></p><button id="mine-rules-confirm" class="journey-primary" type="button">开始游戏</button></dialog>
+    <dialog id="mine-enter-dialog" class="journey-rules" aria-labelledby="mine-enter-title" aria-describedby="mine-enter-description"><h2 id="mine-enter-title">是否闯关？</h2><p id="mine-enter-description"></p><div class="journey-actions"><button id="mine-enter-cancel" type="button" autofocus>暂不闯关</button><button id="mine-enter-confirm" class="journey-primary" type="button">确认闯关</button></div></dialog>
+    <dialog id="mine-rules-dialog" class="journey-rules" aria-labelledby="mine-rules-title"><h2 id="mine-rules-title">扫雷怎么玩</h2><p>揭开所有没有地雷的格子，即可通关。</p><ol><li>数字表示周围八个格子中的地雷数量。</li><li>怀疑有雷时，先标记；标记格不会被排开。</li><li>空白格会自动展开，普通关首次揭格保证安全。</li></ol><p id="mine-rules-reward"></p><p id="mine-rules-timing"></p><button id="mine-rules-confirm" class="journey-primary" type="button">继续游戏</button></dialog>
     <dialog id="mine-restart-dialog" class="journey-rules" aria-labelledby="mine-restart-title"><h2 id="mine-restart-title">重新开始本关？</h2><p>当前棋局将被放弃，其他关卡的进度会保留。</p><div class="journey-actions"><button id="mine-restart-cancel" type="button">继续当前局</button><button id="mine-restart-confirm" type="button" class="journey-primary">确认重开</button></div></dialog>`;
   const $=id=>host.querySelector(`#${id}`);
-  let rulesStarting=false;
   const collection=createStarCollection({onComplete:reward=>{
     if(dead||reward.userId!==identity)return;
     emit(Events.PROGRESSION_CONFIRMED,{userId:reward.userId,progression:reward.progression});
@@ -95,13 +96,14 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
   /** 显示当前候选难度和规格，筛选动作不创建服务端尝试。 */
   function renderSelection(state){
     const level=state.levels.find(v=>v.level_id===state.selected);
-    if(!level){$('mine-start').disabled=true;return;}
+    if(!level)return;
     for(const button of $('mine-difficulties').children){button.setAttribute('aria-pressed',String(button.dataset.difficulty===level.difficulty));button.disabled=state.busy;}
     const specs=state.levels.filter(v=>v.difficulty===level.difficulty);
     $('mine-specs').replaceChildren();
     for(const item of specs){
       const button=document.createElement('button');button.type='button';button.className='mine-spec';button.dataset.level=item.level_id;
-      button.setAttribute('aria-pressed',String(item.level_id===state.selected));button.disabled=state.busy;
+      button.setAttribute('aria-pressed',String(item.level_id===state.selected));button.disabled=state.busy||!state.enabled;
+      button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-controls','mine-enter-dialog');
       const size=document.createElement('strong'),caption=document.createElement('span'),rating=document.createElement('span'),best=document.createElement('small');
       const footer=document.createElement('span'),stars=document.createElement('span');footer.className='mine-spec-footer';stars.className='mine-rating';
       size.textContent=item.difficulty==='tutorial'?'跟着提示，学会扫雷':`${item.cols} × ${item.rows}`;
@@ -112,11 +114,9 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       paintMineStars(stars,progress?.best_stars||0,`历史最高${progress?.best_stars||0}星${item.max_stars===1?'，入门教学最高1星':''}`,item.max_stars);
       footer.append(best,stars);button.append(size,caption,rating,footer);$('mine-specs').append(button);
     }
-    const progress=state.progress.find(v=>v.level_id===level.level_id);
     $('mine-options-title').textContent=level.difficulty==='tutorial'?'你的第一堂扫雷课':'选择棋盘';
     $('mine-reward-note').textContent=level.difficulty==='tutorial'?'认识数字、学会标记，再独立完成一盘。完成后获得 1 星、2 经验。':`三星 ≤ ${mineTime(level.t3_ms)} · 二星 ≤ ${mineTime(level.t2_ms)} · 其余通关一星。经验 ${level.star_xp.join(' / ')}，提升星级补差额。`;
-    $('mine-start').textContent=state.busy?'正在准备…':progress?.current_attempt?'继续游戏 →':model.hasSaved(level.level_id)?'查看上局 →':'开始游戏 →';
-    $('mine-start').disabled=state.busy||!state.enabled;
+    $('mine-enter-confirm').disabled=state.busy||!state.enabled;
   }
   /** 复用44px格子，已揭数字和终盘雷区来自服务端。 */
   function renderBoard(state){
@@ -217,14 +217,29 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     $('mine-clock-retry').hidden=!state.paused||state.clockBusy||selectionOnly||document.hidden||$('mine-rules-dialog').open;
     $('mine-clock-retry').disabled=state.busy;
   }
-  /** 规则阅读完成前不发开局请求，已开局重看时暂停计时与星级递减。 */
-  function openRules(starting){
-    rulesStarting=starting;
+  /** 游戏内查看规则时暂停计时，关闭规则后继续当前局。 */
+  function openRules(){
     const level=model.state.levels.find(v=>v.level_id===model.state.selected);
     $('mine-rules-reward').textContent=level?.difficulty==='tutorial'?'跟随四步引导完成，获得1星、2经验。':`三星 ≤ ${mineTime(level.t3_ms)}，二星 ≤ ${mineTime(level.t2_ms)}。重复成绩不重复奖励，提升星级补差额。`;
-    $('mine-rules-timing').textContent=starting?'点击“开始游戏”后开始计时。'+energyHint(level?.difficulty==='tutorial'):'查看规则期间计时和可得星数已暂停，关闭规则后继续。';
-    $('mine-rules-confirm').textContent=starting?'开始游戏':'继续游戏';$('mine-rules-dialog').showModal();
-    if(!starting)void run(()=>model.setPaused('rules',true));
+    $('mine-rules-timing').textContent='查看规则期间计时和可得星数已暂停，关闭规则后继续。';
+    $('mine-rules-dialog').showModal();void run(()=>model.setPaused('rules',true));
+  }
+  /** 取消或返回选关时聚焦原卡片，保留键盘操作位置。 */
+  function focusSelected(){if(model)$('mine-specs').querySelector(`[data-level="${model.state.selected}"]`)?.focus({preventScroll:true});}
+  /** 卡片点击只展示确认与规则门槛，确认前不创建尝试或扣体力。 */
+  function askToEnter(id){
+    const state=model.state,level=state.levels.find(item=>item.level_id===id);
+    if(!level||state.busy||!state.enabled)return;
+    model.select(id);pendingLevel=id;
+    const continuing=state.progress.some(item=>item.level_id===id&&item.current_attempt)||state.attempt?.level_id===id&&state.attempt.status==='active';
+    $('mine-enter-title').textContent=`是否挑战${level.name}？`;
+    $('mine-enter-description').textContent=`${level.cols} × ${level.rows} · ${level.mine_count}颗地雷。${continuing?'确认后继续上次的棋局，不重复消耗体力。':energyHint(level.difficulty==='tutorial')}${level.max_stars===1?'完成教学获得1星、2经验。':`三星${mineTime(level.t3_ms)}内，二星${mineTime(level.t2_ms)}内，其余通关1星；经验${level.star_xp.join(' / ')}。`}`;
+    $('mine-enter-dialog').showModal();
+  }
+  /** 登录完成后仍进入用户确认的关卡，只在此处开始或恢复计时。 */
+  async function openSelected(id){
+    await identityReady;if(dead)return;model.select(id);selectionOnly=false;
+    await model.setPaused('selection',false,{sync:false});await runPlay(()=>model.open());
   }
   for(const [key,name,caption] of DIFFICULTIES){
     const button=document.createElement('button');button.type='button';button.dataset.difficulty=key;
@@ -235,27 +250,17 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     const button=event.target.closest('[data-difficulty]');if(!button)return;
     const level=model.state.levels.find(v=>v.difficulty===button.dataset.difficulty);if(level)model.select(level.level_id);
   });
-  scope.listen($('mine-specs'),'click',event=>{const button=event.target.closest('[data-level]');if(button)model.select(button.dataset.level);});
-  scope.listen($('mine-start'),'click',()=>{
-    const selected=model.state.selected;
-    void auth.requireLogin(async()=>{
-      await identityReady;
-      if(dead)return;
-      model.select(selected);
-      const progress=model.state.progress.find(v=>v.level_id===model.state.selected);
-      if(progress?.current_attempt||model.hasSaved(model.state.selected)){
-        selectionOnly=false;await model.setPaused('selection',false,{sync:false});return runPlay(()=>model.open());
-      }
-      openRules(true);
-    });
+  scope.listen($('mine-specs'),'click',event=>{const button=event.target.closest('[data-level]');if(button)askToEnter(button.dataset.level);});
+  scope.listen($('mine-enter-cancel'),'click',()=>$('mine-enter-dialog').close());
+  scope.listen($('mine-enter-dialog'),'close',()=>{pendingLevel=null;if(!$('mine-selector').hidden)focusSelected();});
+  scope.listen($('mine-enter-confirm'),'click',()=>{
+    const selected=pendingLevel;if(!selected||model.state.busy)return;
+    $('mine-enter-dialog').close();void auth.requireLogin(()=>openSelected(selected));
   });
-  scope.listen($('mine-rules'),'click',()=>openRules(false));
-  scope.listen($('mine-rules-confirm'),'click',()=>{
-    $('mine-rules-dialog').close();
-    if(rulesStarting){selectionOnly=false;void model.setPaused('selection',false,{sync:false});void runPlay(()=>model.open());}
-  });
-  scope.listen($('mine-rules-dialog'),'close',()=>{if(!rulesStarting)void run(()=>model.setPaused('rules',false));});
-  scope.listen($('mine-back'),'click',()=>{selectionOnly=true;void run(()=>model.setPaused('selection',true));collection.cancel();stopAnimation();emit(Events.SETTLEMENT_CLOSED);render(model.state);$('mine-start').focus();});
+  scope.listen($('mine-rules'),'click',openRules);
+  scope.listen($('mine-rules-confirm'),'click',()=>$('mine-rules-dialog').close());
+  scope.listen($('mine-rules-dialog'),'close',()=>void run(()=>model.setPaused('rules',false)));
+  scope.listen($('mine-back'),'click',()=>{selectionOnly=true;void run(()=>model.setPaused('selection',true));collection.cancel();stopAnimation();emit(Events.SETTLEMENT_CLOSED);render(model.state);focusSelected();});
   scope.listen($('mine-board'),'click',event=>{const cell=event.target.closest('[data-index]');if(cell)model.choose(Number(cell.dataset.index));});
   scope.listen($('mine-board'),'keydown',event=>{
     const cell=event.target.closest('[data-index]');if(!cell||!model.state.attempt)return;
@@ -295,7 +300,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     /** 换号先销毁旧请求和棋盘，再加载新账号自己的目录进度。 */
     async setUser(uid){
       if(identity===uid&&model)return;collection.cancel(false);identity=uid;model?.destroy();stopAnimation();selectionOnly=false;lastId=null;lastOutcome=null;errorMessage='';
-      $('mine-rules-dialog').close();$('mine-restart-dialog').close();
+      pendingLevel=null;$('mine-enter-dialog').close();$('mine-rules-dialog').close();$('mine-restart-dialog').close();
       let storage;try{storage=window.localStorage;}catch{/* 存储禁用仍可依靠服务端续玩。 */}
       const next=createMineSession({uid,storage,onChange:state=>render(state),onReward:result=>{
         render(next.state);
