@@ -72,10 +72,11 @@ class AkariAPI(TestCase):
         self.client.cookies.set(self.settings.session_cookie_name,'2')
         self.assertEqual(self.client.get(base).status_code,404)
 
-    def test_recorded_time_never_reduces_completion_stars(self):
-        """新版照明时间只记录，长时间思考仍固定通关三星，教学固定一星。"""
+    def test_legacy_fixed_rewards_stay_bound_to_old_versions(self):
+        """旧策略保持三星，新策略按时间；入门仍固定一星。"""
         from backend.app.services.game_rules import stars_for
         self.assertEqual(stars_for({'game_id':'akari','rules_version':2,'t3_ms':1,'t2_ms':2},9000000),3)
+        self.assertEqual(stars_for({'game_id':'akari','rules_version':2,'reward_policy_version':2,'t3_ms':1,'t2_ms':2},9000000),1)
         self.assertEqual(stars_for({'game_id':'akari','rules_version':2,'max_stars':1},9000000),1)
 
     def test_new_boards_preserve_old_attempts_and_do_not_duplicate_rewards(self):
@@ -87,7 +88,7 @@ class AkariAPI(TestCase):
         previous=old.json();self.assertEqual(previous['puzzle']['rows'],8)
         first=self.client.put(previous['links']['completion'],json=self.answer(previous))
         self.assertEqual(first.status_code,201,first.text)
-        new=self.start(level);self.assertEqual(new['level_version'],2);self.assertEqual(new['puzzle']['rows'],10)
+        new=self.start(level);self.assertEqual(new['level_version'],LEVELS[level]['level_version']);self.assertEqual(new['puzzle']['rows'],10)
         self.assertEqual(self.client.get(previous['links']['self']).json()['puzzle']['rows'],8)
         saved=self.client.put(new['links']['completion'],json=self.answer(new)).json()
         self.assertEqual((saved['awarded_stars'],saved['awarded_xp']),(0,0))

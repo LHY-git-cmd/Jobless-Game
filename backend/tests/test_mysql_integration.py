@@ -397,7 +397,7 @@ class MySQLIntegrationTests(TestCase):
 
     def test_v14_akari_revisions_keep_old_versions(self):
         """真实V14追加七个版本；旧定义保留，10～15关均为10×10且判题通过。"""
-        from backend.app.common.game_catalog import AKARI_LEVELS,AKARI_V2_LEVELS
+        from backend.app.common.game_catalog import AKARI_V3_LEVELS as AKARI_LEVELS,AKARI_V2_LEVELS
         from backend.app.services import progression_service as service
         from backend.content_check import akari_solutions
         self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'akari-v14-test'})
@@ -417,6 +417,26 @@ class MySQLIntegrationTests(TestCase):
                 result=service.dispatch(raw,db,'completion_put',rid=attempt['attempt_id'],
                     data={'bulbs':akari_solutions(level['puzzle']['map'])[0]},received_at=utc_now())
                 self.assertEqual(result.status,201)
+
+    def test_v16_akari_timed_rewards_and_legacy_preserved(self):
+        """真实V16追加15个评分版本；按服务器时长给1/2/3星，经验累计仅2/4/6。"""
+        from backend.app.common.game_catalog import AKARI_LEVELS,AKARI_V3_LEVELS
+        from backend.app.services import progression_service as service
+        from backend.content_check import akari_solutions
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'akari-time-v16-test'})
+        raw=self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            for level in AKARI_LEVELS+AKARI_V3_LEVELS:
+                self.assertEqual(db.get(progression.GameLevelVersion,(level['level_id'],level['level_version'])).definition,level)
+        level=next(v for v in AKARI_LEVELS if v.get('number')==1)
+        for ms,stars,xp in [(level['t2_ms']+5000,1,2),(level['t3_ms']+5000,2,2),(1000,3,2),(1000,3,0)]:
+            service.limiter.clear()
+            with self.sessions() as db:
+                attempt=service.dispatch(raw,db,'attempt_create',data={'level_id':level['level_id'],'level_version':level['level_version'],'mode':'campaign'},key=str(uuid4())).data
+                row=db.get(progression.GameAttempt,attempt['attempt_id']);row.started_at=utc_now()-timedelta(milliseconds=ms);db.commit()
+            with self.sessions() as db:
+                result=service.dispatch(raw,db,'completion_put',rid=attempt['attempt_id'],data={'bulbs':akari_solutions(level['puzzle']['map'])[0]},received_at=utc_now()).data
+                self.assertEqual((result['stars'],result['awarded_xp']),(stars,xp))
 
     def test_v15_energy_concurrent_spend_restart_and_refund(self):
         """真实InnoDB并发十个开局只允许五局，重复结算仅返一次，零体力重开回滚。"""
