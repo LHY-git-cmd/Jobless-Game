@@ -18,7 +18,7 @@ from ..models.entities.progression import (GameLevelVersion, PlayerProgression, 
     GameAttempt, GameCompletion, ProgressionGrant, PlayerQualification, ApiIdempotency)
 from ..models.entities.cosmetic import PlayerCosmetic, PlayerAppearance
 from ..repositories import progression_repository as repo
-from . import auth_service
+from . import auth_service,energy_service
 from .game_rules import validate_akari, validate_sudoku, stars_for, elapsed_ms, reward_milestones
 
 DEFAULT_APPEARANCE = {key: 'default' for key in ('theme_id', 'mine_skin_id', 'akari_skin_id', 'sudoku_skin_id')}
@@ -236,6 +236,7 @@ def attempt_resource(db, attempt, status=200):
             'started_at': iso(attempt.started_at), 'expires_at': iso(attempt.expires_at), 'server_now': iso(utc_now()),
             'ended_at': iso(attempt.ended_at) if attempt.ended_at else None,
             'puzzle': deepcopy(level['puzzle']), 'links': {'self': base, 'completion': base + '/completion'}}
+    data['energy']=energy_service.snapshot(db,attempt.user_id)
     if attempt.game_id == 'mine':
         data['board'] = mine_public(attempt.board)
         data['timing'] = mine_timing(attempt)
@@ -258,9 +259,9 @@ def owned_attempt(db, uid, attempt_id):
     return attempt
 
 
-def create_attempt(db, uid, data, key, **_):
+def create_attempt(db, uid, data, key, _kind='attempts', **_):
     """幂等优先；同关最多一个active，总活跃关卡最多10。"""
-    previous, key = idempotent(db, uid, 'attempts', key, data)
+    previous, key = idempotent(db, uid, _kind, key, data)
     if previous:
         return previous
     limiter.check((uid, 'starts'), 10)
@@ -301,13 +302,43 @@ def create_attempt(db, uid, data, key, **_):
               expires_at=now + timedelta(days=POLICY['attempt_days']), board=board)
     db.add(attempt)
     db.flush()
+    energy_service.spend(db,uid,attempt,level)
+    db.flush()
     resource = attempt_resource(db, attempt, 201)
-    return remember(db, uid, 'attempts', key, data, resource, attempt.attempt_id)
+    return remember(db, uid, _kind, key, data, resource, attempt.attempt_id)
+
+
+def restart_attempt(db,uid,rid,data,key,**_):
+    """检查和重开在同一账号事务内；任何不足或创建失败都回滚原局的放弃。"""
+    payload={'attempt_id':rid}
+    previous,key=idempotent(db,uid,'attempt-restarts',key,payload)
+    if previous:return previous
+    old=owned_attempt(db,uid,rid)
+    if old.status not in ('active','completed','abandoned','expired'):
+        fail(409,'attempt_terminal','当前尝试无法重新开始。')
+    # 使用当前发布版本，旧成绩继续保留同一关卡身份。
+    level=LEVELS.get(old.level_id)
+    if level is None:fail(404,'level_not_found','关卡不存在。')
+    # 两个标签页同时重开同一旧局时，后到请求只能取得冲突，不能再创建并收费。
+    other_active=repo.rows(db,GameAttempt,GameAttempt.user_id==uid,GameAttempt.level_id==old.level_id,
+                           GameAttempt.status=='active',GameAttempt.attempt_id!=old.attempt_id,
+                           GameAttempt.expires_at>utc_now(),lock=True,limit=1)
+    if other_active:fail(409,'restart_conflict','本关已在其他页面重新开始，请刷新后继续。')
+    if old.status=='active':
+        old.status='abandoned';old.ended_at=utc_now();old.revision+=1;db.flush()
+    # 重开内部创建使用独立键空间，不能命中客户端曾用过的普通开局UUID。
+    resource=create_attempt(db,uid,{'level_id':old.level_id,'level_version':level['level_version'],'mode':old.mode},key,_kind='restart-created')
+    return remember(db,uid,'attempt-restarts',key,payload,resource,resource.data['attempt_id'])
 
 
 def get_attempt(db, uid, rid, **_):
     """恢复前核验正式凭据，客户端存档不是奖励凭据。"""
     return attempt_resource(db, owned_attempt(db, uid, rid))
+
+
+def get_energy(db,uid,**_):
+    """读取并结算账号自然恢复；dispatch会对该账号加锁后再提交。"""
+    return Resource(energy_service.snapshot(db,uid))
 
 
 def abandon_attempt(db, uid, rid, match, **_):
@@ -504,6 +535,7 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
     attempt.status, attempt.ended_at = 'completed', terminal_at
     attempt.revision += 1
     db.flush()
+    energy_service.refund(db,uid,attempt)
     updated = progression(db, uid, True)
     after_progress = progress_rows(db, uid, True)
     after = {key for key, item in LEVELS.items() if not requirements(item, updated, after_progress)}
@@ -514,6 +546,7 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
                 'newly_unlocked_level_ids': sorted(after - before), 'newly_unlocked_cosmetic_ids': newly_cosmetics,
                 'reward_policy_version': level['reward_policy_version'],
                 'links': {'self': base, 'progression': '/api/v1/me/progression'}}
+    snapshot['energy']=energy_service.snapshot(db,uid)
     db.add(GameCompletion(attempt_id=rid, payload_hash=fingerprint, duration_ms=duration, stars=current, snapshot=snapshot))
     return Resource(snapshot, 201, {'Location': base})
 
@@ -575,11 +608,12 @@ def cosmetics(db, uid, **_):
              'asset_url': '/journey.css'} for item in COSMETICS], 'appearance': appearance(db, uid).data})
 
 
-ACTIONS = {'attempt_create': create_attempt, 'attempt_get': get_attempt, 'attempt_abandon': abandon_attempt,
+ACTIONS = {'energy_get':get_energy,
+           'attempt_restart':restart_attempt,'attempt_create': create_attempt, 'attempt_get': get_attempt, 'attempt_abandon': abandon_attempt,
            'reveal': reveal, 'mine_clock': mine_clock, 'tutorial_action': tutorial_action, 'sudoku_tutorial': sudoku_tutorial, 'completion_put': complete_attempt, 'completion_get': get_completion,
            'level_progress': list_progress, 'appearance_get': appearance, 'appearance_put': put_appearance,
            'cosmetics': cosmetics}
-READ_ACTIONS = {'attempt_get', 'completion_get', 'level_progress', 'appearance_get', 'cosmetics', 'progression', 'eligibility'}
+READ_ACTIONS = {'completion_get', 'level_progress', 'appearance_get', 'cosmetics', 'progression', 'eligibility'}
 
 
 def dispatch(token, db, action, **kwargs):

@@ -77,6 +77,22 @@ class GameCompletion(Base):
     snapshot: Mapped[dict] = mapped_column(JSON)
 
 
+class PlayerEnergy(Base):
+    """账号共用的有界体力余额；recovery_at为下一点恢复时刻，满体力时为空。"""
+    __tablename__ = 'player_energy'
+    user_id: Mapped[int] = mapped_column(UID, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    current: Mapped[int] = mapped_column(Integer, default=5)
+    recovery_at: Mapped[datetime | None] = mapped_column(DateTime)
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class AttemptEnergy(Base):
+    """每个付费尝试一份扣返凭证，随尝试清理回收；旧尝试无凭证不返体力。"""
+    __tablename__ = 'attempt_energy'
+    attempt_id: Mapped[str] = mapped_column(String(36), ForeignKey('game_attempts.attempt_id', ondelete='CASCADE'), primary_key=True)
+    refunded: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class ProgressionGrant(Base):
     """永久奖励唯一键不包含题目版本或可清理的尝试外键。"""
     __tablename__ = 'progression_grants'

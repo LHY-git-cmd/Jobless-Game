@@ -418,6 +418,55 @@ class MySQLIntegrationTests(TestCase):
                     data={'bulbs':akari_solutions(level['puzzle']['map'])[0]},received_at=utc_now())
                 self.assertEqual(result.status,201)
 
+    def test_v15_energy_concurrent_spend_restart_and_refund(self):
+        """真实InnoDB并发十个开局只允许五局，重复结算仅返一次，零体力重开回滚。"""
+        from backend.app.services import progression_service as service
+        from backend.app.common.game_catalog import LEVELS
+        from backend.content_check import akari_solutions
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'energy-v15-test'})
+        raw=self.client.cookies.get(get_settings().session_cookie_name)
+        ids=[f'akari-v2-{n:03}' for n in range(1,11)]
+        service.limiter.clear()
+
+        def start(identity):
+            """每线程使用独立连接，服务端用户锁保证余额不会被并发扣成负数。"""
+            with self.sessions() as db:
+                try:
+                    return service.dispatch(raw,db,'attempt_create',data={'level_id':identity,'level_version':LEVELS[identity]['level_version'],'mode':'campaign'},key=str(uuid4())).data
+                except AppError as error:
+                    return error.detail['code']
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            outcomes=list(pool.map(start,ids))
+        attempts=[v for v in outcomes if isinstance(v,dict)]
+        self.assertEqual(len(attempts),5)
+        self.assertEqual(outcomes.count('energy_insufficient'),5)
+        attempt=attempts[0]
+        with self.sessions() as db:
+            with self.assertRaises(AppError):service.dispatch(raw,db,'attempt_restart',rid=attempt['attempt_id'],data={},key=str(uuid4()))
+            self.assertEqual(db.get(progression.GameAttempt,attempt['attempt_id']).status,'active')
+        payload={'bulbs':akari_solutions(attempt['puzzle']['map'])[0]}
+
+        def complete(_):
+            """两个重复终盘并发进入，同一完成快照和扣返凭证只生效一次。"""
+            with self.sessions() as db:
+                return service.dispatch(raw,db,'completion_put',rid=attempt['attempt_id'],data=payload,received_at=utc_now()).data
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first,second=list(pool.map(complete,range(2)))
+        self.assertEqual(first,second)
+        with self.sessions() as db:
+            energy=service.dispatch(raw,db,'energy_get').data
+            self.assertEqual(energy['current'],1)
+            self.assertEqual(db.get(progression.AttemptEnergy,attempt['attempt_id']).refunded,1)
+            original_key=db.scalar(select(progression.ApiIdempotency.key).where(progression.ApiIdempotency.resource_id==attempt['attempt_id'],progression.ApiIdempotency.resource_kind=='attempts'))
+        service.limiter.clear()
+        with self.sessions() as db:
+            restarted=service.dispatch(raw,db,'attempt_restart',rid=attempt['attempt_id'],data={},key=original_key).data
+            self.assertNotEqual(restarted['attempt_id'],attempt['attempt_id'])
+            self.assertEqual(restarted['energy']['current'],0)
+        with self.sessions() as db:
+            replay=service.dispatch(raw,db,'attempt_restart',rid=attempt['attempt_id'],data={},key=original_key).data
+            self.assertEqual(replay,restarted)
+
     def test_v7_v8_cancel_pair_competition_has_one_outcome(self):
         """真实MySQL上竞争取消/配对：只能取消成功或配对成功，不能双重占用。"""
         from backend.app.services import pk_service as service

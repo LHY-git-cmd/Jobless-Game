@@ -76,6 +76,12 @@ async def progression(request: Request, db: Session = Depends(get_db)):
     return await run(request, db, 'progression')
 
 
+@router.get('/me/energy')
+async def energy(request: Request, db: Session = Depends(get_db)):
+    """当前账号的权威体力与下次恢复时间；不接收客户端余额。"""
+    return await run(request,db,'energy_get')
+
+
 @router.get('/me/level-progress')
 async def progress(request: Request, game_id: str | None = Query(None, max_length=16), cursor: str | None = Query(None, max_length=40),
                    limit: int = Query(20, ge=1, le=50), db: Session = Depends(get_db)):
@@ -111,6 +117,12 @@ async def mine_clock(attempt_id: str, payload: MineClockPut, request: Request, d
 async def abandon(attempt_id: str, payload: AttemptPatch, request: Request, db: Session = Depends(get_db)):
     """条件放弃，仅允许active进入abandoned。"""
     return await run(request, db, 'attempt_abandon', rid=attempt_id, match=request.headers.get('If-Match'))
+
+
+@router.post('/attempts/{attempt_id}/restart',status_code=201)
+async def restart(attempt_id: str,payload: EmptyDTO,request: Request,db: Session=Depends(get_db)):
+    """原子重开与扣体力共用事务，网络重放必须使用同一UUID。"""
+    return await run(request,db,'attempt_restart',rid=attempt_id,data=payload.model_dump(),key=request.headers.get('Idempotency-Key'))
 
 
 @router.put('/attempts/{attempt_id}/reveals/{cell_index}', status_code=201)
