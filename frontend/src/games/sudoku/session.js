@@ -3,9 +3,12 @@ import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
 import { createSudoku,selectSudokuCell,setSudokuValue,toggleSudokuNote,normalizeSudokuNotes,checkSudoku } from './rules.js';
 
+// 每局最多保留最近100次实际编辑，限制草稿体积；选格和切换模式不占撤回次数。
+const UNDO_LIMIT=100;
+
 /** request、storage及now可注入；服务端负责时间和奖励，本地只保存未提交的布局。 */
 export function createSudokuSession({uid,storage,request=api,now=Date.now,onChange=()=>{},onReward=()=>{}}={}){
-  const state={levels:[],progress:[],enabled:false,selected:null,attempt:null,grid:null,result:null,pending:false,busy:false,paused:false,manualPaused:false,clockBusy:false,message:''};
+  const state={levels:[],progress:[],enabled:false,selected:null,attempt:null,grid:null,history:[],result:null,pending:false,busy:false,paused:false,manualPaused:false,clockBusy:false,message:''};
   const store=createJourneyStore(storage,`sudoku:${uid}`,message=>{state.message=message;});
   if(!storage&&uid)state.message='本地存储不可用，刷新可能丢失未提交的答案与笔记。';
   const reasons=new Set();
@@ -21,7 +24,7 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
     return (state.attempt.timing?.elapsed_ms||0)+(state.attempt.timing?.paused||state.attempt.status!=='active'?0:Math.max(0,now()-anchor));
   }
   /** 保存只包含玩家布局与模式，不保存本地伪造的奖励。 */
-  function save(){if(!dead&&state.attempt&&state.grid)store.save(state.attempt,{values:state.grid.values,notes:state.grid.notes,notesMode:state.grid.notesMode,selected:state.grid.selected,manualPaused:state.manualPaused});}
+  function save(){if(!dead&&state.attempt&&state.grid)store.save(state.attempt,{values:state.grid.values,notes:state.grid.notes,notesMode:state.grid.notesMode,selected:state.grid.selected,manualPaused:state.manualPaused,history:state.history});}
   /** 普通操作等待在途时钟，离页暂停则由独立队列发送keepalive。 */
   async function perform(work){
     if(dead||state.busy)return;
@@ -48,6 +51,12 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
     grid.notesMode=draft?.notesMode===true;
     if(Number.isInteger(draft?.selected)&&draft.selected>=0&&draft.selected<grid.values.length)grid.selected=draft.selected;
     normalizeSudokuNotes(grid);state.grid=grid;state.pending=Boolean(saved?.pending);anchor=now();
+    // 历史与给定盘共同校验，损坏存档不能通过撤回覆盖题目数字或越界。
+    state.history=attempt.puzzle.tutorial?[]:(Array.isArray(draft?.history)?draft.history:[]).slice(-UNDO_LIMIT).filter(edit=>
+      edit&&Number.isInteger(edit.index)&&edit.index>=0&&edit.index<grid.values.length&&!grid.givens[edit.index]&&
+      ['beforeValue','afterValue'].every(key=>Number.isInteger(edit[key])&&edit[key]>=0&&edit[key]<=size)&&
+      ['beforeNotes','afterNotes'].every(key=>Number.isInteger(edit[key])&&edit[key]>=0&&edit[key]<(1<<size))&&
+      (!edit.beforeValue||!edit.beforeNotes)&&(!edit.afterValue||!edit.afterNotes));
     state.paused=reasons.size>0||Boolean(attempt.timing?.paused)||state.clockBusy;
     frozen=state.pending||state.paused?attempt.timing?.elapsed_ms||0:null;
     const progress=state.progress.find(v=>v.level_id===attempt.level_id);
@@ -81,6 +90,7 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
   function confirmed(result,restored=false){
     if(dead)return;
     state.result=result;state.pending=false;state.attempt.status='completed';state.grid.complete=true;
+    state.history=[];
     frozen=result.duration_ms;store.clearPending(state.attempt);
     let progress=state.progress.find(v=>v.level_id===state.attempt.level_id);
     if(!progress){progress={level_id:state.attempt.level_id};state.progress.push(progress);}
@@ -177,6 +187,7 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
         if(dead||state.paused||state.pending)return;
         const grid=state.grid,index=grid.selected,noting=grid.notesMode&&value!==0;
         if(index===null||grid.givens[index]||!Number.isInteger(value)||value<0||value>grid.size)return;
+        const beforeValue=grid.values[index],beforeNotes=grid.notes[index];
         if(state.attempt.puzzle.tutorial){
           const step=state.attempt.board.tutorial_step;
           const steps=[['row',1,2,false],['erase',1,0,false],['note',1,2,true],['column',6,1,false],['box',1,2,false]];
@@ -185,10 +196,24 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
           const response=await request(state.attempt.links.self+'/sudoku-tutorial-actions/'+expected[0],{method:'PUT',body:{index,value}});
           if(dead)return;state.attempt=response.data;
           grid.values=[...response.data.board.tutorial_values];grid.notes=[...response.data.board.tutorial_notes];
-        }else if(!(noting?toggleSudokuNote(grid,value):setSudokuValue(grid,value)))return;
+        }else{
+          if(!(noting?toggleSudokuNote(grid,value):setSudokuValue(grid,value)))return;
+          if(beforeValue!==grid.values[index]||beforeNotes!==grid.notes[index]){
+            state.history.push({index,beforeValue,beforeNotes,afterValue:grid.values[index],afterNotes:grid.notes[index]});
+            if(state.history.length>UNDO_LIMIT)state.history.shift();
+          }
+        }
         state.message='';save();publish();
         if(grid.values.every(v=>v>0)&&checkSudoku(grid).status!=='conflict')await settle();
       });
+    },
+    /** 仅撤回本局真实编辑，恢复对应格答案和笔记；不改变计时或已冻结终盘。 */
+    undo(){
+      if(!editable()||state.attempt.puzzle.tutorial||!state.history.length)return;
+      const edit=state.history.at(-1),grid=state.grid;
+      if(grid.values[edit.index]!==edit.afterValue||grid.notes[edit.index]!==edit.afterNotes){state.history=[];save();publish();return;}
+      state.history.pop();grid.values[edit.index]=edit.beforeValue;grid.notes[edit.index]=edit.beforeNotes;
+      grid.selected=edit.index;grid.complete=false;state.message='';save();publish();
     },
     /** 保存失败只重放已冻结的终盘。 */
     async complete(){return perform(async()=>{if(state.pending&&!state.result)await resumeSubmission();});},
@@ -222,6 +247,6 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
       const next=immediate?work():clockQueue.catch(()=>{}).then(work);clockQueue=next.catch(()=>{});return next;
     },
     /** 退出后旧响应不可写回新账号，草稿由既有存储保留。 */
-    destroy(){dead=true;state.attempt=null;state.grid=null;state.result=null;},
+    destroy(){dead=true;state.attempt=null;state.grid=null;state.history=[];state.result=null;},
   };
 }

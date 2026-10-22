@@ -62,6 +62,40 @@ test('manual pause survives hidden pages and reload until explicitly resumed',as
   assert.equal(restored.state.manualPaused,false);assert.equal(restored.state.paused,false);
 });
 
+test('undo walks back notes, clear and answers, ignoring selection, mode and identical input',async()=>{
+  const f=fixture(),m=createSudokuSession({uid:1,...f});await m.load();await m.open();
+  m.choose(1);m.toggleNotes();await m.input(2);await m.input(3);await m.input(0);
+  m.toggleNotes();await m.input(2);await m.input(2);m.choose(6);
+  m.undo();assert.equal(m.state.grid.selected,1);assert.equal(m.state.grid.values[1],0);assert.equal(m.state.grid.notes[1],0);
+  m.undo();assert.equal(m.state.grid.notes[1],6);
+  m.undo();assert.equal(m.state.grid.notes[1],2);
+  m.undo();assert.equal(m.state.grid.notes[1],0);
+  assert.equal(m.state.history.length,0);m.undo();assert.equal(m.state.grid.values[0],1);
+});
+
+test('undo history survives same-attempt reload, is blocked during pause and clears on restart',async()=>{
+  const f=fixture(),m=createSudokuSession({uid:1,...f});await m.load();await m.open();m.choose(1);await m.input(3);
+  await m.setPaused('manual',true);m.undo();assert.equal(m.state.grid.values[1],3);
+  await m.setPaused('manual',false);m.destroy();
+  const restored=createSudokuSession({uid:1,...f});await restored.load();
+  const time=restored.elapsed();restored.undo();assert.equal(restored.state.grid.values[1],0);assert.equal(restored.elapsed(),time);
+  await restored.input(2);await restored.restart();assert.equal(restored.state.history.length,0);
+});
+
+test('undo cannot change a frozen pending completion',async()=>{
+  const f=fixture(),m=createSudokuSession({uid:1,...f});await m.load();await m.open();
+  m.choose(1);await m.input(2);m.choose(6);f.fail(true);await assert.rejects(m.input(1),/离线/);
+  const values=[...m.state.grid.values];m.undo();assert.deepEqual(m.state.grid.values,values);assert.equal(m.state.pending,true);
+});
+
+test('undo history is bounded to the latest 100 actual edits',async()=>{
+  const f=fixture(),m=createSudokuSession({uid:1,...f});await m.load();await m.open();m.choose(1);m.toggleNotes();
+  for(let count=0;count<105;count++)await m.input(2);
+  assert.equal(m.state.history.length,100);
+  for(let count=0;count<100;count++)m.undo();
+  assert.equal(m.state.history.length,0);assert.equal(m.state.grid.notes[1],2);
+});
+
 test('offline final submission persists exact payload and retries without a new attempt',async()=>{
   const f=fixture();let rewards=0;
   const m=createSudokuSession({uid:1,...f,onReward:()=>rewards++});await m.load();await m.open();

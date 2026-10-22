@@ -211,7 +211,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── sudoku/  # 数独规则与笔记
 │   │   │   │   ├── rules.js  # 4×4/9×9数独规则、手动笔记和冲突检查
 │   │   │   │   ├── controller.js  # 五档选题、参考图棋盘、教学及星级动画
-│   │   │   │   └── session.js  # 正式尝试、账号草稿、暂停及终盘重试
+│   │   │   │   └── session.js  # 正式尝试、账号草稿、连续撤回、暂停及终盘重试
 │   │   │   ├── catalog.js  # 三游戏元数据及稳定导航地址
 │   │   │   └── formal-board.js  # 正式照明/数独/竞速棋盘
 │   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
@@ -303,7 +303,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── sudoku/  # 数独规则与笔记
 │   │   │   │   ├── sudoku.test.js  # 所属模块的行为回归测试
 │   │   │   │   ├── sudoku-variant.test.js  # 可变尺寸、笔记边界和无内置答案判题
-│   │   │   │   └── sudoku-session.test.js  # 显式开始、草稿恢复、嵌套暂停及结算重试
+│   │   │   │   └── sudoku-session.test.js  # 草稿恢复、连续撤回、嵌套暂停及结算重试
 │   │   │   └── game-catalog.test.js  # 所属模块的行为回归测试
 │   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
 │   │   │   ├── completion.test.js  # 所属模块的行为回归测试

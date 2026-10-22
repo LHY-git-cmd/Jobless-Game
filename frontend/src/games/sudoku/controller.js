@@ -30,11 +30,11 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     </div>
     <section id="sudoku-play" class="sudoku-play" aria-label="数独游戏" hidden>
       <div class="sudoku-topbar"><button id="sudoku-back" type="button">返回选关</button><span>无职游戏</span><button id="sudoku-restart" type="button">重新开始</button></div>
-      <div class="sudoku-heading"><p class="eyebrow" id="sudoku-kicker">SUDOKU</p><h2>数独</h2><p id="sudoku-description"></p></div>
-      <div class="sudoku-toolbar"><div class="sudoku-available"><span>可得星数</span><span id="sudoku-available-stars" class="mine-rating" aria-live="polite"></span></div><div class="sudoku-tools-right"><p><span id="sudoku-clock-label">本局用时</span><strong id="sudoku-clock">00:00</strong></p><button id="sudoku-pause-toggle" type="button" aria-pressed="false" aria-label="暂停游戏" title="暂停游戏"><svg class="sudoku-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><svg class="sudoku-resume-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4 12 8-12 8Z"/></svg></button></div></div>
+      <div class="sudoku-heading"><p class="eyebrow" id="sudoku-kicker">SUDOKU</p><h2>数独</h2></div>
+      <div class="sudoku-toolbar"><div class="sudoku-difficulty"><span>难度</span><strong id="sudoku-difficulty-label"></strong></div><div class="sudoku-available"><span>可得星数</span><span id="sudoku-available-stars" class="mine-rating" aria-live="polite"></span></div><div class="sudoku-tools-right"><p><span id="sudoku-clock-label">本局用时</span><strong id="sudoku-clock">00:00</strong></p><button id="sudoku-pause-toggle" type="button" aria-pressed="false" aria-label="暂停游戏" title="暂停游戏"><svg class="sudoku-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><svg class="sudoku-resume-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4 12 8-12 8Z"/></svg></button></div></div>
       <div id="sudoku-tutorial" class="sudoku-tutorial" hidden><p id="sudoku-tutorial-count" class="eyebrow"></p><h3 id="sudoku-tutorial-title"></h3><p id="sudoku-tutorial-text"></p></div>
       <div class="sudoku-board-wrap"><div id="sudoku-board" class="sudoku-board" role="group" aria-label="数独棋盘"></div><div id="sudoku-pause" class="sudoku-pause" hidden><strong>棋局已暂停</strong><p>准备好后，继续这一盘。</p><button id="sudoku-clock-retry" type="button" class="journey-primary">继续游戏</button></div></div>
-      <div class="sudoku-input"><div id="sudoku-keypad" class="sudoku-keypad" role="group" aria-label="填写数字"></div><div class="sudoku-actions"><button id="sudoku-clear" type="button">清除选中格</button><button id="sudoku-notes" type="button" class="journey-primary" aria-pressed="false">笔记：关</button></div><p class="sudoku-keyboard-help">方向键选格 · 数字键填写 · Delete 清除</p></div>
+      <div class="sudoku-input"><div id="sudoku-keypad" class="sudoku-keypad" role="group" aria-label="填写数字"></div><div class="sudoku-actions"><button id="sudoku-undo" type="button" disabled>撤回上一步</button><button id="sudoku-clear" type="button">清除选中格</button><button id="sudoku-notes" type="button" aria-pressed="false">笔记：关</button></div><p class="sudoku-keyboard-help">方向键选格 · 数字键填写 · Delete 清除</p></div>
       <div id="sudoku-result" class="sudoku-result" role="status" hidden><p class="eyebrow">每一步推理，都算数。</p><h3 id="sudoku-result-title"></h3><div id="sudoku-result-stars" class="mine-rating"></div><p id="sudoku-result-description"></p><button id="sudoku-retry-settlement" type="button" class="journey-primary" hidden>重试保存奖励</button></div>
     </section>
     <div class="sudoku-feedback"><p id="sudoku-message" role="status" aria-live="polite"></p><button id="sudoku-reload" type="button" hidden>重新加载</button></div>
@@ -134,7 +134,10 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     const heading=document.getElementById('levels-title')?.closest('.section-heading');if(heading)heading.hidden=true;
     if(state.attempt&&state.grid){
       const grid=state.grid,selected=grid.selected,level=state.levels.find(v=>v.level_id===state.attempt.level_id),active=!state.busy&&!state.paused&&!state.pending&&state.attempt.status==='active';
-      $('sudoku-kicker').textContent=`${level?.name||'数独'} / SUDOKU`;$('sudoku-description').textContent=`${grid.size} × ${grid.size} · 固定题盘 · ${grid.givens.filter(Boolean).length} 个已给数字`;
+      $('sudoku-kicker').textContent=`${level?.name||'数独'} / SUDOKU`;
+      $('sudoku-difficulty-label').textContent=DIFFICULTIES.find(([key])=>key===level?.difficulty)?.[1]||'数独';
+      $('sudoku-undo').hidden=Boolean(state.attempt.puzzle.tutorial);$('sudoku-undo').disabled=!active||!state.history.length;
+      $('sudoku-undo').parentElement.classList.toggle('has-undo',!state.attempt.puzzle.tutorial);
       $('sudoku-notes').textContent=grid.notesMode?'笔记：开':'笔记：关';$('sudoku-notes').setAttribute('aria-pressed',String(grid.notesMode));$('sudoku-notes').disabled=!active;
       const editable=active&&selected!==null&&!grid.givens[selected];
       if($('sudoku-keypad').children.length!==grid.size){$('sudoku-keypad').replaceChildren();for(let digit=1;digit<=grid.size;digit++){const button=document.createElement('button');button.type='button';button.dataset.digit=digit;button.textContent=digit;$('sudoku-keypad').append(button);}}
@@ -170,6 +173,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
   scope.listen($('sudoku-board'),'click',event=>{const cell=event.target.closest('[data-index]');if(cell)model.choose(Number(cell.dataset.index));});
   scope.listen($('sudoku-keypad'),'click',event=>{const button=event.target.closest('[data-digit]');if(button)void run(()=>model.input(Number(button.dataset.digit)));});
   scope.listen($('sudoku-notes'),'click',()=>model.toggleNotes());scope.listen($('sudoku-clear'),'click',()=>void run(()=>model.input(0)));
+  scope.listen($('sudoku-undo'),'click',()=>model.undo());
   scope.listen(document,'keydown',event=>{
     if(!model?.state.grid||selectionOnly||$('sudoku-play').hidden||document.querySelector('dialog[open]')||event.ctrlKey||event.altKey||event.metaKey||event.target.closest('input,textarea,select,[contenteditable="true"]'))return;
     const grid=model.state.grid,size=grid.size,index=grid.selected??0,col=index%size;

@@ -62,6 +62,8 @@ def main():
                 wait("!document.getElementById('sudoku-start').disabled");click('#sudoku-start');wait("document.getElementById('auth-dialog').open")
                 login('数独交互甲')
                 wait("document.querySelectorAll('#sudoku-board .sudoku-cell').length===81 && !document.getElementById('sudoku-restart').disabled")
+                assert ev("!document.getElementById('sudoku-description') && document.getElementById('sudoku-difficulty-label').textContent==='简单'")
+                assert ev("document.getElementById('sudoku-undo').disabled")
                 attempt=row();original=attempt.attempt_id;puzzle=attempt.board
                 givens=LEVELS[attempt.level_id]['puzzle']['values'];blank=next(i for i,v in enumerate(givens) if not v)
                 same_row=[v for i,v in enumerate(givens) if i//9==blank//9 and v];duplicate=same_row[0]
@@ -72,6 +74,8 @@ def main():
                 assert ev("document.querySelector('#sudoku-board .conflict').getAttribute('aria-label').includes('存在重复')")
                 (qa.OUTPUT/'sudoku-conflict-desktop.png').write_bytes(base64.b64decode(cmd('Page.captureScreenshot',{'format':'png'})['data']))
                 key('Delete');wait("document.querySelectorAll('#sudoku-board .conflict').length===0")
+                click('#sudoku-undo');wait("document.querySelectorAll('#sudoku-board .conflict').length>=2")
+                click('#sudoku-undo');wait("document.querySelectorAll('#sudoku-board .conflict').length===0 && document.getElementById('sudoku-undo').disabled")
                 # 重建后实际焦点仍是已选格，方向键不能跨越左右边界。
                 ev(f'document.querySelector(\'#sudoku-board [data-index="{blank}"]\').focus()');key('ArrowRight')
                 expected=blank+1 if blank%9<8 else blank
@@ -80,6 +84,23 @@ def main():
                 click(f'#sudoku-board [data-index="{given}"]');key('9')
                 assert ev(f'document.querySelector(\'#sudoku-board [data-index="{given}"]\').textContent')==str(givens[given])
                 checks.append('键盘填数/删除/方向焦点、题目数字保护、同数与冲突高亮')
+
+                click(f'#sudoku-board [data-index="{blank}"]');click('#sudoku-notes')
+                note_on=ev("getComputedStyle(document.getElementById('sudoku-notes')).backgroundColor")
+                click('#sudoku-keypad [data-digit="2"]');wait("!document.getElementById('sudoku-restart').disabled")
+                cmd('Page.reload');wait("document.querySelector('#sudoku-notes')?.textContent==='笔记：开' && !document.getElementById('sudoku-undo').disabled")
+                click('#sudoku-undo');wait("document.querySelectorAll('#sudoku-board .sudoku-notes').length===0")
+                click('#sudoku-notes');assert ev("getComputedStyle(document.getElementById('sudoku-notes')).backgroundColor")!=note_on
+                for width,height in [(1440,1100),(375,1100),(320,1000)]:
+                    cmd('Emulation.setDeviceMetricsOverride',{'width':width,'height':height,'deviceScaleFactor':1,'mobile':width<700})
+                    assert ev('document.documentElement.scrollWidth<=innerWidth'),width
+                    assert ev("(()=>{const a=document.querySelector('.auth-controls').getBoundingClientRect(),p=document.querySelector('.player-profile').getBoundingClientRect(),n=document.querySelector('.auth-username').getBoundingClientRect(),s=document.querySelector('.player-stars').getBoundingClientRect();return a.top<=p.top+1 && a.right<=innerWidth && n.right<=a.left && s.right<=a.left;})()"),'账号操作应位于首行右侧且不遮挡资料'
+                    assert ev("(()=>{const s=document.querySelector('.sudoku-available').getBoundingClientRect(),t=document.querySelector('.sudoku-toolbar').getBoundingClientRect();return Math.abs(s.left+s.width/2-t.left-t.width/2)<1;})()"),'星级保持居中'
+                    ev("window.scrollTo({top:0,behavior:'instant'})")
+                    (qa.OUTPUT/f'sudoku-header-{width}.png').write_bytes(base64.b64decode(cmd('Page.captureScreenshot',{'format':'png'})['data']))
+                    ev("document.querySelector('.sudoku-input').scrollIntoView({block:'end',behavior:'instant'})")
+                    (qa.OUTPUT/f'sudoku-undo-{width}.png').write_bytes(base64.b64decode(cmd('Page.captureScreenshot',{'format':'png'})['data']))
+                checks.append('难度位置/说明移除、连续撤回和刷新后撤回、笔记开关颜色及320/375px右上账号布局')
 
                 click('#sudoku-pause-toggle');paused(True)
                 cmd('Page.reload');wait("!document.getElementById('sudoku-pause').hidden && !document.getElementById('sudoku-clock-retry').disabled");paused(True)
