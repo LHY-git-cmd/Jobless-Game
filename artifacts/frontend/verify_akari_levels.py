@@ -38,7 +38,8 @@ def main():
                     while time.monotonic()<deadline:
                         if ev(f'(()=>{{try{{return Boolean({expression});}}catch{{return false;}}}})()'):return
                         time.sleep(.025)
-                    raise AssertionError((expression,ev("document.getElementById('akari-message')?.textContent")))
+                    shot('akari-failure.png')
+                    raise AssertionError((expression,ev("({game:document.getElementById('akari-message')?.textContent,auth:document.querySelector('.auth-status')?.textContent,dialog:document.getElementById('auth-dialog')?.className,body:document.body.textContent.slice(-900)})")))
 
                 def click(selector):
                     """调用实际DOM按钮监听器，不直接修改游戏状态。"""
@@ -53,6 +54,10 @@ def main():
                 def choose(level):
                     """切关本身不建局，点击开始后才进入正式尝试。"""
                     progression_service.limiter.clear()
+                    if ev("document.getElementById('akari-result').open"):
+                        cmd('Input.dispatchKeyEvent',{'type':'keyDown','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
+                        cmd('Input.dispatchKeyEvent',{'type':'keyUp','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
+                        wait("!document.getElementById('akari-result').open")
                     if ev("!document.getElementById('akari-play').hidden"):click('#akari-back')
                     click(f'#akari-levels [data-level="{level["level_id"]}"]');click('#akari-enter-confirm')
                     wait(f"document.querySelectorAll('#akari-board [data-index]').length==={level['puzzle']['rows']**2}&&!document.getElementById('akari-restart').disabled")
@@ -60,7 +65,7 @@ def main():
                 def bulb(index):
                     """每次操作等待会话释放忙碌状态，最终一步由结算负责冻结。"""
                     click(f'#akari-board [data-index="{index}"]')
-                    wait("!document.getElementById('akari-restart').disabled||!document.getElementById('akari-result').hidden")
+                    wait("!document.getElementById('akari-restart').disabled||!document.getElementById('akari-save-status').hidden||document.getElementById('akari-result').open")
 
                 cmd('Page.enable');cmd('Network.enable');cmd('Runtime.enable')
                 cmd('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1150,'deviceScaleFactor':1,'mobile':False})
@@ -134,22 +139,34 @@ def main():
                         cmd('Page.reload');wait("document.getElementById('akari-message').textContent.includes('连接失败')")
                         cmd('Network.setBlockedURLs',{'urls':[]});click('#akari-retry-settlement')
                         checks.append('断网终盘刷新后以原负载重试')
-                    wait("!document.getElementById('akari-result').hidden&&document.getElementById('akari-result-title').textContent.includes('点亮')")
+                    wait("document.getElementById('akari-result').open&&document.getElementById('akari-result-title').textContent.includes('点亮')")
                     if number==0:
                         shot('akari-tutorial-complete.png')
+                    if number==1:
+                        assert ev("document.getElementById('akari-result-description').textContent.includes('6 经验')")
+                        for width,height in [(375,812),(320,740)]:
+                            cmd('Emulation.setDeviceMetricsOverride',{'width':width,'height':height,'deviceScaleFactor':1,'mobile':True})
+                            assert ev("(()=>{const r=document.getElementById('akari-result').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;})()")
+                            assert ev("[...document.querySelectorAll('#akari-result button')].every(b=>b.getBoundingClientRect().height>=44)")
+                            shot(f'akari-result-{width}.png')
+                        cmd('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1150,'deviceScaleFactor':1,'mobile':False})
+                        shot('akari-result-desktop.png');checks.append('普通关三星6经验、320/375px弹窗及返回首页/下一关按钮')
                     assert ev("document.querySelectorAll('#akari-board button:not(:disabled)').length===0")
                     checks.append(f'{level["name"]}真实点击完成及服务器结算')
                 shot('akari-final-complete.png')
                 assert ev("document.getElementById('akari-result-title').textContent.includes('全部点亮')")
-                click('#akari-next');wait("!document.getElementById('akari-selector').hidden")
-                choose(AKARI_LEVELS[1]);wait("!document.getElementById('akari-result').hidden")
+                assert ev("document.getElementById('akari-next').disabled")
+                click('#akari-result-home');wait("location.pathname.endsWith('/index.html')")
+                cmd('Page.navigate',{'url':base+'journey.html?game_id=akari'})
+                wait("document.querySelectorAll('#akari-levels button').length===16")
+                choose(AKARI_LEVELS[1]);wait("document.getElementById('akari-result').open")
                 assert ev("document.getElementById('akari-result-description').textContent.includes('经验')")
-                # 最后一关完成后的下一关按钮回选关，入门下一关单独验证无跨游戏跳转。
-                click('#akari-back');choose(AKARI_LEVELS[0]);click('#akari-next')
+                # 最后一关通过弹窗返回首页，入门下一关仍进入照明第1关。
+                choose(AKARI_LEVELS[0]);click('#akari-next')
                 wait("document.getElementById('akari-kicker').textContent.startsWith('第1关')")
-                checks.append('查看旧结果、最终关返回选关及入门下一关导航')
+                checks.append('通关弹窗、历史结果可再次查看、最终关返回首页及入门下一关导航')
                 with sessions() as db:
-                    summary=db.scalar(select(PlayerProgression));assert summary.total_stars==46
+                    summary=db.scalar(select(PlayerProgression));assert (summary.total_stars,summary.xp)==(46,92)
                 print(json.dumps({'passed':len(checks),'checks':checks},ensure_ascii=False))
         finally:
             server.should_exit=True;worker.join(timeout=5);qa.api.app.dependency_overrides.clear();engine.dispose()

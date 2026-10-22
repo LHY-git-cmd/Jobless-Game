@@ -1,6 +1,6 @@
 # 项目目录树
 
-更新日期：2026-10-22。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
+更新日期：2026-10-23。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
 
 ```text
 crawler-portal/                            # 项目根目录：前端、登录后端、素材及文档
@@ -24,6 +24,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── akari-catalog-v2.json          # 照明入门及第1～15关的冻结地图和参数
 │   │   ├── akari-audit-v2.json            # 照明离线逻辑推理及内部递进度量，不下发浏览器
 │   │   ├── akari-catalog-v3.json          # 七步入门及第10～15关10×10的追加版本目录
+│   │   ├── akari-catalog-v4.json          # 照明按时间评星、普通关统一2/4/6经验的版本目录
 │   │   ├── akari-audit-v3.json            # 最新16题的离线唯一解与递进推理审计
 │   │   └── sudoku-audit-v2.json           # 开发机离线唯一解和逐步推理记录，不下发浏览器
 │   ├── sudoku_content.py                 # 有界离线构造、两解搜索及四档逻辑分级器
@@ -119,7 +120,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V12__publish_sudoku_difficulties.sql # 数独教学与四档各三题，保留历史定义
 │   │   ├── V13__publish_akari_levels.sql   # 照明入门及15关，保留旧定义及永久资格
 │   │   ├── V14__expand_akari_tutorial_and_boards.sql # 教学及第10～15关追加版本2，不改旧定义
-│   │   └── V15__create_player_energy.sql # 账号体力状态与随尝试回收的扣返凭证
+│   │   ├── V15__create_player_energy.sql # 账号体力状态与随尝试回收的扣返凭证
+│   │   └── V16__align_akari_timed_rewards.sql # 追加照明15关按用时评分版本，保留旧奖励
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -149,6 +151,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_sudoku_api.py            # 数独13题判题、教学、暂停、奖励及资格隔离
 │       ├── test_akari_content.py          # 照明16关唯一性、逻辑递进及冻结迁移一致性
 │       ├── test_akari_api.py              # 照明目录、16关判题、权威时钟及历史资格
+│       ├── test_akari_rewards.py          # 时间毫秒边界、2/4/6经验、升星补差及版本兼容
 │       ├── test_energy.py                 # 体力恢复边界、扣返幂等、零体力重开回滚及账号隔离
 │       ├── test_mine_redesign.py         # 五档矩形扫雷、教学步骤、首击安全、经验补差及冻结时间
 │       ├── test_mine_pause.py            # 服务器暂停/继续、防重版本、账号隔离及有效时长结算

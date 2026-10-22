@@ -90,12 +90,16 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
   async function restore(path){
     const response=await request(path);if(dead)return;adopt(response.data);
     if(response.data.status==='completed'){
-      const result=await request(response.data.links.completion);if(dead)return;confirmed(result.data,true);
+      const result=await request(response.data.links.completion);if(dead)return;
       if(state.levels.find(v=>v.level_id===response.data.level_id)?.level_version!==response.data.level_version){
         // 已完成旧盘保留正式成绩，新的选关入口应开始最新版而不是反复显示旧尺寸。
+        let progress=state.progress.find(v=>v.level_id===response.data.level_id);
+        if(!progress){progress={level_id:response.data.level_id};state.progress.push(progress);}
+        Object.assign(progress,{best_stars:result.data.best_stars,current_attempt:null});
+        store.clearPending(state.attempt);
         outdatedCompleted.add(response.data.level_id);state.attempt=null;state.board=null;state.result=null;state.pending=false;frozen=null;
         state.message='本关已更新，可以开始新版棋盘；旧成绩已保留。';
-      }
+      }else confirmed(result.data,true);
       return;
     }
     if(response.data.status!=='active')return;
@@ -103,7 +107,7 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
     await writeClock(reasons.size>0);if(dead)return;
     state.paused=reasons.size>0||Boolean(state.attempt.timing?.paused);frozen=state.paused?state.attempt.timing.elapsed_ms:null;
     if(state.levels.find(v=>v.level_id===state.attempt.level_id)?.level_version!==state.attempt.level_version){
-      state.message=`正在继续旧版${state.attempt.puzzle.rows}×${state.attempt.puzzle.cols}棋局，重新开始将使用新版棋盘。`;
+      state.message=`正在继续旧版${state.attempt.puzzle.rows}×${state.attempt.puzzle.cols}棋局，重新开始将使用最新题目与奖励规则。`;
     }
   }
   /** 创建响应丢失使用同一UUID；服务器已有本关时转为恢复。 */

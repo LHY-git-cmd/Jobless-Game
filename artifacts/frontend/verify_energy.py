@@ -63,9 +63,17 @@ def main():
                 def open_akari(identity):
                     """选关确认才开始；返回选关不返体力。"""
                     progression_service.limiter.clear()
+                    close_result()
                     if ev("document.getElementById('akari-play')&&!document.getElementById('akari-play').hidden"):click('#akari-back')
                     click(f'#akari-levels [data-level="{identity}"]');click('#akari-enter-confirm')
                     wait("!document.getElementById('akari-play').hidden&&!document.getElementById('akari-restart').disabled")
+
+                def close_result():
+                    """真实Esc关闭通关弹窗，再操作背景棋盘或重开按钮。"""
+                    if ev("document.getElementById('akari-result')?.open"):
+                        cmd('Input.dispatchKeyEvent',{'type':'keyDown','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
+                        cmd('Input.dispatchKeyEvent',{'type':'keyUp','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
+                        wait("!document.getElementById('akari-result').open")
 
                 cmd('Page.enable');cmd('Runtime.enable');cmd('Network.enable');cmd('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1100,'deviceScaleFactor':1,'mobile':False})
                 cmd('Page.navigate',{'url':base+'index.html'});wait("document.querySelector('.auth-open')")
@@ -91,8 +99,9 @@ def main():
                 assert ev("document.getElementById('akari-restart-energy').textContent.includes('再消耗1点')")
                 click('#akari-restart-confirm');energy(3)
                 for index in akari_solutions(LEVELS['akari-v2-001']['puzzle']['map'])[0]:
-                    click(f'#akari-board [data-index="{index}"]');wait("!document.getElementById('akari-restart').disabled||!document.getElementById('akari-result').hidden")
+                    click(f'#akari-board [data-index="{index}"]');wait("!document.getElementById('akari-restart').disabled||document.getElementById('akari-result').open")
                 energy(4);checks.append('普通开局扣1、刷新不扣、重开再扣1、通关返1')
+                close_result()
                 for _ in range(4):
                     click('#akari-restart');click('#akari-restart-confirm');wait("!document.getElementById('akari-restart').disabled")
                 energy(0)

@@ -119,8 +119,10 @@ test('七步教学限制当前目标，实际演示互照、数字墙并恢复�
 test('题目更新后旧完成盘不遮挡新版入口，旧活动盘明确提示旧版本',async()=>{
   const f=fixture(),model=createAkariSession({uid:1,...f});await model.load();await model.open();
   await model.toggle(1);await model.toggle(7);model.destroy();f.levels[0].level_version=2;
-  const revised=createAkariSession({uid:1,...f});await revised.load();
+  let historicalRewards=0;
+  const revised=createAkariSession({uid:1,...f,onReward:()=>historicalRewards++});await revised.load();
   assert.equal(revised.state.attempt,null);assert.equal(revised.hasSaved('akari-v2-001'),false);
+  assert.equal(historicalRewards,0);
   await revised.open();assert.equal(revised.state.attempt.level_version,2);assert.equal(f.starts,2);
   revised.destroy();f.levels[0].level_version=3;
   const active=createAkariSession({uid:1,...f});await active.load();
