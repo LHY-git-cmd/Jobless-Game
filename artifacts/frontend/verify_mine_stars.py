@@ -124,7 +124,7 @@ def main():
                 cmd('Emulation.setDeviceMetricsOverride',{'width':375,'height':812,'deviceScaleFactor':1,'mobile':True})
                 ev("document.querySelector('.mine-operation').scrollIntoView({behavior:'instant',block:'start'})")
                 wait("document.querySelector('.player-stars').getBoundingClientRect().bottom<0")
-                assert ev("document.querySelector('.mine-operation').getBoundingClientRect().bottom<=document.getElementById('mine-viewport').getBoundingClientRect().top && document.getElementById('mine-flag').getBoundingClientRect().height>=44 && document.getElementById('mine-reveal').getBoundingClientRect().height>=44")
+                assert ev("document.querySelector('.mine-operation').getBoundingClientRect().top>=document.getElementById('mine-viewport').getBoundingClientRect().bottom && document.getElementById('mine-flag').getBoundingClientRect().height>=44 && document.getElementById('mine-reveal').getBoundingClientRect().height>=44")
                 before=ev('scrollY');reveal(0);solve('mine-v2-easy-10')
                 wait("document.querySelectorAll('.mine-flying-star').length===2 && document.querySelector('.mine-star-total')")
                 assert ev("document.querySelector('.player-stars strong').textContent==='2'")

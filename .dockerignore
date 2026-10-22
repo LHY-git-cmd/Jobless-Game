@@ -12,10 +12,21 @@
 !frontend/*.html
 !frontend/favicon.ico
 !frontend/styles.css
+!frontend/journey.css
+!frontend/mine-journey.css
+!frontend/mine-practice.css
+!frontend/navigation.css
+!frontend/styles/
+!frontend/styles/**
 !frontend/src/
 !frontend/src/**
 !frontend/assets/
 !frontend/assets/**
+# 明确排除测试和工具；Docker的*.html匹配不能用来隔离嵌套HTML夹具。
+frontend/test/
+frontend/test/**
+frontend/node_modules/
+frontend/package*.json
 **/__pycache__/
 **/*.pyc
 **/.env

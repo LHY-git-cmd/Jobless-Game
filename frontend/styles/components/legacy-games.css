@@ -1,0 +1,120 @@
+/* 关卡保持原有操作方式；固定大小格子只在棋盘容器内滚动。 */
+.game-panel { width: min(100%, 640px); margin: 32px auto; padding: 28px 36px; border: 1px solid var(--line); border-radius: 18px; background: #102b3cf5; box-shadow: 0 24px 80px #06162466; }
+.top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.top-row button { padding: 8px 12px; font-size: 13px; }
+.screen-brand { color: var(--gold); font: 600 19px SimSun, serif; letter-spacing: 2px; white-space: nowrap; }
+.game-heading { display: flex; align-items: center; gap: 18px; margin: 28px 0 24px; }
+.game-heading img { border-radius: 12px; }
+.game-heading .eyebrow { margin-bottom: 8px; font-size: 11px; }
+.game-heading h1 { margin: 0; font-size: 32px; letter-spacing: 4px; }
+.game-heading p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.game-panel > p { color: var(--muted); font-size: 14px; line-height: 1.7; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px 12px; border: 1px solid var(--line); border-radius: 10px; background: #071e3255; }
+.stats > span { color: var(--muted); font-size: 12px; text-align: center; }
+.stats > span + span { border-left: 1px solid var(--line); }
+.stats strong { display: block; margin-top: 6px; color: var(--gold); font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
+#board-caption { margin: 20px 0 10px; }
+.board-viewport, .akari-viewport { max-width: 100%; overflow: auto; border: 1px solid #afc5cf77; border-radius: 8px; background: #091e2b; touch-action: pan-x pan-y; scrollbar-color: #92aab9 #102b3c; }
+/* 格子背景逐一对应原图切片；选中和悬停不覆盖图片。 */
+.board { display: grid; grid-template-columns: repeat(10, 44px); grid-template-rows: repeat(10, 44px); gap: 0; width: max-content; padding: 8px; margin-inline: auto; border: 3px solid; border-color: #e2e2e2 #595959 #595959 #e2e2e2; background: #8c8c8c; }
+.cell { --cell-art: url("../../assets/minesweeper/covered.webp"); display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 0; background: var(--cell-art) center / 100% 100% no-repeat #bdbdbd; color: #000080; box-shadow: none; font: 700 30px/1 Arial, sans-serif; user-select: none; transition: box-shadow 160ms ease, filter 160ms ease; }
+.cell:hover:not(:disabled) { background: var(--cell-art) center / 100% 100% no-repeat #bdbdbd; filter: brightness(1.08); }
+.cell.cell-revealed { --cell-art: url("../../assets/minesweeper/open.webp"); cursor: default; box-shadow: inset 0 0 0 1px #929292; }
+.cell.cell-flagged { --cell-art: url("../../assets/minesweeper/flag.webp"); }
+.cell.cell-mine { --cell-art: url("../../assets/minesweeper/mine.webp"); box-shadow: none; }
+.cell.cell-exploded { --cell-art: url("../../assets/minesweeper/exploded.webp"); }
+/* 每颗雷独立扩散冲击环，爆炸结束后变为焦黑形态。 */
+.cell.cell-blasting { position: relative; z-index: 2; animation: mine-impact 520ms ease-out both; }
+.cell.cell-blasting::after { content: ""; position: absolute; inset: 3px; border: 3px solid #ffbf41; border-radius: 50%; pointer-events: none; animation: mine-shockwave 520ms ease-out both; }
+.cell.cell-spent, .cell.cell-spent:hover:not(:disabled) { filter: grayscale(.85) brightness(.65); }
+@keyframes mine-impact {
+  0% { transform: scale(.8); }
+  25% { transform: scale(1.12) rotate(-4deg); }
+  55% { transform: scale(1.02) rotate(3deg); }
+  100% { transform: none; }
+}
+@keyframes mine-shockwave {
+  0% { transform: scale(.65); opacity: .9; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+.game-tools { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin: 0 0 12px; }
+.game-tools button { padding: 8px 12px; font-size: 12px; }
+.game-tools .dev-quick { margin: 0; }
+.cell.cell-selected { position: relative; z-index: 1; box-shadow: inset 0 0 0 3px var(--gold), inset 0 0 0 4px #805c20; }
+.cell[data-adjacent="1"] { --cell-art: url("../../assets/minesweeper/number-1.webp"); box-shadow: none; }
+.cell[data-adjacent="2"] { --cell-art: url("../../assets/minesweeper/number-2.webp"); box-shadow: none; }
+.cell[data-adjacent="3"] { --cell-art: url("../../assets/minesweeper/number-3.webp"); box-shadow: none; }
+.cell[data-adjacent="5"] { color: #800000; }
+.cell[data-adjacent="6"] { color: #006868; }
+.cell[data-adjacent="7"] { color: #111; }
+.cell[data-adjacent="8"] { color: #505050; }
+.controls { padding-top: 18px; }
+.controls p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.action-buttons, .sudoku-actions { display: flex; gap: 12px; }
+.action-buttons button, .sudoku-actions button { flex: 1; }
+#reveal-button, #sudoku-check, .dialog-card > button, #result-primary { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); font-weight: 600; }
+#reveal-button:hover:not(:disabled), #sudoku-check:hover:not(:disabled), .dialog-card > button:hover, #result-primary:hover { background: #fff0ce; border-color: #fff0ce; }
+#game-message, #sudoku-message, #akari-message { min-height: 24px; margin: 16px 0 0; color: var(--gold); }
+.sudoku-board { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); width: min(100%, 450px); margin-inline: auto; overflow: hidden; border: 3px solid #d9c494; border-radius: 4px; background: var(--paper); }
+.sudoku-cell { position: relative; display: grid; place-items: center; width: 100%; height: auto; min-height: 0; aspect-ratio: 1; padding: 0; border: 1px solid #bdc9ca; border-radius: 0; background: #faf8f0; color: #225f99; font-size: clamp(17px, 5vw, 24px); font-weight: 600; }
+.sudoku-notes { position: absolute; inset: 1px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); color: #39546b; font-size: clamp(8px, 2.4vw, 12px); font-weight: 600; line-height: 1; }
+.sudoku-notes > span { display: grid; place-items: center; min-width: 0; min-height: 0; }
+.sudoku-cell.selected .sudoku-notes { color: #3e391e; }
+#sudoku-notes-toggle[aria-pressed="true"] { color: var(--gold-ink); border-color: var(--gold); background: var(--gold); }
+.game-panel > .sudoku-input-hint { margin: -6px 0 14px; font-size: 12px; }
+.sudoku-cell.given { color: var(--ink); background: #e4e9e6; font-weight: 800; }
+.sudoku-cell.peer { background: #e2eddc; }
+.sudoku-cell.same-value { color: #185238; background: #b7dac5; }
+.sudoku-cell:hover:not(:disabled) { background: #f7e5b9; border-color: #bda871; }
+.sudoku-cell.selected { color: #343323; background: var(--gold); box-shadow: inset 0 0 0 2px #846220; }
+.sudoku-cell.conflict { color: #801010; background: #ffc7c7; box-shadow: inset 0 0 0 2px #b62929; }
+.sudoku-cell.box-right { border-right: 3px solid #637575; }
+.sudoku-cell.box-bottom { border-bottom: 3px solid #637575; }
+.sudoku-cell:focus-visible, .akari-cell:focus-visible, .cell:focus-visible { position: relative; z-index: 1; outline: 3px solid #9e6110; outline-offset: -3px; }
+.sudoku-keypad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; width: min(100%, 450px); margin-inline: auto; }
+.sudoku-keypad button { min-width: 0; padding: 8px 0; color: var(--gold); font-size: 18px; }
+.sudoku-keypad button[aria-pressed="true"] { border-color: var(--gold); background: #f0d49a22; box-shadow: inset 0 0 0 1px var(--gold); }
+.sudoku-actions { width: min(100%, 450px); margin: 14px auto 0; }
+.akari-viewport { max-height: min(65dvh, 520px); }
+.akari-board { display: grid; grid-template-columns: repeat(10, 44px); grid-template-rows: repeat(10, 44px); width: max-content; margin-inline: auto; border: 2px solid #091e2b; }
+/* 未照亮的可放灯格为暗蓝紫色，墙格为黑色，灯光覆盖后保持暖黄。 */
+.akari-cell { display: grid; place-items: center; width: 44px; height: 44px; min-height: 0; padding: 0; border: 1px solid #71838d; border-radius: 0; background: #504c80; color: #f5ead0; font-size: 22px; font-weight: 700; }
+.akari-cell.wall { background: #08090c; color: #f5ead0; border-color: #3d5260; cursor: default; opacity: 1; }
+.akari-cell.lit { background: #fff1bb; color: var(--ink); }
+.akari-cell:hover:not(:disabled) { background-color: #5b5790; border-color: var(--gold); }
+.akari-cell.lit:hover:not(:disabled) { background-color: #f5d88e; border-color: #8b672a; }
+.akari-cell.bulb { position: relative; background: #ffe19a; }
+.akari-cell.bulb::before { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: url("../../assets/bulb.webp") center / contain no-repeat; pointer-events: none; }
+.akari-cell.error { background-color: #f6b4b4; color: #740000; box-shadow: inset 0 0 0 3px #a72929; }
+.akari-cell.bulb.error::before { inset: 6px; }
+
+/* 弹窗使用实色面板，保证复杂背景上的文字和焦点清晰。 */
+.dialog-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: #061624ba; backdrop-filter: blur(6px); }
+.dialog-card { width: min(100%, 460px); max-height: calc(100dvh - 40px); overflow: auto; padding: 32px; border: 1px solid #c4ab7a88; border-radius: 16px; background: var(--surface); box-shadow: 0 24px 80px #0006; }
+.dialog-card h2 { margin: 0 0 20px; color: var(--gold); font-size: 24px; letter-spacing: 2px; }
+.dialog-card ol { padding-left: 22px; color: #dbe5e9; font-size: 14px; line-height: 1.8; }
+.dialog-card li + li { margin-top: 12px; }
+.dialog-card p { color: var(--muted); font-size: 14px; line-height: 1.8; }
+.dialog-card > button { width: 100%; margin-top: 12px; }
+.dialog-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.dialog-actions button { flex: 1; }
+/* 查看通关棋盘后，下一关入口位于棋盘下方状态栏右侧；小屏允许换行。 */
+.game-bottom { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.game-bottom > p, .game-bottom > #game-message { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.game-bottom > .next-level { margin-left: auto; background: var(--gold); border-color: var(--gold); color: var(--gold-ink); font-size: 14px; font-weight: 600; }
+.game-bottom > .next-level:hover { background: #fff0ce; border-color: #fff0ce; }
+#settlement-dialog { grid-template-columns: minmax(0, 1fr); }
+.settlement-card { width: min(100%, 480px); min-width: 0; }
+.dialog-card .eyebrow { color: var(--gold); font-size: 11px; margin: 0 0 10px; }
+.settlement-levels { list-style: none; padding: 0 !important; margin: 24px 0 0; }
+.settlement-levels > li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.settlement-levels > li + li { margin-top: 0; }
+.settlement-levels small { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+.settlement-levels strong { color: #f5f4ef; font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.settlement-total { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 24px 0; padding: 18px; border: 1px solid #f0d49a55; border-radius: 10px; background: #071e3255; }
+.settlement-total > span { color: var(--muted); font-size: 13px; }
+.settlement-total strong { color: var(--gold); font-size: 32px; font-weight: 500; font-variant-numeric: tabular-nums; }
+#settlement-home { color: var(--gold-ink); background: var(--gold); border-color: var(--gold); font-weight: 600; }
+#settlement-home:hover { background: #fff0ce; border-color: #fff0ce; }
+.level-timer { text-align: right; }
+.level-timer strong { margin-left: 8px; color: var(--gold); font-weight: 500; font-variant-numeric: tabular-nums; }

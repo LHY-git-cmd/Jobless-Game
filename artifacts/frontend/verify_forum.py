@@ -15,6 +15,8 @@ import time
 import verify_ranking as qa
 from verify_progress import browser
 from backend.app.services import auth_service
+from backend.app.common.game_catalog import LEVELS
+from backend.app.models.entities.progression import GameLevel,GameLevelVersion
 
 
 def main():
@@ -24,6 +26,12 @@ def main():
         engine = qa.create_engine('sqlite:///'+(Path(temporary)/'qa.sqlite').as_posix(), connect_args={'check_same_thread':False})
         qa.Base.metadata.create_all(engine)
         sessions = qa.sessionmaker(engine, expire_on_commit=False)
+        # 当前扫雷使用正式关卡；夹具发布到临时库，禁止回退已下线的旧首页。
+        with sessions() as db:
+            for item in LEVELS.values():
+                db.add(GameLevel(level_id=item['level_id'],game_id=item['game_id'],order_index=item['order']))
+                db.add(GameLevelVersion(level_id=item['level_id'],level_version=1,definition=item))
+            db.commit()
 
         def dependency():
             """请求使用独立数据库会话，确认刷新后的真实持久化。"""
@@ -32,6 +40,7 @@ def main():
         qa.api.app.dependency_overrides[qa.get_db] = dependency
         config = qa.get_settings()
         previous = (config.cookie_secure,config.forum_post_interval_seconds,config.forum_comment_interval_seconds)
+        config.progression_enabled=True;config.pk_rooms_enabled=False;config.matchmaking_enabled=False
         previous_limiter=auth_service.rate_limiter
         # 多次切换隔离账号需要更高的测试额度，仅修改本进程并在 finally 恢复。
         auth_service.rate_limiter=auth_service.LoginRateLimiter(50,60)
@@ -167,19 +176,19 @@ def main():
                     navigate('forum-post.html?id=999999');wait("document.querySelector('#forum-status')?.textContent.includes('不存在')")
                     navigate('forum-post.html?id=invalid');wait("document.querySelector('#forum-status')?.textContent.includes('无效')")
                     checks.append('不存在和无效帖子有清晰返回入口')
-                    navigate('index.html');click('#start-button')
-                    wait("!document.querySelector('#rules-dialog').classList.contains('hidden')")
-                    click('#rules-close')
-                    before=evaluate("Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('jobless-progress-v1:')).map(k=>[k,localStorage.getItem(k)]))")
+                    navigate('journey.html?game_id=mine');click('#mine-start')
+                    wait("document.querySelector('#mine-rules-dialog').open")
+                    click('#mine-rules-confirm')
+                    wait("document.querySelectorAll('.mine-square').length===100 && !document.querySelector('#mine-restart').disabled")
+                    before=evaluate("Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('jobless-journey-v1:')).map(k=>[k,localStorage.getItem(k)]))")
                     assert before
-                    click('#game-screen .notification-game');wait("document.querySelector('#notification-dialog').open")
+                    click('.notification-bell');wait("document.querySelector('#notification-dialog').open")
                     click('.notification-close')
-                    assert evaluate("Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('jobless-progress-v1:')).map(k=>[k,localStorage.getItem(k)]))") == before
-                    # 返回首页会正常更新 atHome；只比较实际棋盘与轮次，不把正常视图保存误判成损坏。
-                    board_before=evaluate("JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('jobless-progress-v1:')))).game")
-                    click('#back-button');navigate('forum.html');navigate('index.html')
-                    click('#start-button');wait("!document.querySelector('#game-screen').classList.contains('hidden')")
-                    assert evaluate("JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('jobless-progress-v1:')))).game") == board_before
+                    assert evaluate("Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('jobless-journey-v1:')).map(k=>[k,localStorage.getItem(k)]))") == before
+                    board_before=evaluate("JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('jobless-journey-v1:')))).entries")
+                    click('#mine-back');navigate('forum.html');navigate('journey.html?game_id=mine')
+                    wait("document.querySelectorAll('.mine-square').length===100 && !document.querySelector('#mine-restart').disabled")
+                    assert evaluate("JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('jobless-journey-v1:')))).entries") == board_before
                     checks.append('游戏中可开消息面板且保留真实棋局')
                     navigate('forum.html');wait("document.querySelectorAll('.forum-post-link').length===1")
                     command('Emulation.setDeviceMetricsOverride',{'width':1280,'height':960,'deviceScaleFactor':1,'mobile':False})

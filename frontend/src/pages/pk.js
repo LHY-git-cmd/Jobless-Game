@@ -1,10 +1,10 @@
 /** 双人竞速页面：REST写操作、SSE通知后GET快照、账号隔离及原终盘重试。 */
-import { initAuth } from '../auth.js';
-import { Events } from '../lib/events.js';
-import { api, createResource } from '../progression/client.js';
-import { subscribeEvents } from '../pk/events.js';
+import { initAuth } from '../features/account/auth.js';
+import { Events } from '../shared/events.js';
+import { api, createResource } from '../features/progression/client.js';
+import { subscribeEvents } from '../features/pk/events.js';
 import { createFormalBoard } from '../games/formal-board.js';
-import { formatTime } from '../session.js';
+import { formatTime } from '../shared/time.js';
 
 const $ = id => document.getElementById(id);
 const auth = initAuth();

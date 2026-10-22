@@ -16,7 +16,8 @@ class StaticCacheTests(TestCase):
     def test_entrypoints_modules_and_styles_revalidate(self):
         """HTML、JS、CSS 包括 304 都要求重新验证，ETag 继续工作。"""
         with TestClient(app) as client:
-            for path in ("/", "/forum.html", "/src/main.js", "/styles.css"):
+            for path in ("/", "/forum.html", "/src/main.js", "/styles.css", "/src/pages/home.js",
+                         "/src/games/mine/controller.js", "/styles/base.css", "/styles/pages/mine.css"):
                 with self.subTest(path=path):
                     response = client.get(path)
                     self.assertEqual(response.status_code, 200)

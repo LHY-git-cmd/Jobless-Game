@@ -1,5 +1,5 @@
 /** 正式尝试/竞速共用棋盘视图：本地照明运算，数独编辑，扫雷仅显示权威揭格。 */
-import { createAkari, toggleBulb, inspectAkari, akariCell } from '../akari.js';
+import { createAkari, toggleBulb, inspectAkari, akariCell } from './akari/rules.js';
 
 /** onChange仅保存草稿，onReveal必须调用正式服务器；不在本地发放成长。 */
 export function createFormalBoard({ host, onChange = () => {}, onReveal = () => {} }) {

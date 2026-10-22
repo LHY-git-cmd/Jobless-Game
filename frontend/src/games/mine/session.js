@@ -1,6 +1,6 @@
 /** 正式扫雷会话：显式开始、权威揭格、账号草稿、教学及可重试结算。 */
-import { api } from '../../progression/client.js';
-import { createJourneyStore } from '../../progression/journey-store.js';
+import { api } from '../../features/progression/client.js';
+import { createJourneyStore } from '../../features/progression/journey-store.js';
 
 /** request与时钟可注入测试；本地仅保存选格/旗标和正式尝试的引用。 */
 export function createMineSession({uid,storage,request=api,onChange=()=>{},onReward=()=>{},now=Date.now}={}) {

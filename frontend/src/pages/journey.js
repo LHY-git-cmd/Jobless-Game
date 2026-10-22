@@ -1,9 +1,9 @@
 /** 独立选关页：扫雷五档正式游戏，其他游戏保留占位；账号成长集中在顶部头像。 */
-import { initAuth } from '../auth.js';
-import { Events } from '../lib/events.js';
-import { api } from '../progression/client.js';
+import { initAuth } from '../features/account/auth.js';
+import { Events } from '../shared/events.js';
+import { api } from '../features/progression/client.js';
 import { gameFromSearch, gameLink } from '../games/catalog.js';
-import { createMineJourney } from '../game/mine-journey-controller.js';
+import { createMineJourney } from '../games/mine/controller.js';
 
 const $ = id => document.getElementById(id);
 const game = gameFromSearch(location.search);
