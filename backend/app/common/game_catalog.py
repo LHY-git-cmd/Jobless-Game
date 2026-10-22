@@ -11,7 +11,12 @@ MINE_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/mine-ca
 LEVELS.update({level['level_id']: level for level in MINE_LEVELS})
 SUDOKU_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/sudoku-catalog-v2.json').read_text(encoding='utf-8'))['levels']
 LEVELS.update({level['level_id']: level for level in SUDOKU_LEVELS})
-AKARI_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/akari-catalog-v2.json').read_text(encoding='utf-8'))['levels']
+AKARI_V2_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/akari-catalog-v2.json').read_text(encoding='utf-8'))['levels']
+LEVELS.update({level['level_id']: level for level in AKARI_V2_LEVELS})
+# 旧尝试绑定不可变旧版本，新目录仅选择最新定义；奖励身份不随地图修订变化。
+LEVEL_VERSIONS = {(level['level_id'],level['level_version']):level for level in LEVELS.values()}
+AKARI_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/akari-catalog-v3.json').read_text(encoding='utf-8'))['levels']
+LEVEL_VERSIONS.update({(level['level_id'],level['level_version']):level for level in AKARI_LEVELS})
 LEVELS.update({level['level_id']: level for level in AKARI_LEVELS})
 PK_PUZZLES = CATALOG['pk_puzzles']
 QUALIFICATIONS = ('mine-beginner-001', 'akari-001', 'sudoku-beginner-001')

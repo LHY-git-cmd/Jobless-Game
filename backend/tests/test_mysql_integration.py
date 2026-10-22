@@ -367,7 +367,7 @@ class MySQLIntegrationTests(TestCase):
     def test_v13_akari_catalog_completion_and_qualification(self):
         """真实V13发布16项冻结题目，所有尺寸可结算且重放不重复授奖。"""
         from backend.app.services import progression_service as service
-        from backend.app.common.game_catalog import AKARI_LEVELS
+        from backend.app.common.game_catalog import AKARI_V2_LEVELS as AKARI_LEVELS
         from backend.content_check import akari_solutions
         self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'akari-v13-test'})
         raw=self.client.cookies.get(get_settings().session_cookie_name)
@@ -394,6 +394,29 @@ class MySQLIntegrationTests(TestCase):
             summary=db.get(progression.PlayerProgression,uid)
             self.assertEqual((summary.total_stars,summary.xp),(46,total_xp))
             self.assertIsNotNone(db.get(progression.PlayerQualification,(uid,'akari-001')))
+
+    def test_v14_akari_revisions_keep_old_versions(self):
+        """真实V14追加七个版本；旧定义保留，10～15关均为10×10且判题通过。"""
+        from backend.app.common.game_catalog import AKARI_LEVELS,AKARI_V2_LEVELS
+        from backend.app.services import progression_service as service
+        from backend.content_check import akari_solutions
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'akari-v14-test'})
+        raw=self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            for definition in AKARI_V2_LEVELS+AKARI_LEVELS:
+                self.assertEqual(db.get(progression.GameLevelVersion,(definition['level_id'],definition['level_version'])).definition,definition)
+        for level in AKARI_LEVELS:
+            if level['level_version']!=2:
+                continue
+            service.limiter.clear()
+            with self.sessions() as db:
+                attempt=service.dispatch(raw,db,'attempt_create',data={
+                    'level_id':level['level_id'],'level_version':2,'mode':'campaign'},key=str(uuid4())).data
+            self.assertEqual(attempt['puzzle']['rows'],5 if level['number']==0 else 10)
+            with self.sessions() as db:
+                result=service.dispatch(raw,db,'completion_put',rid=attempt['attempt_id'],
+                    data={'bulbs':akari_solutions(level['puzzle']['map'])[0]},received_at=utc_now())
+                self.assertEqual(result.status,201)
 
     def test_v7_v8_cancel_pair_competition_has_one_outcome(self):
         """真实MySQL上竞争取消/配对：只能取消成功或配对成功，不能双重占用。"""

@@ -13,7 +13,7 @@ import time
 import verify_ranking as qa
 from verify_progress import browser
 from sqlalchemy import select
-from backend.app.common.game_catalog import LEVELS
+from backend.app.common.game_catalog import LEVELS,LEVEL_VERSIONS
 from backend.app.models.entities.progression import GameLevel,GameLevelVersion,GameAttempt,PlayerProgression
 from backend.app.services import progression_service
 from backend.sudoku_content import solutions
@@ -27,7 +27,10 @@ def environment(database):
         for item in LEVELS.values():
             if db.get(GameLevel,item['level_id']) is None:
                 db.add(GameLevel(level_id=item['level_id'],game_id=item['game_id'],order_index=item['order']))
-                db.add(GameLevelVersion(level_id=item['level_id'],level_version=1,definition=item))
+        # 预览只追加缺失版本，重启时保留所有账号、旧尝试及既有冻结定义。
+        for item in LEVEL_VERSIONS.values():
+            if db.get(GameLevelVersion,(item['level_id'],item['level_version'])) is None:
+                db.add(GameLevelVersion(level_id=item['level_id'],level_version=item['level_version'],definition=item))
         db.commit()
 
     def dependency():

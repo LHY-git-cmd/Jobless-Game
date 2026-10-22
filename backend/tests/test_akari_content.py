@@ -14,15 +14,18 @@ class AkariContent(TestCase):
 
     def test_all_sixteen_unique_logical_and_progressive(self):
         """逐题核对唯一性、完整逻辑终盘、预定尺寸及审计记录。"""
-        levels = json.loads((ROOT/'content/akari-catalog-v2.json').read_text(encoding='utf-8'))['levels']
-        audit = json.loads((ROOT/'content/akari-audit-v2.json').read_text(encoding='utf-8'))
+        levels = json.loads((ROOT/'content/akari-catalog-v3.json').read_text(encoding='utf-8'))['levels']
+        audit = json.loads((ROOT/'content/akari-audit-v3.json').read_text(encoding='utf-8'))
         self.assertEqual(len(levels), 16)
-        self.assertEqual([v['puzzle']['rows'] for v in levels], [4,4,5,5,6,6,6,7,7,7,8,8,8,9,9,10])
+        self.assertEqual([v['puzzle']['rows'] for v in levels], [5,4,5,5,6,6,6,7,7,7,10,10,10,10,10,10])
         identities = set()
         scores = []
         for number, level in enumerate(levels):
             with self.subTest(level=level['level_id']):
                 puzzle = level['puzzle']; grid = puzzle['map']
+                if number>=10:
+                    self.assertTrue(all('.' in row for row in grid))
+                    self.assertTrue(all(any(row[col]=='.' for row in grid) for col in range(10)))
                 answers = akari_solutions(grid)
                 self.assertEqual(len(answers), 1)
                 self.assertTrue(validate_akari(puzzle, answers[0]))
@@ -52,8 +55,29 @@ class AkariContent(TestCase):
 
     def test_migration_matches_catalog_and_keeps_legacy(self):
         """迁移冻结完全相同的定义，不修改已发布的旧题目。"""
-        catalog = json.loads((ROOT/'content/akari-catalog-v2.json').read_text(encoding='utf-8'))['levels']
-        sql = (ROOT/'migrations/V13__publish_akari_levels.sql').read_text(encoding='utf-8')
+        catalog = json.loads((ROOT/'content/akari-catalog-v3.json').read_text(encoding='utf-8'))['levels']
+        sql = (ROOT/'migrations/V14__expand_akari_tutorial_and_boards.sql').read_text(encoding='utf-8')
         self.assertNotIn('UPDATE ', sql)
         for level in catalog:
-            self.assertIn(json.dumps(level, ensure_ascii=False, separators=(',', ':')), sql)
+            if level['number']==0 or level['number']>=10:
+                self.assertEqual(level['level_version'],2)
+                self.assertIn(json.dumps(level, ensure_ascii=False, separators=(',', ':')), sql)
+        old=json.loads((ROOT/'content/akari-catalog-v2.json').read_text(encoding='utf-8'))['levels']
+        for number in range(1,10):
+            self.assertEqual(catalog[number],old[number])
+
+    def test_tutorial_exercises_light_conflict_and_numbered_walls(self):
+        """入门实际练习放灯、撤灯、互照与数字，最终仍用完整三项规则判定。"""
+        level=json.loads((ROOT/'content/akari-catalog-v3.json').read_text(encoding='utf-8'))['levels'][0]
+        puzzle=level['puzzle'];steps=puzzle['tutorial_steps']
+        self.assertEqual(len(steps),7)
+        self.assertTrue({'0','1'}<=set(''.join(puzzle['map'])))
+        self.assertEqual([s.get('bulb') for s in steps[:5]],[True,False,True,True,False])
+        bulbs=set()
+        for step in steps[:-1]:
+            index=step['index']
+            self.assertEqual(''.join(puzzle['map'])[index],'.')
+            if step['bulb']:bulbs.add(index)
+            else:bulbs.remove(index)
+        answer=akari_solutions(puzzle['map'])[0]
+        self.assertTrue(bulbs<set(answer))

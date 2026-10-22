@@ -193,9 +193,104 @@ def generate():
     migration.write_text('\n'.join(lines)+'\n',encoding='utf-8')
 
 
+def revise_tutorial_and_boards():
+    """追加v3：保留旧定义，教学和第10～15关用同一权益身份的版本2。"""
+    target=ROOT/'content/akari-catalog-v3.json'
+    audit_target=ROOT/'content/akari-audit-v3.json'
+    migration=ROOT/'migrations/V14__expand_akari_tutorial_and_boards.sql'
+    if any(p.exists() for p in (target,audit_target,migration)):
+        raise ValueError('新版本已存在，禁止覆盖冻结题目')
+    catalog=json.loads((ROOT/'content/akari-catalog-v2.json').read_text(encoding='utf-8'))
+    audit=json.loads((ROOT/'content/akari-audit-v2.json').read_text(encoding='utf-8'))
+    levels=catalog['levels'];rng=random.Random(20261023014)
+    tutorial=levels[0]
+    # 左上光路能同时观察横竖传播，三个独立区域分别练习光线和数字墙。
+    steps=[
+        {'title':'点亮第一束光','text':'点击高亮格放灯。灯光沿横竖传播，不会穿过黑墙；暖黄色表示已照亮。','index':0,'bulb':True,'focus':[0,1,5]},
+        {'title':'放错也能修改','text':'再次点击同一盏灯，把它撤下。任何未通关的棋盘都可以这样修改。','index':0,'bulb':False,'focus':[0]},
+        {'title':'观察光线与黑墙','text':'再放回这盏灯。右侧和下方的黑墙挡住光线，黑墙本身不能放灯。','index':0,'bulb':True,'focus':[0,2,10]},
+        {'title':'体验灯泡互照','text':'点击高亮格再放一盏灯，观察两盏灯互相照射时出现的红色提示。','index':1,'bulb':True,'focus':[0,1]},
+        {'title':'消除互照冲突','text':'撤下刚才新增的灯，消除红色冲突。两束光可以交叉，但灯泡不能照到另一盏灯。','index':1,'bulb':False,'focus':[0,1]},
+        {'title':'读懂数字墙','text':'0的上下左右不能放灯；1～4要求相邻灯数恰好等于数字，斜角不算。点击高亮格，让右上角的1恰好邻接一盏灯。','index':9,'bulb':True,'focus':[2,4,9,10]},
+        {'title':'独立点亮最后一区','text':'照亮剩余白格，并同时满足所有数字、灯泡不互照。已照亮的格子仍可点击；只有三个条件全部满足才通关。','focus':[17,18,22,23]},
+    ]
+    puzzle={'rows':5,'cols':5,'map':['..0#1','.###.','0####','##10#','##..#'],'tutorial':True,'tutorial_steps':steps}
+    puzzle['checksum']=checksum(puzzle)
+    tutorial.update(level_version=2,puzzle=puzzle,focus='七步认识照明规则')
+    audit[tutorial['level_id']]=solve(puzzle['map'])
+    previous=audit[levels[9]['level_id']]['score'];pools={1:{},2:{}}
+    def shape(grid):
+        """以墙体位置识别拓扑，六关不用同一张墙图的数字变体充数。"""
+        return tuple(''.join('.' if c=='.' else '#' for c in row) for row in grid)
+
+    def guided_variant(grid,result):
+        """只在离线已验证唯一题上增加真实数字，寻找联合约束可解的较易变体。"""
+        bulbs=set(result['bulbs']);walls=[i for i,c in enumerate(''.join(grid)) if c=='#']
+        random.Random(checksum({'map':grid})).shuffle(walls)
+        for accumulate in (False,True):
+            revised=[list(row) for row in grid]
+            for index in walls:
+                if not accumulate:revised=[list(row) for row in grid]
+                revised[index//10][index%10]=str(sum(i in bulbs for i in adjacent(index,10,10)))
+                current=[''.join(row) for row in revised];logical=solve(current,1)
+                if logical['solved'] and logical['tier']==1 and logical['score']>previous:
+                    return current,logical
+        return None
+    # 先收集同尺寸候选再整体排序，避免某一关先选得过难而堵住后续递进。
+    for attempt in range(20000):
+        grid=candidate(rng,10,10 if rng.random()<.65 else 13)
+        if not grid or any('.' not in row for row in grid) or any(all(row[col]!='.' for row in grid) for col in range(10)):
+            continue
+        if len(akari_solutions(grid))!=1:
+            continue
+        direct=solve(grid,1)
+        if direct['solved']:
+            result=direct
+        elif len(pools[2])<8:
+            result=solve(grid,2)
+        else:
+            continue
+        tier=result['tier']
+        if result['solved'] and tier in pools and result['score']>previous and result['score'] not in pools[tier]:
+            pools[tier][result['score']]=(grid,result)
+            print(f'10x10候选: tier={tier}, steps={len(result["trace"])}, pool={len(pools[tier])}',flush=True)
+            if tier==2 and len(pools[1])<8:
+                easier=guided_variant(grid,result)
+                if easier and easier[1]['score'] not in pools[1] and all(shape(v[0])!=shape(easier[0]) for v in pools[1].values()):
+                    pools[1][easier[1]['score']]=easier
+        if len(pools[1])>=8 and len(pools[2])>=8:
+            break
+    if any(len(pool)<3 for pool in pools.values()):
+        raise ValueError('未收集足够的10×10逻辑递进题')
+    chosen=[]
+    for tier in (1,2):
+        used={shape(grid) for grid,_ in chosen}
+        ordered=sorted((score,pair) for score,pair in pools[tier].items() if shape(pair[0]) not in used)
+        if len(ordered)<3:
+            raise ValueError('不同墙体布局不足三题')
+        chosen.extend(ordered[i][1] for i in (0,len(ordered)//2,len(ordered)-1))
+    for number,(grid,result) in enumerate(chosen,10):
+        puzzle={'rows':10,'cols':10,'map':grid};puzzle['checksum']=checksum(puzzle)
+        levels[number].update(level_version=2,puzzle=puzzle)
+        audit[levels[number]['level_id']]=result;previous=result['score']
+        print(f'第{number}关: 10x10, tier={result["tier"]}, steps={len(result["trace"])}',flush=True)
+    target.write_text(json.dumps({'version':3,'levels':levels},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    audit_target.write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    lines=['-- 作用：追加照明七步入门与第10～15关10×10的版本2，保留旧定义、尝试和权益。','']
+    for level in levels:
+        if level['level_version']!=2:
+            continue
+        definition=json.dumps(level,ensure_ascii=False,separators=(',',':')).replace("'","''")
+        lines.append(f"INSERT INTO game_level_versions (level_id, level_version, definition) VALUES ('{level['level_id']}', 2, '{definition}');")
+    migration.write_text('\n'.join(lines)+'\n',encoding='utf-8')
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--generate',action='store_true')
+    parser.add_argument('--revise',action='store_true',help='追加七步教学与10～15关10×10的新冻结版本')
     args=parser.parse_args()
     if args.generate:
         generate()
+    if args.revise:
+        revise_tutorial_and_boards()

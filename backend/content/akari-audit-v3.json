@@ -1,0 +1,3238 @@
+{
+  "akari-v2-tutorial": {
+    "solved": true,
+    "bulbs": [
+      0,
+      9,
+      22
+    ],
+    "tier": 0,
+    "score": 606,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          1
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          9
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          5
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          22
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          23
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          0
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-001": {
+    "solved": true,
+    "bulbs": [
+      1,
+      4,
+      11,
+      14
+    ],
+    "tier": 0,
+    "score": 607,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          2,
+          5
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          4
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          14
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          11
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          3
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          1
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-002": {
+    "solved": true,
+    "bulbs": [
+      0,
+      2,
+      4,
+      8,
+      11,
+      14,
+      21
+    ],
+    "tier": 0,
+    "score": 1010,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          18
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          14
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          21
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          13
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          11
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          5
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          0
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          2
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          4
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          8
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-003": {
+    "solved": true,
+    "bulbs": [
+      4,
+      5,
+      13,
+      22
+    ],
+    "tier": 0,
+    "score": 1012,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          5
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          2
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          4
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          7
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          13
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          14
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          10,
+          12
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          15,
+          17
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          18
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          22
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-004": {
+    "solved": true,
+    "bulbs": [
+      1,
+      4,
+      6,
+      9,
+      16,
+      23,
+      26,
+      31
+    ],
+    "tier": 0,
+    "score": 1221,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          1,
+          6
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          3
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          4
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          14
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          9
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          16,
+          23
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          30
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          26,
+          31
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          22,
+          27,
+          29,
+          34
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          15,
+          21,
+          33
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          20,
+          32
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          35
+        ],
+        "value": 0
+      }
+    ]
+  },
+  "akari-v2-005": {
+    "solved": true,
+    "bulbs": [
+      3,
+      7,
+      12,
+      16,
+      19,
+      23,
+      28,
+      32,
+      35
+    ],
+    "tier": 0,
+    "score": 1222,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          17
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          7,
+          12,
+          19
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          8,
+          15,
+          20
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          16,
+          23,
+          28
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          9
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          33
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          35
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          0,
+          6,
+          18,
+          24,
+          30
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          1
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          3
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          25
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          32
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-006": {
+    "solved": true,
+    "bulbs": [
+      2,
+      7,
+      9,
+      18,
+      23,
+      27,
+      32,
+      34
+    ],
+    "tier": 0,
+    "score": 1223,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          4,
+          11
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          2,
+          9
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          14,
+          16
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          7
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          18
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          19,
+          26,
+          31
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          27,
+          32,
+          34
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          20,
+          22
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          0,
+          6,
+          12
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          10,
+          28
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          13
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          23
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-007": {
+    "solved": true,
+    "bulbs": [
+      1,
+      6,
+      11,
+      16,
+      24,
+      33,
+      35,
+      37,
+      41,
+      43,
+      47
+    ],
+    "tier": 1,
+    "score": 102038,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          8,
+          14
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          22,
+          28
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          35,
+          43
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          38,
+          44
+        ],
+        "value": 0
+      },
+      {
+        "technique": "joint",
+        "indices": [
+          33,
+          41
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          27
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          5,
+          12,
+          19,
+          26
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          29,
+          30,
+          31,
+          32
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          16,
+          24
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          37
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          2,
+          9
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          3,
+          10,
+          17
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          11
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          13
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          18,
+          25,
+          39
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          47
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          15,
+          20
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          48
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          1
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          6
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-008": {
+    "solved": true,
+    "bulbs": [
+      1,
+      9,
+      15,
+      21,
+      27,
+      31,
+      36,
+      40,
+      42,
+      45,
+      48
+    ],
+    "tier": 1,
+    "score": 102137,
+    "trace": [
+      {
+        "technique": "coverage",
+        "indices": [
+          42
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          48
+        ],
+        "value": 1
+      },
+      {
+        "technique": "joint",
+        "indices": [
+          9,
+          15
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          2,
+          16,
+          23,
+          30,
+          37,
+          44
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          36
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          10,
+          11,
+          12,
+          13
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          14,
+          17,
+          18,
+          19,
+          20
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          29
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          21
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          7
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          1
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          3
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          45
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          39
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          31
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          25
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          32,
+          33,
+          34
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          40
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          5,
+          26
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          27
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          6
+        ],
+        "value": 0
+      }
+    ]
+  },
+  "akari-v2-009": {
+    "solved": true,
+    "bulbs": [
+      4,
+      10,
+      15,
+      21,
+      27,
+      30,
+      32,
+      35,
+      41,
+      45,
+      47
+    ],
+    "tier": 1,
+    "score": 102335,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          0,
+          2
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          6,
+          12
+        ],
+        "value": 0
+      },
+      {
+        "technique": "joint",
+        "indices": [
+          37
+        ],
+        "value": 0
+      },
+      {
+        "technique": "joint",
+        "indices": [
+          47
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          5,
+          19,
+          26,
+          33,
+          40
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          27
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          23,
+          24,
+          25
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          30,
+          32
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          9,
+          16,
+          44
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          10
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          3
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          39
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          45
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          29
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          15,
+          21
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          7
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          35
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          14
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          36
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          42
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          48
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          4
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          41
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-010": {
+    "solved": true,
+    "bulbs": [
+      0,
+      2,
+      5,
+      18,
+      26,
+      29,
+      31,
+      38,
+      45,
+      47,
+      50,
+      53,
+      56,
+      65,
+      70,
+      74,
+      83,
+      86,
+      91,
+      94,
+      99
+    ],
+    "tier": 1,
+    "score": 103971,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          18,
+          29
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          13,
+          22,
+          24,
+          33
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          2
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          59,
+          68,
+          79
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          78,
+          89,
+          98
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          12,
+          32,
+          42,
+          52,
+          62,
+          72
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          8
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          10,
+          11,
+          14,
+          15,
+          16,
+          17
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          0
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          20
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          39,
+          49
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          5
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          70
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          81
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          83
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          73
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          91
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          90
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          99
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          97
+        ],
+        "value": 0
+      },
+      {
+        "technique": "joint",
+        "indices": [
+          34
+        ],
+        "value": 0
+      },
+      {
+        "technique": "joint",
+        "indices": [
+          47,
+          56
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          7,
+          27,
+          37,
+          57,
+          67,
+          77
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          38
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          86
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          36
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          45
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          48,
+          58
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          40,
+          41,
+          43,
+          44
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          31
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          50
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          76
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          65
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          54
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          64
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          75,
+          85,
+          95
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          74,
+          94
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          26
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          53
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-011": {
+    "solved": true,
+    "bulbs": [
+      1,
+      3,
+      12,
+      17,
+      24,
+      26,
+      30,
+      45,
+      54,
+      57,
+      65,
+      72,
+      79,
+      83,
+      88,
+      90,
+      97
+    ],
+    "tier": 1,
+    "score": 104173,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          1
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          3,
+          12
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          21
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          24,
+          26
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          18,
+          27,
+          29
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          23,
+          32,
+          34,
+          43
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          30
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          45,
+          54
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          52
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          65
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          70
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          62,
+          71
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          82,
+          91
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          13
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          14
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          16,
+          36,
+          46
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          22
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          20
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          40
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          47,
+          48,
+          49
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          53
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          64,
+          74,
+          84,
+          94
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          63,
+          66
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          57
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          68,
+          77
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          58,
+          59
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          75,
+          85,
+          95
+        ],
+        "value": 0
+      },
+      {
+        "technique": "joint",
+        "indices": [
+          88
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          78,
+          98
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          89
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          79
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          19,
+          39,
+          69,
+          99
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          17
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          97
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          86
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          83
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          73,
+          93
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          72
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          92
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          90
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-012": {
+    "solved": true,
+    "bulbs": [
+      1,
+      5,
+      9,
+      18,
+      21,
+      26,
+      29,
+      37,
+      42,
+      51,
+      53,
+      69,
+      74,
+      80,
+      88,
+      92,
+      96
+    ],
+    "tier": 1,
+    "score": 104569,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          1
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          6,
+          8,
+          17
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          21
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          15,
+          24
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          9,
+          18,
+          29
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          30
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          27,
+          38
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          32,
+          41
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          43
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          49
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          54
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          35,
+          55
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          36,
+          47,
+          56
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          70,
+          72,
+          81
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          75,
+          84,
+          86
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          96
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          87,
+          98
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          89
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          2,
+          3
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          5
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          25
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          16
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          22
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          66,
+          76
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          26
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          42
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          40
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          88
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          48,
+          58,
+          68,
+          78
+        ],
+        "value": 0
+      },
+      {
+        "technique": "joint",
+        "indices": [
+          53
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          62,
+          64,
+          73
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          51
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          60
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          50
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          57,
+          59
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          80
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          91
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          82,
+          83
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          69
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          67
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          92
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          93
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          74
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          77
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          37
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-013": {
+    "solved": true,
+    "bulbs": [
+      6,
+      12,
+      19,
+      25,
+      30,
+      33,
+      44,
+      56,
+      61,
+      68,
+      77,
+      79,
+      82,
+      91
+    ],
+    "tier": 2,
+    "score": 203476,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          0,
+          11
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          7,
+          9,
+          18
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          40,
+          42,
+          51
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          68,
+          77,
+          79
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          87,
+          89
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          82,
+          91
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          71
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          94
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          86,
+          95,
+          97
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          38,
+          48,
+          58
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          39,
+          49,
+          59,
+          69,
+          99
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          47,
+          57,
+          67
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          63,
+          64,
+          65,
+          66
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          70,
+          72,
+          73,
+          74,
+          75,
+          76
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          90
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          6
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          17,
+          26
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          19
+        ],
+        "value": 1
+      },
+      {
+        "technique": "contradiction",
+        "indices": [
+          3
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          12
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          10,
+          13,
+          14
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          25
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          22,
+          32,
+          52
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          61
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          20,
+          21,
+          23,
+          24,
+          27
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          30
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          50,
+          60
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          35,
+          45,
+          55,
+          85
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          33
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          34,
+          36
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          56
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          53,
+          54
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          44
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          84
+        ],
+        "value": 0
+      }
+    ]
+  },
+  "akari-v2-014": {
+    "solved": true,
+    "bulbs": [
+      1,
+      4,
+      6,
+      10,
+      15,
+      17,
+      22,
+      31,
+      36,
+      42,
+      45,
+      54,
+      58,
+      61,
+      76,
+      80,
+      83,
+      87,
+      89,
+      92,
+      98
+    ],
+    "tier": 2,
+    "score": 204171,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          1,
+          10
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          4,
+          6,
+          15
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          7,
+          9,
+          18
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          21
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          22
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          3,
+          14,
+          23
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          73
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          84,
+          86,
+          95
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          24,
+          34
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          25
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          36,
+          45
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          26,
+          27,
+          28,
+          29
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          46
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          47,
+          48,
+          49
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          55,
+          65
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          76
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          67
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          77,
+          78,
+          79
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          87,
+          89,
+          98
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          19,
+          39,
+          59,
+          69,
+          99
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          58
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          38
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          57,
+          97
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          17
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          31
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          40
+        ],
+        "value": 0
+      },
+      {
+        "technique": "contradiction",
+        "indices": [
+          33
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          42
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          51
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          43
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          52
+        ],
+        "value": 0
+      },
+      {
+        "technique": "contradiction",
+        "indices": [
+          50
+        ],
+        "value": 0
+      },
+      {
+        "technique": "contradiction",
+        "indices": [
+          53
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          54
+        ],
+        "value": 1
+      },
+      {
+        "technique": "contradiction",
+        "indices": [
+          60
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          61
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          70,
+          81
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          83,
+          92
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          63,
+          93
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          91,
+          94
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          80
+        ],
+        "value": 1
+      }
+    ]
+  },
+  "akari-v2-015": {
+    "solved": true,
+    "bulbs": [
+      1,
+      4,
+      6,
+      9,
+      12,
+      18,
+      24,
+      27,
+      33,
+      39,
+      40,
+      48,
+      52,
+      67,
+      71,
+      74,
+      76,
+      85,
+      88,
+      92,
+      97,
+      99
+    ],
+    "tier": 2,
+    "score": 204571,
+    "trace": [
+      {
+        "technique": "number",
+        "indices": [
+          1,
+          12
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          9,
+          18
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          29
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          21,
+          30
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          23
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          39,
+          48
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          28
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          44,
+          53
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          45,
+          65
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          46,
+          57,
+          66
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          68
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          79
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          74,
+          76,
+          85
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          0
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          11,
+          31,
+          41
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          13
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          4
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          15,
+          16,
+          17
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          6
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          26,
+          36
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          27
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          86,
+          96
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          73
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          84,
+          94
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          77,
+          78
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          88,
+          97
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          80,
+          81,
+          82,
+          83
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          92
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          95
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          89
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          90,
+          91
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          67
+        ],
+        "value": 1
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          99
+        ],
+        "value": 1
+      },
+      {
+        "technique": "contradiction",
+        "indices": [
+          24
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          35
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          34
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          33
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          42
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          43,
+          63
+        ],
+        "value": 0
+      },
+      {
+        "technique": "coverage",
+        "indices": [
+          40
+        ],
+        "value": 1
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          50,
+          60,
+          70
+        ],
+        "value": 0
+      },
+      {
+        "technique": "contradiction",
+        "indices": [
+          52
+        ],
+        "value": 1
+      },
+      {
+        "technique": "number",
+        "indices": [
+          61
+        ],
+        "value": 0
+      },
+      {
+        "technique": "sight",
+        "indices": [
+          62
+        ],
+        "value": 0
+      },
+      {
+        "technique": "number",
+        "indices": [
+          71
+        ],
+        "value": 1
+      }
+    ]
+  }
+}

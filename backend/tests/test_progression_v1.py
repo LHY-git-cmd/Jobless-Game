@@ -14,7 +14,7 @@ from backend.app.common.config import get_settings
 from backend.app.common.security import utc_now
 from backend.app.models.entities import User
 from backend.app.services import auth_service
-from backend.app.common.game_catalog import LEVELS
+from backend.app.common.game_catalog import LEVELS, LEVEL_VERSIONS
 from backend.content_check import akari_solutions, sudoku_solutions
 
 
@@ -32,7 +32,8 @@ class ProgressionAPI(TestCase):
                 db.add(User(id=uid, username=f'p{uid}', username_key=f'p{uid}', password_hash='test', created_at=utc_now()))
             for item in LEVELS.values():
                 db.add(GameLevel(level_id=item['level_id'], game_id=item['game_id'], order_index=item['order']))
-                db.add(GameLevelVersion(level_id=item['level_id'], level_version=1, definition=item))
+            for item in LEVEL_VERSIONS.values():
+                db.add(GameLevelVersion(level_id=item['level_id'], level_version=item['level_version'], definition=item))
             db.commit()
         def dependency():
             """每请求独立会话，模拟生产释放语义。"""

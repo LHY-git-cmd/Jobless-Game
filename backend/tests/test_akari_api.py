@@ -19,7 +19,7 @@ class AkariAPI(TestCase):
         """只提交关卡标识，由服务器绑定冻结题目。"""
         service.limiter.clear()
         response=self.client.post('/api/v1/attempts',headers={'Idempotency-Key':str(uuid4())},json={
-            'level_id':key,'level_version':1,'mode':'campaign'})
+            'level_id':key,'level_version':LEVELS[key]['level_version'],'mode':'campaign'})
         self.assertEqual(response.status_code,201,response.text)
         return response.json()
 
@@ -77,3 +77,17 @@ class AkariAPI(TestCase):
         from backend.app.services.game_rules import stars_for
         self.assertEqual(stars_for({'game_id':'akari','rules_version':2,'t3_ms':1,'t2_ms':2},9000000),3)
         self.assertEqual(stars_for({'game_id':'akari','rules_version':2,'max_stars':1},9000000),1)
+
+    def test_new_boards_preserve_old_attempts_and_do_not_duplicate_rewards(self):
+        """旧8×8尝试保留原盘，新10×10沿用同一关卡权益且不会再发一次奖励。"""
+        level='akari-v2-010'
+        old=self.client.post('/api/v1/attempts',headers={'Idempotency-Key':str(uuid4())},json={
+            'level_id':level,'level_version':1,'mode':'campaign'})
+        self.assertEqual(old.status_code,201,old.text)
+        previous=old.json();self.assertEqual(previous['puzzle']['rows'],8)
+        first=self.client.put(previous['links']['completion'],json=self.answer(previous))
+        self.assertEqual(first.status_code,201,first.text)
+        new=self.start(level);self.assertEqual(new['level_version'],2);self.assertEqual(new['puzzle']['rows'],10)
+        self.assertEqual(self.client.get(previous['links']['self']).json()['puzzle']['rows'],8)
+        saved=self.client.put(new['links']['completion'],json=self.answer(new)).json()
+        self.assertEqual((saved['awarded_stars'],saved['awarded_xp']),(0,0))
