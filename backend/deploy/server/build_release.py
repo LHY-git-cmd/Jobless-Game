@@ -56,8 +56,9 @@ def main():
         for block in iter(lambda: package.read(1024 * 1024), b""):
             digest.update(block)
     checksum = digest.hexdigest()
-    (output / "jobless-game-server.zip.sha256").write_text(
-        checksum + "  " + archive.name + "\n", encoding="ascii")
+    # 固定使用LF，避免Windows回车被Linux的sha256sum识别为文件名的一部分。
+    (output / "jobless-game-server.zip.sha256").write_bytes(
+        (checksum + "  " + archive.name + "\n").encode("ascii"))
     print("部署包: " + str(archive))
     print("大小: {:.1f} MiB".format(archive.stat().st_size / 1024 / 1024))
     print("SHA256: " + checksum)
