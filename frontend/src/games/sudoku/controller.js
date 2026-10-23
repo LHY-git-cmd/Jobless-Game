@@ -84,7 +84,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
       footer.append(best,stars);button.append(number,title,description,rating,footer);$('sudoku-specs').append(button);
     }
     $('sudoku-options-title').textContent=DESCRIPTIONS[level.difficulty];
-    $('sudoku-reward-note').textContent=(level.max_stars===1?'认识行、列与宫，学会填数和笔记。完成获得1星、2经验。':`三星 ≤ ${sudokuTime(level.t3_ms)} · 二星 ≤ ${sudokuTime(level.t2_ms)} · 其余通关一星。经验 ${level.star_xp.join(' / ')}，提升星级补差额。`)+energyHint(level.difficulty==='tutorial');
+    $('sudoku-reward-note').textContent=(level.max_stars===1?'认识行、列与宫，学会填数和笔记。完成获得1星、2经验。':`三星 ≤ ${sudokuTime(level.t3_ms)} · 二星 ≤ ${sudokuTime(level.t2_ms)} · 其余通关一星。经验 ${level.star_xp.join(' / ')}，提升星级补差额，首次三星当局新增经验翻倍，历史不补发。`)+energyHint(level.difficulty==='tutorial');
   }
   /** 只在布局或操作状态变化时绘制棋盘，保留键盘焦点，时钟不重建格子。 */
   function renderBoard(state){
@@ -159,7 +159,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
       $('sudoku-tutorial').hidden=!state.attempt.puzzle.tutorial||Boolean(state.result);$('sudoku-tutorial').dataset.step=state.attempt.board.tutorial_step??'';
       if(state.attempt.puzzle.tutorial){const step=state.attempt.board.tutorial_step,content=TUTORIAL[Math.min(step,4)];$('sudoku-tutorial-count').textContent=`入门引导 · ${Math.min(step+1,5)} / 5`;$('sudoku-tutorial-title').textContent=content[0];$('sudoku-tutorial-text').textContent=content[1];}
       $('sudoku-result').hidden=!state.pending&&!state.result;$('sudoku-result-title').textContent=state.result?'本关成绩已保存':'数独完成，正在保存奖励…';
-      $('sudoku-result-description').textContent=state.result?`用时 ${sudokuTime(state.result.duration_ms)} · 历史最高 ${state.result.best_stars} 星 · 本次新增 ${state.result.awarded_stars} 星、${state.result.awarded_xp} 经验。`:'终盘已保留，连接恢复后可重试保存。成绩以成功提交时的用时为准。';
+      $('sudoku-result-description').textContent=state.result?`用时 ${sudokuTime(state.result.duration_ms)} · 历史最高 ${state.result.best_stars} 星 · 本次新增 ${state.result.awarded_stars} 星、${state.result.awarded_xp} 经验。${state.result.first_three_star_bonus?`其中首次三星加成 ${state.result.first_three_star_bonus} 经验。`:""}`:'终盘已保留，连接恢复后可重试保存。成绩以成功提交时的用时为准。';
       $('sudoku-result-stars').hidden=!state.result;if(state.result)paintStars($('sudoku-result-stars'),state.result.stars,`本局${state.result.stars}星`,level?.max_stars);
       $('sudoku-retry-settlement').hidden=!state.pending||Boolean(state.result);$('sudoku-retry-settlement').disabled=state.busy;
       renderBoard(state);timing();

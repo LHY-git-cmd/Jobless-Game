@@ -6,6 +6,8 @@ from pathlib import Path
 
 CATALOG = json.loads((Path(__file__).resolve().parents[2] / 'content/game-catalog-v1.json').read_text(encoding='utf-8'))
 POLICY = CATALOG['policy']
+# 等级与倒计时采用新策略，冻结题库中的旧策略保留用于历史审计。
+POLICY = {**POLICY, **json.loads((Path(__file__).resolve().parents[2] / 'content/progression-policy-v2.json').read_text(encoding='utf-8'))}
 LEVELS = {level['level_id']: level for level in CATALOG['levels']}
 MINE_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/mine-catalog-v2.json').read_text(encoding='utf-8'))['levels']
 LEVELS.update({level['level_id']: level for level in MINE_LEVELS})
@@ -20,6 +22,12 @@ LEVEL_VERSIONS.update({(level['level_id'],level['level_version']):level for leve
 AKARI_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/akari-catalog-v4.json').read_text(encoding='utf-8'))['levels']
 LEVEL_VERSIONS.update({(level['level_id'],level['level_version']):level for level in AKARI_LEVELS})
 LEVELS.update({level['level_id']: level for level in AKARI_LEVELS})
+REWARD_LEVELS = json.loads((Path(__file__).resolve().parents[2] / 'content/campaign-rewards-v3.json').read_text(encoding='utf-8'))['levels']
+LEVEL_VERSIONS.update({(level['level_id'],level['level_version']):level for level in REWARD_LEVELS})
+LEVELS.update({level['level_id']:level for level in REWARD_LEVELS})
+MINE_LEVELS = [LEVELS[item['level_id']] for item in MINE_LEVELS]
+SUDOKU_LEVELS = [LEVELS[item['level_id']] for item in SUDOKU_LEVELS]
+AKARI_LEVELS = [LEVELS[item['level_id']] for item in AKARI_LEVELS]
 PK_PUZZLES = CATALOG['pk_puzzles']
 QUALIFICATIONS = ('mine-beginner-001', 'akari-001', 'sudoku-beginner-001')
 

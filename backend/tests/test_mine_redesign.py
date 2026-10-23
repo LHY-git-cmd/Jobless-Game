@@ -114,7 +114,7 @@ class MineRedesign(TestCase):
         third = self.start(IDS[1]); self.solve(third)
         self.assertEqual(self.client.put(third['links']['completion'], json={}).json()['awarded_xp'], 0)
         self.assertEqual(self.client.get('/api/v1/me/progression').json()['xp'], 6)
-        self.assertTrue(self.client.get('/api/v1/me/pk-eligibility').json()['requirements'][0]['completed'])
+        self.assertEqual(self.client.get('/api/v1/me/pk-eligibility').json()['requirements'],[])
 
     def test_every_difficulty_xp_and_account_isolation(self):
         """各档直接三星精确给奖励，换号不能读局或继承星数。"""
@@ -158,7 +158,7 @@ class MineRedesign(TestCase):
         self.solve(attempt)
         saved = self.client.put(attempt['links']['completion'], json={})
         self.assertEqual((saved.json()['stars'], saved.json()['awarded_xp']), (1,2), saved.text)
-        self.assertFalse(self.client.get('/api/v1/me/pk-eligibility').json()['requirements'][0]['completed'])
+        self.assertFalse(self.client.get('/api/v1/me/pk-eligibility').json()['eligible'])
         again = self.start(IDS[0]); self.reveal(again,0)
         for action in ('number','flag'):
             self.client.put(again['links']['self']+'/tutorial-actions/'+action, json={})

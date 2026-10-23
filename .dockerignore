@@ -5,6 +5,9 @@
 !backend/app/**
 !backend/requirements.txt
 !backend/cleanup_sessions.py
+!backend/cleanup_game_history.py
+!backend/content/
+!backend/content/**
 !backend/deploy/
 !backend/deploy/docker/
 !backend/deploy/docker/**

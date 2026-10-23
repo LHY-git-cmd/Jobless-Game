@@ -102,8 +102,8 @@ class ProgressionAPI(TestCase):
         self.assertEqual(result.json()['awarded_xp'], 0)
         self.assertEqual(self.client.get('/api/v1/me/progression').json()['xp'], 80)
         eligibility = self.client.get('/api/v1/me/pk-eligibility').json()
-        self.assertFalse(eligibility['eligible'])
-        self.assertEqual([r['completed'] for r in eligibility['requirements']], [False, True, False])
+        self.assertTrue(eligibility['eligible'])
+        self.assertEqual(eligibility['requirements'], [])
 
     def test_server_time_partial_stars_and_unlock(self):
         """服务器时间决定星级；前三关一星足够解锁第二组。"""
@@ -118,7 +118,7 @@ class ProgressionAPI(TestCase):
             result = self.client.put(attempt['links']['completion'], json=self.answer(attempt)).json()
             self.assertEqual((result['stars'], result['awarded_xp']), (1, 40))
         self.assertEqual(self.create('akari-004').status_code, 201)
-        self.assertEqual(self.client.get('/api/v1/me/progression').json()['level'], 2)
+        self.assertEqual(self.client.get('/api/v1/me/progression').json()['level'], 6)
 
     def test_bad_input_auth_origin_body_limit_and_foreign_attempt(self):
         """保护DTO、所有权、同源和新增v1体积，不回显终盘。"""

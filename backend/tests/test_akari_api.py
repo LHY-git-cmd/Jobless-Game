@@ -47,8 +47,9 @@ class AkariAPI(TestCase):
             self.assertEqual(result.status_code,201,result.text)
             data=result.json();self.assertEqual(data['stars'],1 if number==0 else 3)
             self.assertEqual(self.client.put(attempt['links']['completion'],json=payload).json(),data)
-            qualified=self.client.get('/api/v1/me/pk-eligibility').json()['requirements'][1]['completed']
-            self.assertEqual(qualified,number>=1)
+            qualified=self.client.get('/api/v1/me/pk-eligibility').json()
+            self.assertEqual(qualified['eligible'],qualified['level']>=5)
+            self.assertEqual(qualified['requirements'],[])
         attempt=self.start();result=self.client.put(attempt['links']['completion'],json=self.answer(attempt)).json()
         self.assertEqual((result['awarded_stars'],result['awarded_xp']),(0,0))
 

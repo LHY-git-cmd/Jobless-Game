@@ -150,11 +150,9 @@ def requirements(level, summary, progress):
 
 
 def eligibility(db, uid, lock=False):
-    """三项AND且只认永久正式资格，不查询旧客户端成绩。"""
-    completed = {r.requirement_id for r in repo.rows(db, PlayerQualification, PlayerQualification.user_id == uid, lock=lock)}
-    items = [{'level_id': key, 'name': LEVELS[key]['name'], 'completed': key in completed,
-              'links': {'level': '/api/v1/levels/' + key, 'play': '/journey.html?level=' + key}} for key in QUALIFICATIONS]
-    return {'eligible': all(v['completed'] for v in items), 'requirements': items,
+    """竞技仅由统一账号等级解锁；旧资格凭据保留但不再作为前置。"""
+    summary=progression(db,uid,lock)
+    return {'eligible': summary['level']>=5, 'minimum_level':5,'level':summary['level'],'required_xp':72,'requirements':[],
             'links': {'self': '/api/v1/me/pk-eligibility'}}
 
 
@@ -162,7 +160,7 @@ def require_pk(db, uid):
     """创建、加入、入队及实际配对都调用同一个权威资格检查。"""
     value = eligibility(db, uid, True)
     if not value['eligible']:
-        fail(403, 'pk_locked', '请先完成扫雷初级、照明第1关和数独初级。', requirements=value['requirements'])
+        fail(403, 'pk_locked', '账号达到5级（72经验）后解锁竞技。', minimum_level=5,level=value['level'],requirements=[])
 
 
 def level_definition(db, level_id, version=1):
@@ -237,6 +235,9 @@ def attempt_resource(db, attempt, status=200):
             'ended_at': iso(attempt.ended_at) if attempt.ended_at else None,
             'puzzle': deepcopy(level['puzzle']), 'links': {'self': base, 'completion': base + '/completion'}}
     data['energy']=energy_service.snapshot(db,attempt.user_id)
+    data['reward']={'timed_stars':not (level.get('game_id')=='akari' and level.get('rules_version',1)>=2 and level.get('reward_policy_version',1)<2),
+        't3_ms':level.get('t3_ms',0),'t2_ms':level.get('t2_ms',0),'max_stars':level.get('max_stars',3),
+        'first_three_star_double':bool(level.get('first_three_star_double'))}
     if attempt.game_id == 'mine':
         data['board'] = mine_public(attempt.board)
         data['timing'] = mine_timing(attempt)
@@ -516,6 +517,16 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
                 db.add(ProgressionGrant(user_id=uid, level_id=attempt.level_id, milestone=milestone, xp_delta=amount,
                        policy_version=level['reward_policy_version'], attempt_id=rid, granted_at=received_at))
                 awarded_xp += amount
+    base_awarded_xp=awarded_xp
+    first_three_star_bonus=0
+    # 只翻倍首次三星当局实际新增经验；旧三星、旧版本和重复提交均不补发。
+    if (attempt.mode=='campaign' and current==3 and previous<3 and progress.first_three_star_at is None
+            and level.get('first_three_star_double') and base_awarded_xp>0
+            and not repo.get(db,ProgressionGrant,(uid,attempt.level_id,'first-three-double'))):
+        first_three_star_bonus=base_awarded_xp
+        db.add(ProgressionGrant(user_id=uid,level_id=attempt.level_id,milestone='first-three-double',
+               xp_delta=first_three_star_bonus,policy_version=level['reward_policy_version'],attempt_id=rid,granted_at=received_at))
+        awarded_xp+=first_three_star_bonus
     progress.best_stars = max(previous, current)
     if current == 3 and progress.first_three_star_at is None:
         progress.first_three_star_at = received_at
@@ -543,6 +554,7 @@ def complete_attempt(db, uid, rid, data, received_at, **_):
     snapshot = {'attempt_id': rid, 'level_id': attempt.level_id, 'level_version': attempt.level_version,
                 'duration_ms': duration, 'stars': current, 'previous_best_stars': previous, 'best_stars': progress.best_stars,
                 'awarded_stars': progress.best_stars - previous, 'awarded_xp': awarded_xp, 'progression': updated,
+                'base_awarded_xp':base_awarded_xp,'first_three_star_bonus':first_three_star_bonus,
                 'newly_unlocked_level_ids': sorted(after - before), 'newly_unlocked_cosmetic_ids': newly_cosmetics,
                 'reward_policy_version': level['reward_policy_version'],
                 'links': {'self': base, 'progression': '/api/v1/me/progression'}}

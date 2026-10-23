@@ -119,7 +119,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       footer.append(best,stars);button.append(size,caption,rating,footer);$('mine-specs').append(button);
     }
     $('mine-options-title').textContent=level.difficulty==='tutorial'?'你的第一堂扫雷课':'选择棋盘';
-    $('mine-reward-note').textContent=level.difficulty==='tutorial'?'认识数字、学会标记，再独立完成一盘。完成后获得 1 星、2 经验。':`三星 ≤ ${mineTime(level.t3_ms)} · 二星 ≤ ${mineTime(level.t2_ms)} · 其余通关一星。经验 ${level.star_xp.join(' / ')}，提升星级补差额。`;
+    $('mine-reward-note').textContent=level.difficulty==='tutorial'?'认识数字、学会标记，再独立完成一盘。完成后获得 1 星、2 经验。':`三星 ≤ ${mineTime(level.t3_ms)} · 二星 ≤ ${mineTime(level.t2_ms)} · 其余通关一星。经验 ${level.star_xp.join(' / ')}，提升星级补差额，首次三星当局新增经验翻倍，历史不补发。`;
     $('mine-enter-confirm').disabled=state.busy||!state.enabled;
   }
   /** 复用44px格子，已揭数字和终盘雷区来自服务端。 */
@@ -176,7 +176,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     $('mine-result-stars').hidden=!state.result;
     if(state.result)paintMineStars($('mine-result-stars'),state.result.stars,`本局获得${state.result.stars}星`,state.attempt.puzzle.tutorial?1:3);
     $('mine-result-description').textContent=lost?'雷区已显示。重新开始会生成新棋盘，其他关卡的进度会保留。':state.result
-      ?`用时 ${mineTime(state.result.duration_ms)} · 历史最高 ${state.result.best_stars} 星 · 本次新增 ${state.result.awarded_stars} 星、${state.result.awarded_xp} 经验。`
+      ?`用时 ${mineTime(state.result.duration_ms)} · 历史最高 ${state.result.best_stars} 星 · 本次新增 ${state.result.awarded_stars} 星、${state.result.awarded_xp} 经验。${state.result.first_three_star_bonus?`其中首次三星加成 ${state.result.first_three_star_bonus} 经验。`:""}`
       :'终盘和用时已保留。若网络失败，点击重试保存奖励。';
   }
   /** 轻量时钟与可得星数同源计算，阅读规则/离开期间照常递减，终盘后冻结。 */

@@ -18,6 +18,7 @@ export function akariTime(ms) {
 export function availableAkariStars(level,attempt,elapsed,confirmed=null) {
   if(Number.isInteger(confirmed))return confirmed;
   if(attempt?.puzzle.tutorial||level?.max_stars===1)return 1;
+  if(attempt?.reward)return attempt.reward.timed_stars?availableMineStars(attempt.reward,elapsed):3;
   if(level&&attempt&&level.level_version!==attempt.level_version)return 3;
   return availableMineStars(level,elapsed);
 }
@@ -36,7 +37,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
       <div class="akari-topbar"><button id="akari-back" type="button">返回选关</button><span>无职游戏</span><button id="akari-restart" type="button">重新开始</button></div>
       <div class="akari-heading"><img src="./assets/bulb.webp" alt="" width="72" height="72"><div><p id="akari-kicker" class="eyebrow">AKARI</p><h2 id="akari-title">照明</h2><p>让光，抵达每一个角落。</p></div></div>
       <div class="akari-toolbar"><span id="akari-focus" hidden></span><div class="akari-available"><span>可得星数</span><span id="akari-available-stars" class="mine-rating" aria-live="polite"></span></div><div class="akari-tools-right"><p id="akari-three-star" class="akari-three-star"></p><div class="akari-time-row"><span id="akari-clock-label">本关用时</span><strong id="akari-clock">00:00</strong><button id="akari-pause-toggle" type="button" aria-pressed="false" aria-label="暂停游戏" title="暂停游戏"><svg class="akari-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><svg class="akari-resume-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4 12 8-12 8Z"/></svg></button></div></div></div>
-      <p id="akari-policy-note" class="akari-guide" role="status" hidden>这局沿用之前的奖励方式。重新开始后，将按通关用时评星，1／2／3星对应2／4／6经验。</p>
+      <p id="akari-policy-note" class="akari-guide" role="status" hidden>这局沿用开始时的奖励规则。重新开始后采用当前规则；首次三星仅将该局实际新增经验翻倍，历史已三星不补发。</p>
       <div id="akari-guide" class="akari-guide" role="status" hidden><p id="akari-guide-count" class="eyebrow"></p><h3 id="akari-guide-title"></h3><p id="akari-guide-text"></p><p id="akari-guide-target" class="akari-guide-target" hidden></p></div>
       <div id="akari-instructions" class="akari-instructions" hidden><p>点击白格放灯，再点一次撤灯。灯光沿横竖传播，遇黑墙或边界停止；黑墙不可放灯。</p><p>照亮全部白格、灯泡之间不互照、每个数字墙上下左右的灯数恰好符合，三个条件同时满足才通关；斜角不计。棋盘可在区域内滑动。</p><p>普通关按有效用时评星，点击暂停图标可暂停计时，继续后再计时。入门固定获得1星、2经验。</p></div>
       <div class="akari-board-wrap"><div id="akari-viewport" class="akari-viewport" tabindex="0" role="region" aria-label="可滚动照明棋盘"><div id="akari-board" class="akari-board" role="group" aria-label="照明棋盘"></div></div><div id="akari-pause" class="akari-pause" hidden><strong>棋局已暂停</strong><p>准备好后，继续点亮。</p><button id="akari-resume" class="journey-primary" type="button">继续游戏</button></div></div>
@@ -85,7 +86,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     $('akari-levels').replaceChildren(fragment);
     if(focused&&!state.busy)$('akari-levels').querySelector(`[data-level="${focused}"]`)?.focus({preventScroll:true});
     const selected=state.levels.find(v=>v.level_id===state.selected);
-    $('akari-selection-note').textContent=selected?`${selected.name} · ${selected.number===0?'七步认识照明规则，完成教学获得1星、2经验。':`三星 ≤ ${akariTime(selected.t3_ms)}，二星 ≤ ${akariTime(selected.t2_ms)}，其余通关1星；经验2 / 4 / 6，升星补差额。`}`:'暂时没有可用关卡。';
+    $('akari-selection-note').textContent=selected?`${selected.name} · ${selected.number===0?'七步认识照明规则，完成教学获得1星、2经验。':`三星 ≤ ${akariTime(selected.t3_ms)}，二星 ≤ ${akariTime(selected.t2_ms)}，其余通关1星；经验2 / 4 / 6，升星补差额，首次三星当局新增经验翻倍，历史不补发。`}`:'暂时没有可用关卡。';
     $('akari-enter-confirm').disabled=state.busy||!state.enabled||!selected;
   }
   /** 汇总错误文本，明确区分全亮与全部约束满足。 */
@@ -151,7 +152,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     $('akari-kicker').textContent=`${level?.name||'照明'} / AKARI`;
     $('akari-focus').hidden=!tutorial;$('akari-focus').textContent=tutorial?level?.focus||'照明入门':'';
     $('akari-guide').hidden=!tutorial;$('akari-instructions').hidden=!tutorial;
-    $('akari-three-star').textContent=tutorial?'入门完成固定1星':level&&state.attempt.level_version!==level.level_version?'本局通关固定三星':`三星条件：${akariTime(level?.t3_ms||0)} 内完成`;
+    $('akari-three-star').textContent=tutorial?'入门完成固定1星':state.attempt.reward?.timed_stars===false?'本局通关固定三星':`三星条件：${akariTime(state.attempt.reward?.t3_ms??level?.t3_ms??0)} 内完成`;
     const steps=akariTutorialSteps(state.attempt.puzzle),guide=steps[state.tutorialStep];
     $('akari-guide-count').hidden=!guide;$('akari-guide-title').hidden=!guide;
     $('akari-guide-count').textContent=guide?`第${state.tutorialStep+1}步 / 共${steps.length}步`:'';
@@ -177,7 +178,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     const allComplete=state.levels.every(item=>state.progress.some(progress=>progress.level_id===item.level_id&&progress.best_stars>0));
     $('akari-result-title').textContent=state.result?(level?.number===15&&allComplete?'入门与15关，全部点亮！':'本关已点亮！'):'棋盘已完成，正在保存成绩';
     // 将每项数值与单位保持在一起，窄屏不会把“6”和“经验”拆到两行。
-    const details=state.result?[`用时 ${akariTime(state.result.duration_ms)}`,`本次新增 ${state.result.awarded_stars} 星`,`${state.result.awarded_xp} 经验`]:[];
+    const details=state.result?[`用时 ${akariTime(state.result.duration_ms)}`,`本次新增 ${state.result.awarded_stars} 星`,`${state.result.awarded_xp} 经验`,...(state.result.first_three_star_bonus?[`含首次三星加成 ${state.result.first_three_star_bonus} 经验`]:[])]:[];
     $('akari-result-description').replaceChildren(...details.flatMap((text,index)=>{
       const span=document.createElement('span');span.className='akari-result-detail';span.textContent=text;
       return index?[' · ',span]:[span];

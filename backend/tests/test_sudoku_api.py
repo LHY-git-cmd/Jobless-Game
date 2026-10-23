@@ -57,7 +57,7 @@ class SudokuAPI(TestCase):
                 self.assertEqual(self.client.put(attempt['links']['completion'],json=self.answer(attempt)).json(),result.json())
                 total+=xp
         self.assertEqual(self.client.get('/api/v1/me/progression').json()['xp'],total)
-        self.assertTrue(self.client.get('/api/v1/me/pk-eligibility').json()['requirements'][2]['completed'])
+        self.assertEqual(self.client.get('/api/v1/me/pk-eligibility').json()['requirements'],[])
         repeated=self.start(); result=self.client.put(repeated['links']['completion'],json=self.answer(repeated)).json()
         self.assertEqual((result['awarded_stars'],result['awarded_xp']),(0,0))
 
@@ -105,4 +105,4 @@ class SudokuAPI(TestCase):
             self.assertEqual(repeat.json()['revision'],response.json()['revision'])
         saved=self.client.put(attempt['links']['completion'],json=self.answer(attempt))
         self.assertEqual((saved.json()['stars'],saved.json()['awarded_xp']),(1,2),saved.text)
-        self.assertFalse(self.client.get('/api/v1/me/pk-eligibility').json()['requirements'][2]['completed'])
+        self.assertFalse(self.client.get('/api/v1/me/pk-eligibility').json()['eligible'])

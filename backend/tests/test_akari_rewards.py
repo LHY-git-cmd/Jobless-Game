@@ -46,9 +46,9 @@ class AkariRewards(TestCase):
             self.assertEqual([stars_for(item,t) for t in (item['t3_ms'],item['t3_ms']+1,item['t2_ms'],item['t2_ms']+1)],[3,2,2,1])
 
     def test_improvement_only_pays_difference_and_repeat_pays_zero(self):
-        """慢速一星得2，再到二星补2，三星再补2，重复三星0。"""
+        """慢速一星得2，再到二星补2，首次三星补2翻倍为4，重复三星0。"""
         level=LEVELS['akari-v2-001'];total=0
-        for ms,stars,xp,added in [(level['t2_ms']+5000,1,2,1),(level['t3_ms']+5000,2,2,1),(1000,3,2,1),(1000,3,0,0)]:
+        for ms,stars,xp,added in [(level['t2_ms']+5000,1,2,1),(level['t3_ms']+5000,2,2,1),(1000,3,4,1),(1000,3,0,0)]:
             result=self.finish(self.start(),ms)
             self.assertEqual((result['stars'],result['awarded_xp'],result['awarded_stars']),(stars,xp,added))
             total+=xp
