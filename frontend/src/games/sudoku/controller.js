@@ -4,6 +4,7 @@ import { sudokuConflicts } from './rules.js';
 import { createScope } from '../../shared/lifecycle.js';
 import { energyHint } from '../../features/progression/attempt-energy.js';
 import { Events,emit } from '../../shared/events.js';
+import { createExitConfirmation } from '../exit-confirmation.js';
 // 轻量复用已有星级和汇聚视图；不依赖扫雷会话或控制器。
 import { availableMineStars as availableStars,paintMineStars as paintStars,createStarCollection } from '../mine/stars.js';
 
@@ -42,6 +43,9 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     <dialog id="sudoku-enter-dialog" class="journey-rules" aria-labelledby="sudoku-enter-title" aria-describedby="sudoku-enter-description"><h2 id="sudoku-enter-title">是否闯关？</h2><p id="sudoku-enter-description"></p><div class="journey-actions"><button id="sudoku-enter-cancel" type="button" autofocus>暂不闯关</button><button id="sudoku-enter-confirm" class="journey-primary" type="button">确认闯关</button></div></dialog>
     <dialog id="sudoku-restart-dialog" class="journey-rules" aria-labelledby="sudoku-restart-title"><h2 id="sudoku-restart-title">重新开始本题？</h2><p>本题的填写和笔记将清空，其他题目的进度会保留。</p><div class="journey-actions"><button id="sudoku-restart-cancel" type="button">继续当前局</button><button id="sudoku-restart-confirm" type="button" class="journey-primary">确认重开</button></div></dialog>`;
   const $=id=>host.querySelector('#'+id);
+  const exitConfirmation=createExitConfirmation({host,scope,getSession:()=>model,
+    onExit:()=>{selectionOnly=true;collection.cancel();emit(Events.SETTLEMENT_CLOSED);boardKey='';pendingFocus=null;$('sudoku-board').replaceChildren();render(model.state);focusSelected();},
+    onError:error=>{errorMessage=error.message;if(error.status===401)emit(Events.AUTH_EXPIRED);if(model)render(model.state);}});
   const collection=createStarCollection({onComplete:reward=>{
     if(dead||reward.userId!==identity)return;
     emit(Events.PROGRESSION_CONFIRMED,{userId:identity,progression:reward.progression});emit(Events.RECORDS_UPDATED);
@@ -130,6 +134,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
   /** 统一更新模式、教学及结果；错误和服务端反馈保持可重试。 */
   function render(state){
     if(dead)return;renderSelection(state);
+    if(!state.attempt){$('sudoku-board').replaceChildren();boardKey='';pendingFocus=null;}
     const playing=Boolean(state.attempt)&&!selectionOnly&&state.attempt.level_id===state.selected;
     $('sudoku-selector').hidden=playing;$('sudoku-play').hidden=!playing;
     const heading=document.getElementById('levels-title')?.closest('.section-heading');if(heading)heading.hidden=true;
@@ -145,7 +150,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
       for(const button of $('sudoku-keypad').children){button.disabled=!editable||(grid.notesMode&&Boolean(grid.values[selected]));if(grid.notesMode)button.setAttribute('aria-pressed',String(Boolean(grid.notes[selected]&(1<<(Number(button.dataset.digit)-1)))));else button.removeAttribute('aria-pressed');}
       $('sudoku-keypad').setAttribute('aria-label',grid.notesMode?'记录候选数':'填写数字');$('sudoku-keypad').dataset.size=grid.size;
       $('sudoku-clear').disabled=!editable;$('sudoku-clear').textContent=grid.notesMode&&selected!==null&&!grid.values[selected]?'清除本格笔记':'清除选中格';
-      $('sudoku-restart').disabled=state.busy||state.clockBusy;
+      $('sudoku-restart').disabled=state.busy||state.clockBusy;$('sudoku-back').disabled=state.busy;
       $('sudoku-pause-toggle').disabled=state.busy||state.clockBusy||state.pending||state.attempt.status!=='active';
       // 图标表达暂停/继续；无障碍名称与悬停说明同步当前动作。
       $('sudoku-pause-toggle').classList.toggle('is-paused',state.paused);$('sudoku-pause-toggle').setAttribute('aria-pressed',String(state.paused));
@@ -189,7 +194,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     $('sudoku-enter-dialog').close();void auth.requireLogin(()=>openSelected(selected));
   });
   scope.listen($('sudoku-pause-toggle'),'click',()=>void run(()=>model.setPaused('manual',!model.state.paused)));
-  scope.listen($('sudoku-back'),'click',()=>{selectionOnly=true;collection.cancel();emit(Events.SETTLEMENT_CLOSED);void run(()=>model.setPaused('selection',true));render(model.state);focusSelected();});
+  scope.listen($('sudoku-back'),'click',()=>void exitConfirmation.ask());
   scope.listen($('sudoku-board'),'click',event=>{const cell=event.target.closest('[data-index]');if(cell)model.choose(Number(cell.dataset.index));});
   scope.listen($('sudoku-keypad'),'click',event=>{const button=event.target.closest('[data-digit]');if(button)void run(()=>model.input(Number(button.dataset.digit)));});
   scope.listen($('sudoku-notes'),'click',()=>model.toggleNotes());scope.listen($('sudoku-clear'),'click',()=>void run(()=>model.input(0)));
@@ -216,6 +221,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     /** 换号先销毁旧局和动画，避免跨账号异步显示。 */
     async setUser(uid){
       if(identity===uid&&model)return;collection.cancel(false);identity=uid;model?.destroy();selectionOnly=false;boardKey='';pendingFocus=null;errorMessage='';
+      exitConfirmation.reset();
       pendingLevel=null;$('sudoku-enter-dialog').close();$('sudoku-restart-dialog').close();
       // 身份变化即移除旧账号内容，不能只隐藏带旧答案/笔记的父容器。
       $('sudoku-board').replaceChildren();$('sudoku-keypad').replaceChildren();$('sudoku-result-title').textContent='';$('sudoku-result-description').textContent='';

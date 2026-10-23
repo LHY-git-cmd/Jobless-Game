@@ -3,6 +3,7 @@ import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
 import { publishAttemptEnergy,restartAttempt } from '../../features/progression/attempt-energy.js';
 import { createSudoku,selectSudokuCell,setSudokuValue,toggleSudokuNote,normalizeSudokuNotes,checkSudoku } from './rules.js';
+import { abandonAttempt } from '../../features/progression/attempt-exit.js';
 
 // 每局最多保留最近100次实际编辑，限制草稿体积；选格和切换模式不占撤回次数。
 const UNDO_LIMIT=100;
@@ -220,6 +221,18 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
     },
     /** 保存失败只重放已冻结的终盘。 */
     async complete(){return perform(async()=>{if(state.pending&&!state.result)await resumeSubmission();});},
+    /** 主动退出先终止当前尝试，成功才删除填写、笔记、撤回及手动暂停草稿。 */
+    async abandon(){return perform(async()=>{
+      const attempt=state.attempt;if(!attempt)return true;
+      if(attempt.status==='active'&&!state.result)await abandonAttempt({attempt,request});
+      if(dead)return false;
+      store.discard(attempt);
+      const progress=state.progress.find(item=>item.level_id===attempt.level_id);
+      if(progress&&(progress.current_attempt===attempt.links.self||progress.current_attempt===attempt.attempt_id))progress.current_attempt=null;
+      state.attempt=null;state.grid=null;state.history=[];state.result=null;state.pending=false;
+      state.paused=false;state.manualPaused=false;state.clockBusy=false;state.message='';
+      reasons.clear();pendingClock=null;frozen=null;publish();return true;
+    });},
     /** 调用方先确认重开，条件放弃避免覆盖其他页面刚完成的棋局。 */
     async restart(){return perform(async()=>{
       const attempt=state.attempt;
@@ -240,9 +253,9 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
       frozen=time;state.paused=true;state.clockBusy=true;publish();
       const operation=operationDone;
       const work=async()=>{
-        if(!immediate)await operation;if(dead)return;
+        if(!immediate)await operation;if(dead||!state.attempt)return;
         try{
-          await writeClock(reasons.size>0);if(dead)return;
+          await writeClock(reasons.size>0);if(dead||!state.attempt)return;
           state.clockBusy=false;state.paused=reasons.size>0||Boolean(state.attempt.timing?.paused);frozen=state.paused?state.attempt.timing.elapsed_ms:null;
         }catch(error){if(!dead){state.clockBusy=false;state.paused=true;}throw error;}
         finally{publish();}

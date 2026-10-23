@@ -37,7 +37,7 @@ function fixture() {
       if(completionFails) throw new Error('离线');
       attempt.status='completed';
       return {data:{stars:3,best_stars:3,awarded_stars:3,awarded_xp:6,duration_ms:30000}};
-    }
+    } else if(options.method==='PATCH')attempt.status='abandoned';
     return {data:structuredClone(attempt),etag:'"1"'};
   }
   return {request,storage,calls,levels,get starts(){return starts;},failCompletion(v){completionFails=v;},now:()=>clockTime,tick(ms){clockTime+=ms;}};
@@ -52,6 +52,22 @@ test('切换难度不创建尝试，点击开始才发POST，标记不发揭格�
   assert.deepEqual(model.state.flags,[4]);
   assert.equal(f.calls.filter(v=>v.path.includes('/reveals/')).length,0);
   assert.ok(f.storage.getItem('jobless-journey-v1:1'));
+});
+
+test('主动退出清除旗标及续玩引用，刷新不恢复原局，再次进入重新开局',async()=>{
+  const f=fixture(),model=createMineSession({uid:1,...f});await model.load();await model.open();model.choose(4);await model.mark();
+  await model.setPaused('exit',true);assert.equal(await model.abandon(),true);
+  assert.equal(model.state.attempt,null);assert.deepEqual(model.state.flags,[]);assert.equal(model.hasSaved('mine-test-easy'),false);
+  const restored=createMineSession({uid:1,...f});await restored.load();assert.equal(restored.state.attempt,null);
+  await restored.open();assert.equal(f.starts,2);assert.deepEqual(restored.state.flags,[]);assert.equal(restored.state.paused,false);
+});
+
+test('退出失败不清除旗标草稿，重试仍终止相同尝试',async()=>{
+  const f=fixture();let offline=true;
+  const request=async(path,options)=>{if(options?.method==='PATCH'&&offline)throw new Error('离线');return f.request(path,options);};
+  const model=createMineSession({uid:1,...f,request});await model.load();await model.open();model.choose(4);await model.mark();
+  await assert.rejects(model.abandon(),/离线/);assert.deepEqual(model.state.flags,[4]);assert.equal(model.hasSaved('mine-test-easy'),true);
+  offline=false;await model.abandon();assert.equal(model.state.attempt,null);
 });
 
 test('通关但结算离线时保留终盘，重试用空体PUT，不重开不重复揭格',async()=>{

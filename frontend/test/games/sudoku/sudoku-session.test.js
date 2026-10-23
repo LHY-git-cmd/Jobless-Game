@@ -42,6 +42,23 @@ test('select does not start; edits and notes restore from the same account and a
   const other=createSudokuSession({uid:2,...f});await other.load();assert.equal(other.state.attempt,null);
 });
 
+test('确认退出清除填写、笔记和续玩引用，刷新不恢复，下一次重新开局',async()=>{
+  const f=fixture(),model=createSudokuSession({uid:1,...f});await model.load();await model.open();model.choose(1);model.toggleNotes();await model.input(2);
+  await model.setPaused('exit',true);assert.equal(await model.abandon(),true);
+  assert.equal(model.state.attempt,null);assert.equal(model.state.grid,null);assert.equal(model.hasSaved('sudoku-easy'),false);
+  const restored=createSudokuSession({uid:1,...f});await restored.load();assert.equal(restored.state.attempt,null);
+  await restored.open();assert.equal(f.starts,2);assert.equal(restored.state.grid.values[1],0);assert.equal(restored.state.grid.notes[1],0);
+  assert.equal(restored.state.paused,false);
+});
+
+test('主动退出失败保留填写和笔记，重试成功才清除',async()=>{
+  const f=fixture();let offline=true;
+  const request=async(path,options)=>{if(options?.method==='PATCH'&&offline)throw new Error('离线');return f.request(path,options);};
+  const model=createSudokuSession({uid:1,...f,request});await model.load();await model.open();model.choose(1);model.toggleNotes();await model.input(2);
+  await assert.rejects(model.abandon(),/离线/);assert.equal(model.state.grid.notes[1],2);assert.equal(model.hasSaved('sudoku-easy'),true);
+  offline=false;await model.abandon();assert.equal(model.state.grid,null);
+});
+
 test('nested pause freezes inputs until every reason is removed',async()=>{
   const f=fixture(),m=createSudokuSession({uid:1,...f});await m.load();await m.open();m.choose(1);
   await m.setPaused('rules',true);const frozen=m.elapsed();f.tick(9000);await m.input(2);

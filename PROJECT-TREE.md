@@ -218,11 +218,13 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
 │   │   │   │   ├── client.js  # 所属业务的同源接口访问
 │   │   │   │   ├── attempt-energy.js  # 三游戏体力快照事件及原子重开幂等适配
+│   │   │   │   ├── attempt-exit.js  # 主动退出前核验ETag并条件终止本局
 │   │   │   │   └── journey-store.js  # 按账号、尝试与版本保存草稿
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
 │   │   │       ├── client.js  # 所属业务的同源接口访问
 │   │   │       └── personal-records.js  # 本人最佳及最近三次通关
 │   │   ├── games/  # 当前游戏规则与棋盘
+│   │   │   ├── exit-confirmation.js  # 三游戏主动退出确认、取消恢复和失败重试
 │   │   │   ├── akari/  # 照明16关规则、会话及页面控制器
 │   │   │   │   ├── rules.js  # 变尺寸照明、覆盖、互斥及数字约束
 │   │   │   │   ├── session.js  # 账号草稿、权威时钟及终盘重试
@@ -316,6 +318,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   └── notifications.test.js  # 所属模块的行为回归测试
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
 │   │   │   │   ├── attempt-energy.test.js  # 原子重开失败不弃旧局、同键重试
+│   │   │   │   ├── attempt-exit.test.js  # 条件退出、丢响应重试和草稿隔离清理
 │   │   │   │   └── progression-client.test.js  # 所属模块的行为回归测试
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
 │   │   │       └── personal-records.test.js  # 所属模块的行为回归测试

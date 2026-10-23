@@ -5,6 +5,7 @@ import { inspectAkari, akariCell } from './rules.js';
 import { createScope } from '../../shared/lifecycle.js';
 import { energyHint } from '../../features/progression/attempt-energy.js';
 import { Events, emit } from '../../shared/events.js';
+import { createExitConfirmation } from '../exit-confirmation.js';
 import { availableMineStars, paintMineStars as paintStars, createStarCollection } from '../mine/stars.js';
 
 /** 秒表不限制游戏时长，正式成绩取服务器活动时间。 */
@@ -48,6 +49,8 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     <dialog id="akari-enter-dialog" class="journey-rules" aria-labelledby="akari-enter-title" aria-describedby="akari-enter-description"><h2 id="akari-enter-title">是否闯关？</h2><p id="akari-enter-description"></p><div class="journey-actions"><button id="akari-enter-cancel" type="button" autofocus>暂不闯关</button><button id="akari-enter-confirm" class="journey-primary" type="button">确认闯关</button></div></dialog>
     <dialog id="akari-restart-dialog" class="journey-rules" aria-labelledby="akari-restart-title"><h2 id="akari-restart-title">重新开始本关？</h2><p>本关灯泡将清空，其他关卡的进度会保留。</p><p id="akari-restart-energy"></p><div class="journey-actions"><button id="akari-restart-cancel" type="button">继续当前局</button><button id="akari-restart-confirm" class="journey-primary" type="button">确认重开</button></div></dialog>`;
   const $=id=>host.querySelector('#'+id);
+  const exitConfirmation=createExitConfirmation({host,scope,getSession:()=>model,onExit:back,
+    onError:error=>{errorMessage=error.message;if(error.status===401)emit(Events.AUTH_EXPIRED);if(model)render(model.state);}});
   const collection=createStarCollection({onComplete:reward=>{
     if(dead||reward.userId!==identity)return;
     emit(Events.PROGRESSION_CONFIRMED,{userId:identity,progression:reward.progression});emit(Events.RECORDS_UPDATED);
@@ -141,7 +144,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     $('akari-selector').hidden=playing;$('akari-play').hidden=!playing;
     $('akari-message').textContent=errorMessage||state.message;
     $('akari-reload').hidden=Boolean(state.levels.length)||state.busy;
-    if(!playing){$('akari-result').close();return;}
+    if(!playing){$('akari-result').close();$('akari-board').replaceChildren();boardKey='';return;}
     const level=state.levels.find(v=>v.level_id===state.attempt.level_id);
     $('akari-policy-note').hidden=!level||state.attempt.level_version===level.level_version;
     const tutorial=Boolean(state.attempt.puzzle.tutorial);
@@ -157,6 +160,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     $('akari-guide-target').hidden=!Number.isInteger(guide?.index);
     $('akari-guide-target').textContent=Number.isInteger(guide?.index)?`当前操作：第${Math.floor(guide.index/state.attempt.puzzle.cols)+1}行第${guide.index%state.attempt.puzzle.cols+1}列 · ${guide.bulb?'放灯':'撤灯'}（金色粗框）`:'';
     $('akari-restart').disabled=state.busy||state.pending;
+    $('akari-back').disabled=state.busy;
     $('akari-pause-toggle').disabled=state.busy||state.pending||state.attempt.status!=='active';
     $('akari-pause-toggle').classList.toggle('is-paused',state.paused);
     $('akari-pause-toggle').setAttribute('aria-pressed',String(state.paused));
@@ -192,8 +196,8 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     const count=availableAkariStars(level,state.attempt,elapsed,state.result?.stars);
     paintStars($('akari-available-stars'),count,`本关可得${count}星`,state.attempt.puzzle.tutorial?1:3);
   }
-  /** 返回时保留当前局，独立记录选关暂停原因。 */
-  function back(){selectionOnly=true;collection.cancel();emit(Events.SETTLEMENT_CLOSED);void run(()=>model.setPaused('selection',true));render(model.state);focusSelected();}
+  /** 仅在服务端确认退出后切换选关，移除当前棋盘视图及续玩状态。 */
+  function back(){selectionOnly=true;collection.cancel();emit(Events.SETTLEMENT_CLOSED);boardKey='';$('akari-board').replaceChildren();render(model.state);focusSelected();}
   /** 弹窗取消或返回选关后，把键盘焦点放回对应关卡卡片。 */
   function focusSelected(){if(model)$('akari-levels').querySelector(`[data-level="${model.state.selected}"]`)?.focus({preventScroll:true});}
   /** 只展示所选关卡及续玩说明，确认前不创建尝试或开始计时。 */
@@ -218,7 +222,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     const selected=pendingLevel;if(!selected||model.state.busy)return;
     $('akari-enter-dialog').close();void auth.requireLogin(()=>openSelected(selected));
   });
-  scope.listen($('akari-back'),'click',back);
+  scope.listen($('akari-back'),'click',()=>void exitConfirmation.ask());
   scope.listen($('akari-board'),'click',event=>{const cell=event.target.closest('[data-index]');if(cell)void run(()=>model.toggle(Number(cell.dataset.index)));});
   scope.listen($('akari-board'),'keydown',event=>{
     const cell=event.target.closest('[data-index]');if(!cell||!model.state.board)return;
@@ -256,6 +260,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     async setUser(uid){
       if(identity===uid&&model)return;
       collection.cancel(false);identity=uid;model?.destroy();selectionOnly=false;boardKey='';pendingFocus=null;errorMessage='';resultShown=null;
+      exitConfirmation.reset();
       $('akari-result').close();
       pendingLevel=null;$('akari-enter-dialog').close();$('akari-restart-dialog').close();
       $('akari-board').replaceChildren();$('akari-result-title').textContent='';$('akari-result-description').textContent='';$('akari-result-stars').replaceChildren();

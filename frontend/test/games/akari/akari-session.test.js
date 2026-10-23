@@ -85,6 +85,22 @@ test('手动暂停冻结时间及编辑，隐藏原因解除后继续只累计�
   await model.toggle(1);assert.equal(model.state.board.bulbs.has(1),true);
 });
 
+test('确认退出终止原局并清除灯泡草稿，刷新不能续玩，再次进入是新局',async()=>{
+  const f=fixture(),model=createAkariSession({uid:1,...f});await model.load();await model.open();await model.toggle(1);
+  await model.setPaused('exit',true);assert.equal(await model.abandon(),true);
+  assert.equal(model.state.attempt,null);assert.equal(model.state.board,null);assert.equal(model.hasSaved(f.levels[0].level_id),false);
+  const restored=createAkariSession({uid:1,...f});await restored.load();assert.equal(restored.state.attempt,null);
+  await restored.open();assert.equal(f.starts,2);assert.equal(restored.state.board.bulbs.size,0);assert.equal(restored.state.paused,false);
+});
+
+test('主动退出失败保留当前灯泡和续玩引用，允许重试原局',async()=>{
+  const f=fixture();let offline=true;
+  const request=async(path,options)=>{if(options?.method==='PATCH'&&offline)throw new Error('离线');return f.request(path,options);};
+  const model=createAkariSession({uid:1,...f,request});await model.load();await model.open();await model.toggle(1);
+  await assert.rejects(model.abandon(),/离线/);assert.equal(model.state.board.bulbs.has(1),true);assert.equal(model.hasSaved(f.levels[0].level_id),true);
+  offline=false;await model.abandon();assert.equal(model.state.attempt,null);
+});
+
 test('退出后迟到响应不可回填棋盘或发奖',async()=>{
   const f=fixture();let resolve,awards=0;
   const request=async(path,options)=>path.endsWith('/completion')?new Promise(done=>resolve=done):f.request(path,options);

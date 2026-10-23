@@ -4,6 +4,9 @@
 .player-profile:has(.player-energy:not([hidden])) { grid-template-columns:70px auto auto; }
 
 .landing-intro { grid-template-columns:minmax(0,1fr); }
+/* 进入棋盘后只通过返回选关退出，选关页面仍保留返回游戏目录的入口。 */
+.catalog-page:has(.mine-play:not([hidden]), .sudoku-play:not([hidden]), .akari-play:not([hidden])) > main > .journey-link,
+.catalog-page:has(.mine-play:not([hidden]), .sudoku-play:not([hidden]), .akari-play:not([hidden])) > .landing-footer > a[href="./challenge.html"] { display:none; }
 /* 关卡页右上角：登录/退出在首行，刷新、消息和设置固定在同一行。 */
 .catalog-page .journey-header-actions { grid-column:2; grid-row:1; min-width:0; align-self:start; justify-self:end; }
 .catalog-page .landing-header .journey-header-actions .auth-controls { display:grid; grid-template-columns:repeat(3,44px); gap:8px; align-items:center; justify-items:end; }

@@ -68,6 +68,30 @@ class EnergyTests(TestCase):
         self.assertEqual(self.client.put(third['links']['completion'],json={}).status_code,422)
         self.assertEqual(self.energy()['current'],4)
 
+    def test_voluntary_exit_keeps_spent_energy_blocks_rewards_and_allows_new_attempt(self):
+        """主动退出终止三游戏原局，不返体力、不发奖，历史成长不受影响。"""
+        for level in ['akari-v2-001','sudoku-v2-easy-01','mine-v2-easy-10']:
+            with self.subTest(level=level):
+                first=self.start(level)
+                before=self.client.get('/api/v1/me/progression').json()
+                latest=self.client.get(first['links']['self'])
+                headers={'If-Match':latest.headers['etag']}
+                ended=self.client.patch(first['links']['self'],json={'status':'abandoned'},headers=headers)
+                self.assertEqual(ended.status_code,200,ended.text)
+                self.assertEqual(ended.json()['status'],'abandoned')
+                self.assertEqual(ended.json()['energy']['current'],first['energy']['current'])
+                duplicate=self.client.patch(first['links']['self'],json={'status':'abandoned'},headers=headers)
+                self.assertEqual(duplicate.status_code,200,duplicate.text)
+                self.assertEqual(self.energy()['current'],first['energy']['current'])
+                self.assertEqual(self.client.put(first['links']['completion'],json={}).status_code,409)
+                self.assertEqual(self.client.get('/api/v1/me/progression').json(),before)
+                progress=self.client.get(f"/api/v1/me/level-progress?game_id={first['game_id']}&limit=50").json()['items']
+                self.assertTrue(all(not item.get('current_attempt') for item in progress if item['level_id']==level))
+                if level=='akari-v2-001':
+                    next_attempt=self.start(level)
+                    self.assertNotEqual(first['attempt_id'],next_attempt['attempt_id'])
+                    self.assertEqual(next_attempt['energy']['current'],first['energy']['current']-1)
+
     def test_regeneration_boundaries_and_cap(self):
         """1799秒不恢复，1800秒恢复；满体力清空周期，离线最多补到5点。"""
         start=utc_now()

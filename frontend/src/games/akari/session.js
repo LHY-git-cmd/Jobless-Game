@@ -4,6 +4,7 @@ import { createJourneyStore } from '../../features/progression/journey-store.js'
 import { publishAttemptEnergy,restartAttempt } from '../../features/progression/attempt-energy.js';
 import { createAkari, toggleBulb } from './rules.js';
 import { akariTutorialSteps } from './tutorial.js';
+import { abandonAttempt } from '../../features/progression/attempt-exit.js';
 
 /** request、storage、now可注入；客户端不决定奖励或正式用时。 */
 export function createAkariSession({uid,storage,request=api,now=Date.now,onChange=()=>{},onReward=()=>{}}={}) {
@@ -179,6 +180,17 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
     },
     /** 终盘失败只重试当前尝试，不另建局或重算负载。 */
     async complete(){return perform(async()=>{if(state.pending&&!state.result){await writeClock(false);if(!dead)await settle();}});},
+    /** 确认退出后先终止服务器尝试，成功才移除当前草稿；已结算的历史成绩保持。 */
+    async abandon(){return perform(async()=>{
+      const attempt=state.attempt;if(!attempt)return true;
+      if(attempt.status==='active'&&!state.result)await abandonAttempt({attempt,request});
+      if(dead)return false;
+      store.discard(attempt);
+      const progress=state.progress.find(item=>item.level_id===attempt.level_id);
+      if(progress&&(progress.current_attempt===attempt.links.self||progress.current_attempt===attempt.attempt_id))progress.current_attempt=null;
+      state.attempt=null;state.board=null;state.result=null;state.pending=false;state.paused=false;state.tutorialStep=0;state.message='';
+      reasons.clear();pendingClock=null;frozen=null;publish();return true;
+    });},
     /** 调用方确认后只放弃当前关；使用最新ETag防止覆盖其他标签页结果。 */
     async restart(){return perform(async()=>{
       const attempt=state.attempt;
@@ -197,8 +209,8 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
       if(before===paused&&state.paused===paused&&!pendingClock)return;
       frozen=time;state.paused=true;publish();const operation=operationDone;
       const work=async()=>{
-        if(!immediate)await operation;if(dead)return;
-        try{await writeClock(reasons.size>0);if(dead)return;state.paused=reasons.size>0||Boolean(state.attempt.timing.paused);frozen=state.paused?state.attempt.timing.elapsed_ms:null;}
+        if(!immediate)await operation;if(dead||!state.attempt)return;
+        try{await writeClock(reasons.size>0);if(dead||!state.attempt)return;state.paused=reasons.size>0||Boolean(state.attempt.timing.paused);frozen=state.paused?state.attempt.timing.elapsed_ms:null;}
         catch(error){if(!dead)state.paused=true;throw error;}
         finally{publish();}
       };

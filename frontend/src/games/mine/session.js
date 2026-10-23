@@ -2,6 +2,7 @@
 import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
 import { publishAttemptEnergy,restartAttempt } from '../../features/progression/attempt-energy.js';
+import { abandonAttempt } from '../../features/progression/attempt-exit.js';
 
 /** request与时钟可注入测试；本地仅保存选格/旗标和正式尝试的引用。 */
 export function createMineSession({uid,storage,request=api,onChange=()=>{},onReward=()=>{},now=Date.now}={}) {
@@ -192,6 +193,17 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     });},
     /** 显式重试结算不会创建尝试或再次排雷。 */
     async complete(){return perform(async current=>{if(state.attempt?.board.outcome==='won'&&!state.result)await settle(current);});},
+    /** 主动退出只终止本局，收到成功响应后清除旗标、选格与续玩引用。 */
+    async abandon(){return perform(async current=>{
+      const attempt=state.attempt;if(!attempt)return true;
+      if(attempt.status==='active'&&!state.result)await abandonAttempt({attempt,request});
+      if(!current())return false;
+      store.discard(attempt);
+      const progress=state.progress.find(item=>item.level_id===attempt.level_id);
+      if(progress&&(progress.current_attempt===attempt.links.self||progress.current_attempt===attempt.attempt_id))progress.current_attempt=null;
+      state.attempt=null;state.result=null;state.flags=[];state.cell=null;state.paused=false;state.clockBusy=false;state.message='';
+      pauseReasons.clear();pendingClock=null;frozen=null;publish();return true;
+    });},
     /** 界面先确认丢弃当前局；条件PATCH与GET核验避免覆盖别处的状态。 */
     async restart(){return perform(async current=>{
       const attempt=state.attempt;
@@ -218,10 +230,10 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
       const stamp=epoch,current=()=>!dead&&stamp===epoch;
       const work=async()=>{
         if(!immediate)await waitOperation;
-        if(!current())return;
+        if(!current()||!state.attempt)return;
         try{
           await writeClock(paused,current);
-          if(current()){state.clockBusy=false;state.paused=pauseReasons.size>0||Boolean(state.attempt.timing?.paused);if(!state.paused)frozen=null;}
+          if(current()&&state.attempt){state.clockBusy=false;state.paused=pauseReasons.size>0||Boolean(state.attempt.timing?.paused);if(!state.paused)frozen=null;}
         }catch(error){if(current()){state.clockBusy=false;state.paused=true;}throw error;}
         finally{if(current())publish();}
       };

@@ -38,6 +38,18 @@ export function createJourneyStore(storage, uid, onError = () => {}) {
     clearPending(attempt) {
       if (this.load(attempt)) { value.entries[attempt.level_id].pending = null; persist(); }
     },
+    /** 退出成功后仅清理同一次尝试；重读存储，保留其他标签页的新局和其他关卡。 */
+    discard(attempt) {
+      try {
+        const latest=JSON.parse(storage?.getItem(key)||'null');
+        if(latest?.entries&&latest?.starts)value=latest;
+      } catch { onError('本地存储读取失败，已退出的对局不能继续。'); }
+      if(value.entries[attempt.level_id]?.identity!==identity(attempt))return;
+      delete value.entries[attempt.level_id];
+      delete value.starts[attempt.level_id];delete value.starts[`restart:${attempt.attempt_id}`];
+      if(value.selected===attempt.level_id)value.selected=null;
+      persist();
+    },
     /** 一个尚未确认的开始动作始终重用原UUID。 */
     startKey(level) { if (!value.starts[level]) { value.starts[level] = crypto.randomUUID(); persist(); } return value.starts[level]; },
     /** 仅在开始已确认或确认放弃该请求后换新UUID。 */
