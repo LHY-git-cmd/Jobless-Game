@@ -44,7 +44,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
       <div id="akari-save-status" class="akari-save-status" role="status" hidden><p>棋盘已完成，正在保存成绩。网络中断时可以重试。</p><button id="akari-retry-settlement" class="journey-primary" type="button">重试保存成绩</button></div>
     </section>
     <div class="akari-feedback"><p id="akari-message" role="status" aria-live="polite"></p><button id="akari-reload" type="button" hidden>重新加载</button></div>
-    <dialog id="akari-result" class="journey-rules akari-result" aria-labelledby="akari-result-title" aria-describedby="akari-result-description"><p class="eyebrow">每一束光，都算数。</p><h2 id="akari-result-title"></h2><div id="akari-result-stars" class="mine-rating"></div><p id="akari-result-description"></p><div class="journey-actions"><button id="akari-result-home" type="button">返回首页</button><button id="akari-next" class="journey-primary" type="button">下一关 →</button></div></dialog>
+    <dialog id="akari-result" class="journey-rules akari-result" aria-labelledby="akari-result-title" aria-describedby="akari-result-description"><p class="eyebrow">每一束光，都算数。</p><h2 id="akari-result-title"></h2><div id="akari-result-stars" class="mine-rating"></div><p id="akari-result-description"></p><div class="journey-actions"><button id="akari-result-home" type="button">返回选关</button><button id="akari-next" class="journey-primary" type="button">下一关 →</button></div></dialog>
     <dialog id="akari-enter-dialog" class="journey-rules" aria-labelledby="akari-enter-title" aria-describedby="akari-enter-description"><h2 id="akari-enter-title">是否闯关？</h2><p id="akari-enter-description"></p><div class="journey-actions"><button id="akari-enter-cancel" type="button" autofocus>暂不闯关</button><button id="akari-enter-confirm" class="journey-primary" type="button">确认闯关</button></div></dialog>
     <dialog id="akari-restart-dialog" class="journey-rules" aria-labelledby="akari-restart-title"><h2 id="akari-restart-title">重新开始本关？</h2><p>本关灯泡将清空，其他关卡的进度会保留。</p><p id="akari-restart-energy"></p><div class="journey-actions"><button id="akari-restart-cancel" type="button">继续当前局</button><button id="akari-restart-confirm" class="journey-primary" type="button">确认重开</button></div></dialog>`;
   const $=id=>host.querySelector('#'+id);
@@ -238,7 +238,8 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
   scope.listen($('akari-restart-cancel'),'click',()=>$('akari-restart-dialog').close());
   scope.listen($('akari-restart-dialog'),'close',()=>void run(()=>model.setPaused('restart',false)));
   scope.listen($('akari-restart-confirm'),'click',()=>{$('akari-restart-dialog').close();collection.cancel();emit(Events.SETTLEMENT_CLOSED);void play(()=>model.restart());});
-  scope.listen($('akari-result-home'),'click',()=>{collection.cancel();emit(Events.SETTLEMENT_CLOSED);window.location.assign('./index.html');});
+  /** 通关后关闭弹窗并返回照明选关，保留已保存的成绩。 */
+  scope.listen($('akari-result-home'),'click',()=>{$('akari-result').close();back();});
   scope.listen($('akari-result-open'),'click',()=>$('akari-result').showModal());
   scope.listen($('akari-result'),'close',()=>{collection.cancel();emit(Events.SETTLEMENT_CLOSED);if(!$('akari-play').hidden)$('akari-result-open').focus({preventScroll:true});});
   scope.listen($('akari-next'),'click',()=>{
