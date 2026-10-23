@@ -16,16 +16,15 @@ const ui = cacheIds({
 });
 
 const boards = {
-  stars: { title: '星数排行', column: '累计星数', rule: '按闯关累计星数从高到低排名，同星数并列。', empty: '榜单还没有记录。完成闯关，收集你的第一颗星星。' },
-  level: { title: '等级排行', column: '等级 / 经验', rule: '按账号等级从高到低排名，同等级按累计经验排序，经验相同并列。', empty: '榜单还没有记录。完成闯关，获得经验并提升等级。' },
-  points: { title: '积分排行', column: '竞技积分', rule: '按竞技积分从高到低排名，同分并列。初始100分，胜利加20、失败减10，允许负分。',empty:'暂无竞技记录。达到5级后，前往竞技模式开始对战。' },
+  stars: { title: '星数排行', column: '累计星数', empty: '榜单还没有记录。完成闯关，收集你的第一颗星星。' },
+  level: { title: '等级排行', column: '等级 / 经验', empty: '榜单还没有记录。完成闯关，获得经验并提升等级。' },
+  points: { title: '积分排行', column: '竞技积分', empty:'暂无竞技记录。达到5级后，前往竞技模式开始对战。' },
 };
 const requested = new URLSearchParams(location.search).get('category');
 const category = Object.hasOwn(boards, requested) ? requested : 'stars';
 const board = boards[category];
 document.title = `${board.title} · 无职游戏`;
 document.getElementById('ranking-title').textContent = board.title;
-document.getElementById('ranking-rule-text').textContent = board.rule;
 document.getElementById('ranking-value-heading').textContent = board.column;
 document.querySelector('#ranking-table caption').textContent = `${board.title}：名次、玩家与${board.column}`;
 for (const link of document.querySelectorAll('.ranking-tabs a')) {
