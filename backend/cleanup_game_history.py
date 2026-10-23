@@ -11,6 +11,7 @@ from .app.common.security import utc_now
 from .app.models.entities.progression import GameAttempt, GameCompletion, ApiIdempotency
 from .app.models.entities.pk import PKRoom, PKSubmission, PKParticipant
 from .app.models.entities.matchmaking import MatchmakingTicket
+from .app.models.entities.arena import ArenaInvitation
 from .app.repositories.progression_repository import lock_users
 
 
@@ -44,6 +45,10 @@ def attempt_batch(db, batch_size, now):
 
 def other_batch(db, batch_size, now):
     """按父子次序清理房间/票据/幂等凭据，查询均走过期或终态索引。"""
+    expired_invites=list(db.scalars(select(ArenaInvitation.invitation_id).where(
+        ArenaInvitation.expires_at<=now-timedelta(days=1)).limit(batch_size)))
+    if expired_invites:
+        db.execute(delete(ArenaInvitation).where(ArenaInvitation.invitation_id.in_(expired_invites)));return len(expired_invites)
     ids = list(db.scalars(select(PKRoom.room_id).where(PKRoom.status.in_(('finished', 'cancelled', 'expired')),
                   PKRoom.finished_at <= now-timedelta(days=POLICY['history_days'])).limit(batch_size)))
     if ids:

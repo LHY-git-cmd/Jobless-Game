@@ -7,7 +7,7 @@ from sqlalchemy import delete
 from backend.tests import test_progression_v1 as fixtures
 from backend.app.common.security import utc_now
 from backend.app.common.game_catalog import QUALIFICATIONS
-from backend.app.models.entities.progression import PlayerQualification
+from backend.app.models.entities.progression import PlayerQualification,PlayerProgression
 from backend.content_check import akari_solutions
 
 
@@ -35,6 +35,9 @@ class PKTests(TestCase):
             for key in completed:
                 db.add(PlayerQualification(user_id=uid, requirement_id=key, level_version=1,
                        attempt_id=str(uuid4()), completed_at=utc_now()))
+            summary=db.get(PlayerProgression,uid)
+            if summary:summary.xp=72 if len(completed)==3 else 0
+            else:db.add(PlayerProgression(user_id=uid,xp=72 if len(completed)==3 else 0,total_stars=0,revision=0))
             db.commit()
 
     def post(self, url, data, key=None):
@@ -128,7 +131,7 @@ class PKTests(TestCase):
         self.tick(utc_now() + timedelta(seconds=2))
         result = self.client.get(base + '/result')
         self.assertEqual(result.json()['outcome'], 'draw')
-        self.assertEqual(self.client.get('/api/v1/me/progression').json()['xp'], 0)
+        self.assertEqual(self.client.get('/api/v1/me/progression').json()['xp'], 72)
 
     def test_pending_ingress_prevents_early_winner_and_restart_cancels(self):
         """平局窗口内已接收请求必须先处理，不能靠DB队列决定胜者。"""

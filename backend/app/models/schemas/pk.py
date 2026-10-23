@@ -6,7 +6,7 @@ from .progression import StrictDTO
 
 class PoolCreate(StrictDTO):
     """首版仅照明普通难度，保持容量和匹配边界清晰。"""
-    game_id: Literal['akari']
+    game_id: Literal['mine','akari','sudoku']
     difficulty: Literal['normal']
 
 
@@ -22,4 +22,15 @@ class ReadinessPut(StrictDTO):
 
 class SubmissionPut(StrictDTO):
     """有界终盘布局，非法布局允许修正后再提交。"""
-    bulbs: list[StrictInt] = Field(max_length=400)
+    bulbs: list[StrictInt]|None = Field(default=None,max_length=400)
+    values: list[StrictInt]|None = Field(default=None,max_length=81)
+
+
+class InvitationCreate(PoolCreate):
+    """仅接收公开目标账号编号，不能代替对方接受。"""
+    user_id:StrictInt=Field(gt=0,le=4294967295)
+
+
+class PresencePut(StrictDTO):
+    """只声明当前已认证页面是否可见，不接收他人在线状态。"""
+    visible:StrictBool

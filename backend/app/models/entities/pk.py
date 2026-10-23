@@ -24,6 +24,8 @@ class PKRoom(Base):
     puzzle: Mapped[dict] = mapped_column(JSON)
     result: Mapped[dict | None] = mapped_column(JSON)
     reason: Mapped[str | None] = mapped_column(String(32))
+    host_id: Mapped[int|None] = mapped_column(UID)
+    source: Mapped[str] = mapped_column(String(16),default='friend',server_default='friend')
 
 
 class PKParticipant(Base):
@@ -36,6 +38,7 @@ class PKParticipant(Base):
     joined_at: Mapped[datetime] = mapped_column(DateTime)
     left_at: Mapped[datetime | None] = mapped_column(DateTime)
     disconnected_at: Mapped[datetime | None] = mapped_column(DateTime)
+    board: Mapped[dict] = mapped_column(JSON,default=dict)
 
 
 class PKSubmission(Base):

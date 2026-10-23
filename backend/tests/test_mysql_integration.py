@@ -27,7 +27,7 @@ from backend.app.services.login_limiter import LoginRateLimiter
 from backend.app.models.entities import AuthSession, User
 from backend.app.models.schemas.auth import LoginRequest
 from backend.app.common.security import utc_now
-from backend.app.models.entities import progression, cosmetic, pk, matchmaking
+from backend.app.models.entities import progression, cosmetic, pk, matchmaking, arena
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_URL = os.getenv("TEST_DATABASE_URL")
@@ -45,7 +45,7 @@ class MySQLIntegrationTests(TestCase):
         if url.drivername != "mysql+pymysql" or not (url.database or "").startswith("jobless_auth_test_"):
             raise ValueError("只允许 mysql+pymysql 且数据库名以 jobless_auth_test_ 开头的专用测试库")
         cls.engine = create_engine(url, pool_size=3, max_overflow=0, pool_timeout=.2, connect_args={"connect_timeout": 3, "read_timeout": 5, "write_timeout": 5})
-        expected_new = {v.__tablename__ for module in (progression, cosmetic, pk, matchmaking)
+        expected_new = {v.__tablename__ for module in (progression, cosmetic, pk, matchmaking, arena)
                         for v in vars(module).values() if isinstance(v, type) and hasattr(v, '__tablename__')}
         unexpected = set(inspect(cls.engine).get_table_names()) - expected_new - {"users", "auth_sessions", "flyway_schema_history", "challenge_progress", "completion_records", "leaderboard_entries", "forum_posts", "forum_comments", "forum_post_likes", "forum_comment_likes", "forum_notifications"}
         if unexpected:
@@ -138,6 +138,47 @@ class MySQLIntegrationTests(TestCase):
             self.assertEqual([item['xp'] for item in levels], [180, 90, 90])
             self.assertEqual([item['rank'] for item in levels], [1, 2, 2])
             self.assertEqual([item['level'] for item in levels], [account_level(item['xp']) for item in levels])
+
+    def test_arena_v18_v19_scores_pools_and_mine_visibility(self):
+        """真实Flyway新表/JSON棋盘/积分唯一流水与负分索引，使用两个独立数据库会话。"""
+        from backend.app.services import pk_service as service
+        from backend.app.services.pk_runtime import runtime
+        from datetime import timedelta
+        runtime.reset();tokens=[];uids=[]
+        for _ in range(2):
+            self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'arena-mysql-test'})
+            raw=self.client.cookies.get(get_settings().session_cookie_name);tokens.append(raw)
+            with self.sessions() as db:
+                uid=auth_service.current_session(raw,db)[1].id;uids.append(uid)
+                db.add(progression.PlayerProgression(user_id=uid,xp=72,total_stars=0,revision=0));db.commit()
+        for token in tokens:
+            with self.sessions() as db:
+                ticket=service.dispatch(token,db,'ticket_create',data={'game_id':'mine','difficulty':'normal'},key=str(uuid4())).data
+        rid=ticket['room_id'];self.assertTrue(rid)
+        for token in tokens:
+            with self.sessions() as db:
+                room=service.dispatch(token,db,'room_get',rid=rid)
+                self.assertNotIn('puzzle',room.data)
+                service.dispatch(token,db,'room_ready',rid=rid,data={'ready':True},match=room.headers['ETag'])
+        with self.sessions() as db:
+            room=db.get(pk.PKRoom,rid);room.starts_at=utc_now()-timedelta(seconds=1);room.ends_at=utc_now()+timedelta(minutes=10)
+            db.get(arena.ArenaAccount,uids[1]).points=5;db.commit()
+        service.maintenance(self.sessions)
+        with self.sessions() as db:
+            value=service.dispatch(tokens[1],db,'room_get',rid=rid).data
+            self.assertNotIn('mine_indices',str(value));self.assertTrue(value['mine_board']['revealed'])
+            index=db.get(pk.PKRoom,rid).puzzle['puzzle']['mine_indices'][0]
+            service.dispatch(tokens[1],db,'room_reveal',rid=rid,index=index,received_at=utc_now())
+        with self.sessions() as db:
+            self.assertEqual(db.get(arena.ArenaAccount,uids[0]).points,120)
+            self.assertEqual(db.get(arena.ArenaAccount,uids[1]).points,-5)
+            entries=list(db.scalars(select(arena.ArenaLedger).where(arena.ArenaLedger.room_id==rid)))
+            self.assertEqual(len(entries),2)
+            self.assertEqual(sorted(item.delta for item in entries),[-10,20])
+            self.assertIn('ix_arena_points',{i['name'] for i in inspect(self.engine).get_indexes('arena_accounts')})
+        service.maintenance(self.sessions)
+        with self.sessions() as db:self.assertEqual(db.get(arena.ArenaAccount,uids[0]).points,120)
+        runtime.reset()
 
     def test_real_cookie_expiry_and_logout(self):
         name = self.new_name()
@@ -527,6 +568,7 @@ class MySQLIntegrationTests(TestCase):
             with self.sessions() as db:
                 uid = auth_service.current_session(raw, db)[1].id
                 uids.append(uid)
+                db.add(progression.PlayerProgression(user_id=uid,xp=72,total_stars=0,revision=0))
                 for key in QUALIFICATIONS:
                     db.add(progression.PlayerQualification(user_id=uid, requirement_id=key, level_version=1,
                            attempt_id=str(uuid4()), completed_at=utc_now()))

@@ -8,7 +8,8 @@ from ..common.config import get_settings
 from ..common.database import get_db
 from ..common.concurrency import bounded_db_call
 from ..common.security import utc_now
-from ..models.schemas.pk import PoolCreate, MembershipCreate, ReadinessPut, SubmissionPut
+from ..models.schemas.pk import PoolCreate, MembershipCreate, ReadinessPut, SubmissionPut,InvitationCreate,PresencePut
+from ..models.schemas.progression import EmptyDTO
 from ..services import pk_service as service, auth_service
 from ..services.pk_runtime import runtime
 from .progression_controller import enabled, response
@@ -71,7 +72,7 @@ async def room(room_id: str, request: Request, db=Depends(get_db)):
 @router.delete('/rooms/{room_id}/members/me', status_code=204)
 async def leave(room_id: str, request: Request, db=Depends(get_db)):
     """移除当前成员；比赛中执行退出判负。"""
-    return await run(request, db, 'room_leave', rid=room_id)
+    return await run(request, db, 'room_leave', rid=room_id,received_at=getattr(request.state,'received_at',utc_now()))
 
 
 @router.put('/rooms/{room_id}/members/me/readiness')
@@ -89,7 +90,7 @@ async def current_readiness(room_id: str, request: Request, db=Depends(get_db)):
 @router.put('/rooms/{room_id}/submissions/me', status_code=201)
 async def submit(room_id: str, payload: SubmissionPut, request: Request, db=Depends(get_db)):
     """入口待处理登记由ASGI中间件管理，包含DTO验证和DB排队时间。"""
-    return await run(request, db, 'room_submit', rid=room_id, data=payload.model_dump(),
+    return await run(request, db, 'room_submit', rid=room_id, data=payload.model_dump(exclude_none=True),
                      received_at=getattr(request.state, 'received_at', utc_now()))
 
 
@@ -103,6 +104,71 @@ async def result(room_id: str, request: Request, db=Depends(get_db)):
 async def my_rooms(request: Request, status: str = Query('active', pattern='^active$'), db=Depends(get_db)):
     """恢复当前唯一房间。"""
     return await run(request, db, 'my_rooms')
+
+
+@router.put('/rooms/{room_id}/reveals/{index}')
+async def reveal(room_id:str,index:int,payload:EmptyDTO,request:Request,db=Depends(get_db)):
+    """竞技扫雷逐格权威揭开；客户端不提交隐藏地雷。"""
+    return await run(request,db,'room_reveal',rid=room_id,index=index,received_at=getattr(request.state,'received_at',utc_now()))
+
+
+@router.put('/rooms/{room_id}/mode')
+async def mode(room_id:str,payload:PoolCreate,request:Request,db=Depends(get_db)):
+    """好友房主条件切换游戏并清除准备。"""
+    return await run(request,db,'room_mode',rid=room_id,data=payload.model_dump(),match=request.headers.get('If-Match'))
+
+
+@router.get('/me/arena')
+async def arena_account(request:Request,db=Depends(get_db)):
+    """本人积分摘要，未开始竞技时GET不初始化账户。"""
+    return await run(request,db,'arena_get')
+
+
+@router.get('/me/arena/state')
+async def arena_state(request:Request,last_room:str|None=Query(None,max_length=36),db=Depends(get_db)):
+    """一次GET恢复本人大厅，过期的前端房间引用不能读取他人对局。"""
+    return await run(request,db,'arena_state',last_room=last_room)
+
+
+@router.get('/arena/users')
+async def arena_users(request:Request,q:str=Query(min_length=1,max_length=64),db=Depends(get_db)):
+    """按公开ID或完整用户名搜索，结果有限且只包含公开字段。"""
+    return await run(request,db,'arena_search',query=q)
+
+
+@router.get('/me/arena/invitations')
+async def arena_invitations(request:Request,db=Depends(get_db)):
+    """本人收到和发出的有效邀请。"""
+    return await run(request,db,'arena_invites')
+
+
+@router.post('/arena/invitations',status_code=201)
+async def arena_invite(payload:InvitationCreate,request:Request,db=Depends(get_db)):
+    """邀请必须由接收者接受，不能自动拉入房间。"""
+    return await run(request,db,'invite_create',data=payload.model_dump(),key=request.headers.get('Idempotency-Key'))
+
+
+@router.post('/arena/invitations/{invitation_id}/accept')
+async def accept_invite(invitation_id:str,payload:EmptyDTO,request:Request,db=Depends(get_db)):
+    """接受前再次验证在线、等级与空闲，重复请求返回原房间。"""
+    return await run(request,db,'invite_accept',rid=invitation_id)
+
+
+@router.delete('/arena/invitations/{invitation_id}',status_code=204)
+async def cancel_invite(invitation_id:str,request:Request,db=Depends(get_db)):
+    """发送者取消或接收者拒绝，已入房需使用房间退出。"""
+    return await run(request,db,'invite_cancel',rid=invitation_id)
+
+
+@router.post('/me/presence')
+async def presence(payload:PresencePut,request:Request,db=Depends(get_db)):
+    """可见登录页面轻量心跳，无持久写入和每秒数据库轮询。"""
+    enabled()
+    enforce_same_origin(request)
+    token=request.cookies.get(get_settings().session_cookie_name)
+    user=await auth_service.get_current_user(token,db)
+    from ..services.arena_service import presence as update_presence
+    return response(update_presence(db,user.id,payload.visible,token))
 
 
 @router.post('/matchmaking-tickets', status_code=201)

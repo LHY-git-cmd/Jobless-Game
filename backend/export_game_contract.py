@@ -21,8 +21,8 @@ def contract():
             if method in ('post', 'put', 'patch', 'delete'):
                 operation.setdefault('parameters', []).extend([
                     {'in': 'header', 'name': 'Idempotency-Key', 'required': True, 'schema': {'type': 'string', 'format': 'uuid'}}
-                    ] if method == 'post' else [])
-            if method in ('put', 'patch') and ('appearance' in path or 'readiness' in path or path == '/api/v1/attempts/{attempt_id}'):
+                    ] if method == 'post' and path not in ('/api/v1/me/presence','/api/v1/arena/invitations/{invitation_id}/accept') else [])
+            if method in ('put', 'patch') and ('appearance' in path or 'readiness' in path or path.endswith('/mode') or path == '/api/v1/attempts/{attempt_id}'):
                 operation.setdefault('parameters', []).append({'in': 'header', 'name': 'If-Match', 'required': True, 'schema': {'type': 'string'}})
             for code in (401, 403, 404, 409, 410, 412, 413, 422, 428, 429, 503):
                 operation['responses'][str(code)] = {'description': 'RFC9457 Problem Details；429/503带Retry-After',

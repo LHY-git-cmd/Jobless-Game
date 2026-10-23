@@ -15,7 +15,9 @@ class PKSubmissionIngress:
     async def __call__(self, scope, receive, send):
         """finally覆盖超大请求、DTO失败、断连及正常返回。"""
         parts = scope.get('path', '').strip('/').split('/')
-        tracked = scope['type'] == 'http' and scope.get('method') == 'PUT' and len(parts) == 6 and parts[:3] == ['api', 'v1', 'rooms'] and parts[4:] == ['submissions', 'me']
+        tracked = scope['type'] == 'http' and len(parts) == 6 and parts[:3] == ['api', 'v1', 'rooms'] and (
+            scope.get('method')=='PUT' and (parts[4:]==['submissions','me'] or parts[4]=='reveals') or
+            scope.get('method')=='DELETE' and parts[4:]==['members','me'])
         if not tracked:
             return await self.app(scope, receive, send)
         received_at = utc_now()

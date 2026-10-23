@@ -4,6 +4,8 @@ from dataclasses import dataclass
 import json
 from threading import Lock, RLock
 from uuid import uuid4
+from collections import OrderedDict
+from time import monotonic
 from ..common.security import hash_session_token
 from .progression_service import fail
 
@@ -26,6 +28,7 @@ class PKRuntime:
         self.lock, self.guard = RLock(), Lock()
         self.streams, self.pending = {}, {}
         self.sequence, self.waiting_ids = 0, []
+        self.presence=OrderedDict()
 
     def reset(self):
         """仅用于服务停机和隔离测试清理有限运行态。"""
@@ -36,6 +39,7 @@ class PKRuntime:
             self.pending.clear()
             self.waiting_ids.clear()
             self.sequence = 0
+            self.presence.clear()
 
     def receive(self, room_id, received_at):
         """在HTTP入口注册，调度器结算前核对平局窗口内未处理请求。"""
@@ -56,6 +60,10 @@ class PKRuntime:
         with self.guard:
             return any(rid == room_id and at <= deadline for rid, at in self.pending.values())
 
+    def has_earlier(self,room_id,received_at):
+        """即时失败也等待更早到达的有限任务，不能让数据库处理先后决定踩雷胜负。"""
+        with self.guard:return any(rid==room_id and at<received_at for rid,at in self.pending.values())
+
     def subscribe(self, uid, token, maximum):
         """鉴权完成并释放DB后才申请流槽，不把Session交给生成器。"""
         with self.guard:
@@ -75,9 +83,26 @@ class PKRuntime:
             sub.closed = True
 
     def online(self, uid):
-        """在线状态只读有限内存，不做数据库心跳。"""
+        """比赛断线仅看竞技事件连接，不能用首页心跳延长30秒重连宽限。"""
         with self.guard:
             return uid in self.streams and not self.streams[uid].closed
+
+    def available(self,uid):
+        """邀请可达性允许普通页面心跳，与比赛连接的断线判定分开。"""
+        with self.guard:
+            return (uid in self.streams and not self.streams[uid].closed) or any(
+                expiry>monotonic() for expiry in self.presence.get(uid,{}).values())
+
+    def heartbeat(self,uid,token,visible=True):
+        """在线索引最多4096账号，每账号至多4会话，60秒失效；不写数据库心跳。"""
+        fingerprint=hash_session_token(token or '')
+        with self.guard:
+            sessions=self.presence.pop(uid,{})
+            sessions={key:expiry for key,expiry in sessions.items() if expiry>monotonic()}
+            if visible:sessions[fingerprint]=monotonic()+60
+            else:sessions.pop(fingerprint,None)
+            if sessions:self.presence[uid]=dict(list(sessions.items())[-4:])
+            while len(self.presence)>4096:self.presence.popitem(last=False)
 
     def publish(self, uid, resource, revision=0):
         """事务提交后通知资源修订；不包含棋盘或对手终盘。"""
@@ -106,6 +131,9 @@ class PKRuntime:
             return
         fingerprint = hash_session_token(token)
         with self.guard:
+            for uid,sessions in list(self.presence.items()):
+                sessions.pop(fingerprint,None)
+                if not sessions:self.presence.pop(uid,None)
             for sub in self.streams.values():
                 if sub.token_hash == fingerprint:
                     sub.closed = True

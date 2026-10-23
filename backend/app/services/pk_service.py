@@ -13,7 +13,8 @@ from ..models.entities.matchmaking import MatchmakingTicket
 from ..repositories import progression_repository as repo
 from . import auth_service
 from . import progression_service as progression
-from .game_rules import validate_akari
+from .game_rules import validate_akari,validate_sudoku
+from . import arena_service as arena,arena_games
 from .pk_runtime import runtime
 
 ACTIVE = ('waiting', 'countdown', 'playing')
@@ -82,17 +83,22 @@ def room_resource(db, room, uid, status=200):
     submitted = {s.user_id for s in repo.rows(db, PKSubmission, PKSubmission.room_id == room.room_id, lock=False, limit=2)}
     base = '/api/v1/rooms/' + room.room_id
     data = {'room_id': room.room_id, 'room_code': room.room_code, 'game_id': room.game_id, 'difficulty': room.difficulty,
+            'host_id':room.host_id,'source':room.source,
             'status': room.status, 'revision': room.revision, 'reason': room.reason,
             'created_at': progression.iso(room.created_at), 'expires_at': progression.iso(room.expires_at),
             'starts_at': progression.iso(room.starts_at) if room.starts_at else None,
             'ends_at': progression.iso(room.ends_at) if room.ends_at else None, 'server_now': progression.iso(utc_now()),
-            'members': [{'user_id': member.user_id, 'username': db.get(User, member.user_id).username,
+            'members': [{'user_id': member.user_id, 'username': db.get(User, member.user_id).username,'avatar_id':db.get(User,member.user_id).avatar_id,
                          'is_me': member.user_id == uid, 'ready': member.ready, 'online': runtime.online(member.user_id),
                          'completed': member.user_id in submitted} for member in current_members],
             'links': {'self': base, 'result': base + '/result', 'readiness': base + '/members/me/readiness',
                       'submission': base + '/submissions/me', 'membership': base + '/members/me'}}
     if room.status in ('playing', 'finished'):
         data['puzzle'] = deepcopy(room.puzzle['puzzle'])
+        if room.game_id=='mine':
+            data['puzzle'].pop('mine_indices',None)
+            member=next((m for m in current_members if m.user_id==uid),None)
+            data['mine_board']=arena_games.public_board(member.board or {},room.puzzle['puzzle']) if member else {}
         data['level_version'] = room.puzzle['level_version']
     if room.result:
         data['result'] = room.result
@@ -111,7 +117,7 @@ def owned_room(db, uid, rid, require_present=False):
     return room, member
 
 
-def new_room(db, uids, now):
+def new_room(db, uids, now, game='akari',source='friend'):
     """唯一业务锁内检查容量和随机房间码碰撞。"""
     if len(active_rooms(db)) >= get_settings().pk_room_limit:
         progression.fail(503, 'room_capacity', '当前房间已满，请稍后再试。', headers={'Retry-After': '5'})
@@ -121,14 +127,16 @@ def new_room(db, uids, now):
             break
     else:
         progression.fail(503, 'room_capacity', '暂时无法创建房间。', headers={'Retry-After': '3'})
-    room = PKRoom(room_id=str(uuid4()), room_code=code, game_id='akari', difficulty='normal', status='waiting', revision=0,
-                  created_at=now, expires_at=now + timedelta(seconds=POLICY['room_wait_seconds']), puzzle=deepcopy(secrets.choice(PK_PUZZLES)))
+    room = PKRoom(room_id=str(uuid4()), room_code=code, game_id=game, difficulty='normal', status='waiting', revision=0,
+                  host_id=uids[0],source=source,created_at=now, expires_at=now + timedelta(seconds=POLICY['room_wait_seconds']), puzzle=arena_games.make_puzzle(game))
     db.add(room)
     db.flush()
     for uid in sorted(uids):
+        arena.account(db,uid,True)
         row = occupancy(db, uid)
         row.room_id, row.ticket_id, row.revision = room.room_id, None, row.revision + 1
-        db.add(PKParticipant(room_id=room.room_id, user_id=uid, ready=False, readiness_created=False, joined_at=now))
+        db.add(PKParticipant(room_id=room.room_id, user_id=uid, ready=False, readiness_created=False, joined_at=now,
+               board=arena_games.initial_board(room.puzzle['puzzle']) if game=='mine' else {}))
     db.flush()
     touch(db, room)
     return room
@@ -142,7 +150,7 @@ def create_room(db, uid, data, key, **_):
     progression.require_pk(db, uid)
     progression.limiter.check((uid, 'pk_starts'), 10)
     require_free(db, uid)
-    room = new_room(db, [uid], utc_now())
+    room = new_room(db, [uid], utc_now(),data['game_id'])
     return progression.remember(db, uid, 'rooms', key, data, room_resource(db, room, uid, 201), room.room_id, 1)
 
 
@@ -164,11 +172,13 @@ def join_room(db, uid, data, key, **_):
         progression.fail(409, 'room_unavailable', '房间已满或已经开始。')
     member = repo.get(db, PKParticipant, (room.room_id, uid))
     if member is None:
-        member = PKParticipant(room_id=room.room_id, user_id=uid, ready=False, readiness_created=False, joined_at=utc_now())
+        member = PKParticipant(room_id=room.room_id, user_id=uid, ready=False, readiness_created=False, joined_at=utc_now(),
+                    board=arena_games.initial_board(room.puzzle['puzzle']) if room.game_id=='mine' else {})
         db.add(member)
     else:
         member.left_at, member.ready, member.disconnected_at = None, False, None
     row.room_id, row.revision = room.room_id, row.revision + 1
+    arena.account(db,uid,True)
     touch(db, room)
     resource = room_resource(db, room, uid, 201)
     resource.headers['Location'] = '/api/v1/rooms/' + room.room_id + '/members/me'
@@ -186,6 +196,7 @@ def get_room(db, uid, rid, **_):
 def readiness(db, uid, rid, data, match, **_):
     """双方准备后冻结题，安排统一开始时间；此时仍不能读取地图。"""
     room, member = owned_room(db, uid, rid, True)
+    progression.require_pk(db,uid)
     progression.precondition(match, room.revision)
     if room.status != 'waiting' or room.expires_at <= utc_now():
         progression.fail(409, 'room_state_conflict', '房间当前不能修改准备状态。')
@@ -214,20 +225,36 @@ def release_room(db, room):
 
 def finish(db, room, now, outcome, reason, winner=None):
     """对局结果不调用成长服务，不授星、经验或主题权益。"""
+    if room.result:return
+    scores=arena.settle(db,room,members(db,room.room_id),winner,outcome,now)
     room.status = 'finished' if outcome in ('win', 'draw') else 'cancelled'
     room.reason, room.finished_at = reason, now
     room.result = {'room_id': room.room_id, 'outcome': outcome, 'winner_id': winner, 'reason': reason,
                    'finished_at': progression.iso(now), 'awarded_xp': 0, 'awarded_stars': 0}
+    room.result={**room.result,'scores':scores,'duration_ms':max(0,int((now-room.starts_at).total_seconds()*1000)) if room.starts_at else 0}
     release_room(db, room)
     touch(db, room)
 
 
-def leave_room(db, uid, rid, **_):
+def voluntary_loss(db,room,uid,received_at,reason):
+    """按HTTP接收先后记录即时失败；更早任务未处理时仅短暂等待其结束。"""
+    prior=room.puzzle.get('pending_loss')
+    event={'user_id':uid,'at':progression.iso(received_at),'reason':reason}
+    if prior and prior['at']<event['at']:event=prior
+    room.puzzle={**room.puzzle,'pending_loss':event}
+    from datetime import datetime
+    at=datetime.fromisoformat(event['at'].removesuffix('Z'))
+    if runtime.has_earlier(room.room_id,at):touch(db,room);return
+    opponent=next((m for m in members(db,room.room_id) if m.user_id!=event['user_id']),None)
+    finish(db,room,at,'win' if opponent else 'cancelled',event['reason'],opponent.user_id if opponent else None)
+
+
+def leave_room(db, uid, rid, received_at=None, **_):
     """进行中退出判负；倒计时退出回等待并清空双方准备。"""
     room, member = owned_room(db, uid, rid)
     if member.left_at:
         return progression.Resource(None, 204)
-    now = utc_now()
+    now = received_at or utc_now()
     member.left_at, member.ready = now, False
     row = repo.get(db, PlayerPKOccupancy, uid)
     if row and row.room_id == rid:
@@ -235,12 +262,13 @@ def leave_room(db, uid, rid, **_):
     db.flush()
     others = members(db, rid, True)
     if room.status == 'playing':
-        finish(db, room, now, 'win' if others else 'cancelled', 'player_left', others[0].user_id if others else None)
+        voluntary_loss(db,room,uid,now,'player_left')
     elif room.status in ('waiting', 'countdown'):
         if not others:
             finish(db, room, now, 'cancelled', 'empty_room')
         else:
             room.status, room.starts_at, room.ends_at = 'waiting', None, None
+            room.host_id=others[0].user_id
             for player in others:
                 player.ready = False
             touch(db, room)
@@ -262,7 +290,9 @@ def submit(db, uid, rid, data, received_at, **_):
         progression.fail(409, 'room_not_playing', '当前不在可提交的比赛时间。')
     progression.limiter.check((uid, 'pk_submissions'), 30)
     progression.limiter.check((uid, 'room_submissions', rid), 60, POLICY['match_seconds'])
-    if not validate_akari(room.puzzle['puzzle'], data['bulbs']):
+    valid=(room.game_id=='akari' and set(data)=={'bulbs'} and validate_akari(room.puzzle['puzzle'],data['bulbs'])) or (
+        room.game_id=='sudoku' and set(data)=={'values'} and validate_sudoku(room.puzzle['puzzle'],data['values']))
+    if not valid:
         progression.fail(422, 'invalid_completion', '终盘尚未满足全部规则。')
     db.add(PKSubmission(room_id=rid, user_id=uid, payload_hash=fingerprint, received_at=received_at))
     touch(db, room)
@@ -290,6 +320,7 @@ def ticket_resource(ticket, status=200):
     """有限票据表示，成功配对后链接到权威房间。"""
     base = '/api/v1/matchmaking-tickets/' + ticket.ticket_id
     return progression.Resource({'ticket_id': ticket.ticket_id, 'status': ticket.status, 'room_id': ticket.room_id,
+           'game_id':ticket.pool.split(':')[0],'created_at':progression.iso(ticket.created_at),
            'expires_at': progression.iso(ticket.expires_at), 'server_now': progression.iso(utc_now()),
            'links': {'self': base, 'room': '/api/v1/rooms/' + ticket.room_id if ticket.room_id else None}},
            status, {'Location': base} if status == 201 else {})
@@ -322,11 +353,13 @@ def pair(db, now):
             continue
         waiting.append(ticket)
     while len(waiting) >= 2 and len(active_rooms(db)) < get_settings().pk_room_limit:
-        first, second = waiting.pop(0), waiting.pop(0)
+        match=next(((a,b) for i,a in enumerate(waiting) for b in waiting[i+1:] if a.pool==b.pool),None)
+        if match is None:break
+        first, second = match;waiting.remove(first);waiting.remove(second)
         if first.user_id == second.user_id:
             release_ticket(db, second, 'cancelled')
             continue
-        room = new_room(db, [first.user_id, second.user_id], now)
+        room = new_room(db, [first.user_id, second.user_id], now,first.pool.split(':')[0],'match')
         for ticket in (first, second):
             ticket.status, ticket.room_id = 'matched', room.room_id
             notify_ticket(db, ticket)
@@ -344,7 +377,7 @@ def create_ticket(db, uid, data, key, **_):
     if len(waiting_tickets(db)) >= get_settings().pk_ticket_limit:
         progression.fail(503, 'ticket_capacity', '匹配队列已满，请稍后重试。', headers={'Retry-After': '5'})
     now = utc_now()
-    ticket = MatchmakingTicket(ticket_id=str(uuid4()), user_id=uid, pool='akari:normal', status='waiting',
+    ticket = MatchmakingTicket(ticket_id=str(uuid4()), user_id=uid, pool=data['game_id']+':normal', status='waiting',
                created_at=now, expires_at=now + timedelta(seconds=POLICY['ticket_seconds']))
     db.add(ticket)
     row.ticket_id, row.revision = ticket.ticket_id, row.revision + 1
@@ -409,6 +442,58 @@ ACTIONS = {'room_create': create_room, 'room_join': join_room, 'room_get': get_r
 READ_ACTIONS = {'room_get', 'room_result', 'my_rooms', 'ticket_get', 'my_ticket'}
 
 
+def reveal_mine(db,uid,rid,index,received_at,**_):
+    """每次揭格只更新本人成员棋盘，踩雷立即判负，全部安全格形成有效完成。"""
+    room,member=owned_room(db,uid,rid,True)
+    if room.game_id!='mine' or room.status!='playing' or not room.starts_at<=received_at<=room.ends_at:
+        progression.fail(409,'room_not_playing','当前不能排雷。')
+    if not 0<=index<100:progression.fail(422,'invalid_cell','格子位置无效。')
+    if repo.get(db,PKSubmission,(rid,uid)):return room_resource(db,room,uid)
+    progression.limiter.check((uid,'arena_reveals',rid),240,60)
+    member.board=arena_games.reveal(member.board or {},room.puzzle['puzzle'],index)
+    if member.board['outcome']=='lost':
+        voluntary_loss(db,room,uid,received_at,'mine_hit')
+    elif member.board['outcome']=='won' and not repo.get(db,PKSubmission,(rid,uid)):
+        db.add(PKSubmission(room_id=rid,user_id=uid,payload_hash='mine-complete',received_at=received_at));touch(db,room)
+    else:touch(db,room)
+    return room_resource(db,room,uid)
+
+
+def change_mode(db,uid,rid,data,match,**_):
+    """好友房主更换模式后重置双方准备；匹配房或开局后不可更改。"""
+    room,_=owned_room(db,uid,rid,True);progression.precondition(match,room.revision)
+    if room.status!='waiting' or room.source!='friend' or room.host_id!=uid:
+        progression.fail(409,'mode_locked','当前不能更换模式。')
+    room.game_id=data['game_id'];room.puzzle=arena_games.make_puzzle(room.game_id)
+    for member in members(db,rid,True):
+        member.ready=False;member.board=arena_games.initial_board(room.puzzle['puzzle']) if room.game_id=='mine' else {}
+    touch(db,room);return room_resource(db,room,uid)
+
+
+def arena_state(db,uid,last_room=None,**_):
+    """单次读取本人大厅快照，账号、房间、排队和邀请共用事务，避免五路并发抢执行槽。"""
+    value=arena.account(db,uid);own=my_rooms(db,uid).data['items'];room_value=None
+    if own:room_value=get_room(db,uid,own[0]['room_id'])
+    elif last_room:
+        try:room_value=get_room(db,uid,last_room)
+        except progression.AppError as error:
+            if error.status_code!=404:raise
+    row=repo.get(db,PlayerPKOccupancy,uid,False)
+    ticket=get_ticket(db,uid,row.ticket_id).data if row and row.ticket_id else None
+    return progression.Resource({'account':value,'eligibility':progression.eligibility(db,uid),
+        'room':{**room_value.data,'etag':room_value.headers.get('ETag')} if room_value else None,
+        'ticket':ticket,'invitations':arena.invitations(db,uid).data['items']})
+
+
+ACTIONS.update({'room_reveal':reveal_mine,'room_mode':change_mode,
+    'arena_state':arena_state,
+    'arena_get':lambda db,uid,**kwargs:progression.Resource(arena.account(db,uid)),
+    'arena_search':arena.search,'arena_invites':arena.invitations,'invite_create':arena.create_invitation,
+    'invite_accept':lambda db,uid,**kwargs:arena.respond_invitation(db,uid,accept=True,**kwargs),
+    'invite_cancel':arena.respond_invitation})
+READ_ACTIONS.update({'arena_get','arena_search','arena_invites','arena_state'})
+
+
 def dispatch(token, db, action, **kwargs):
     """单进程互斥保证全局容量，数据库唯一占用保证持久一致性。"""
     with runtime.lock:
@@ -418,9 +503,18 @@ def dispatch(token, db, action, **kwargs):
                 progression.fail(401, 'unauthenticated', '请先登录。')
             uid = current[1].id
             if action not in READ_ACTIONS:
+                # 所有竞技写事务先按同一顺序锁住有界活跃用户及本次邀请双方。
+                extra=[uid]
+                if action=='invite_create':extra.append(kwargs['data']['user_id'])
+                if action in ('invite_accept','invite_cancel'):
+                    from ..models.entities.arena import ArenaInvitation
+                    invitation=repo.get(db,ArenaInvitation,kwargs['rid'],False)
+                    if invitation:extra.extend([invitation.sender_id,invitation.target_id])
+                active=repo.rows(db,PlayerPKOccupancy,(PlayerPKOccupancy.room_id.is_not(None)|PlayerPKOccupancy.ticket_id.is_not(None)),lock=False,limit=17)
+                repo.lock_users(db,sorted({*extra,*(row.user_id for row in active)}))
                 lock_active_users(db, uid)
             response = ACTIONS[action](db, uid, **kwargs)
-            if action == 'room_leave':
+            if action in ('room_leave','ticket_cancel'):
                 # 退出释放容量就是一次配对事件，等待队列无需定时重复查资格。
                 db.flush()
                 pair(db, utc_now())
@@ -449,6 +543,11 @@ def advance_room(db, room, now, restart):
         touch(db, room)
     if room.status != 'playing':
         return
+    if room.puzzle.get('pending_loss'):
+        from datetime import datetime
+        event=room.puzzle['pending_loss'];at=datetime.fromisoformat(event['at'].removesuffix('Z'))
+        if runtime.has_earlier(room.room_id,at):return
+        voluntary_loss(db,room,event['user_id'],at,event['reason']);return
     submissions = repo.rows(db, PKSubmission, PKSubmission.room_id == room.room_id, limit=2, order=PKSubmission.received_at)
     deadline = min(room.ends_at, submissions[0].received_at + timedelta(milliseconds=POLICY['draw_ms'])) if submissions else room.ends_at
     if now >= deadline and not runtime.has_pending(room.room_id, deadline):
@@ -482,6 +581,12 @@ def maintenance(sessions, now=None, restart=False):
     with runtime.lock, sessions() as db:
         try:
             lock_active_users(db)
+            from ..models.entities.arena import ArenaInvitation
+            expired=repo.rows(db,ArenaInvitation,ArenaInvitation.status=='pending',
+                *([] if restart else [ArenaInvitation.expires_at<=now]),limit=32)
+            for item in expired:
+                item.status='cancelled' if restart else 'expired'
+                for who in [item.sender_id,item.target_id]:db.info.setdefault('pk_events',{})[(who,'/api/v1/me/arena/invitations')]=0
             freed_room = False
             for room in active_rooms(db):
                 advance_room(db, room, now, restart)

@@ -32,6 +32,14 @@ class EventTests(IsolatedAsyncioTestCase):
         hub.unsubscribe(two)
         self.assertEqual(len(hub.streams), 0)
 
+    async def test_presence_bounded_revoked_and_not_game_connection(self):
+        """普通页面可接邀请但不能冒充比赛连接；退出撤销在线，索引有上限。"""
+        hub=PKRuntime();hub.heartbeat(1,'session-one',True)
+        self.assertTrue(hub.available(1));self.assertFalse(hub.online(1))
+        hub.revoke('session-one');self.assertFalse(hub.available(1))
+        for uid in range(4100):hub.heartbeat(uid,'token',True)
+        self.assertEqual(len(hub.presence),4096)
+
     async def test_session_closed_before_stream_starts(self):
         """StreamingResponse创建前主动归还Session，流生成器只持订阅。"""
         db = Mock()
