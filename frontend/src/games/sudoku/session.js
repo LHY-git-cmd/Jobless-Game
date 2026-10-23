@@ -1,6 +1,7 @@
 /** 数独正式会话：账号草稿、版本化时钟、教学输入及可恢复的幂等终盘提交。 */
 import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
+import { createRequestId } from '../../shared/request-id.js';
 import { publishAttemptEnergy,restartAttempt } from '../../features/progression/attempt-energy.js';
 import { createSudoku,selectSudokuCell,setSudokuValue,toggleSudokuNote,normalizeSudokuNotes,checkSudoku } from './rules.js';
 import { abandonAttempt } from '../../features/progression/attempt-exit.js';
@@ -70,7 +71,7 @@ export function createSudokuSession({uid,storage,request=api,now=Date.now,onChan
   async function writeClock(paused){
     const attempt=state.attempt;if(!attempt||attempt.status!=='active'||state.pending)return;
     for(let retry=0;retry<3;retry++){
-      const command=pendingClock?.rid===attempt.attempt_id?pendingClock:{rid:attempt.attempt_id,paused,revision:state.attempt.timing.revision,command_id:crypto.randomUUID()};
+      const command=pendingClock?.rid===attempt.attempt_id?pendingClock:{rid:attempt.attempt_id,paused,revision:state.attempt.timing.revision,command_id:createRequestId()};
       pendingClock=command;
       try{
         const {rid,...body}=command;

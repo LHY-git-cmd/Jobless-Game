@@ -3,6 +3,7 @@ import { api } from '../../features/progression/client.js';
 import { createJourneyStore } from '../../features/progression/journey-store.js';
 import { publishAttemptEnergy,restartAttempt } from '../../features/progression/attempt-energy.js';
 import { abandonAttempt } from '../../features/progression/attempt-exit.js';
+import { createRequestId } from '../../shared/request-id.js';
 
 /** request与时钟可注入测试；本地仅保存选格/旗标和正式尝试的引用。 */
 export function createMineSession({uid,storage,request=api,onChange=()=>{},onReward=()=>{},now=Date.now}={}) {
@@ -53,7 +54,7 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     const attempt=state.attempt;
     if(!attempt||attempt.status!=='active'||attempt.board.outcome!=='active')return;
     for(let retry=0;retry<3;retry++){
-      const command=pendingClock?.rid===attempt.attempt_id?pendingClock:{rid:attempt.attempt_id,paused,revision:state.attempt.timing?.revision||0,command_id:crypto.randomUUID()};
+      const command=pendingClock?.rid===attempt.attempt_id?pendingClock:{rid:attempt.attempt_id,paused,revision:state.attempt.timing?.revision||0,command_id:createRequestId()};
       pendingClock=command;
       try{
         const {rid,...body}=command;

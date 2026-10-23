@@ -1,10 +1,11 @@
 /** 全站可见账号在线租约及对战邀请；跨标签合并读取，不使用每秒数据库轮询。 */
 import { requestJson } from '../../shared/http.js';
+import { createRequestId } from '../../shared/request-id.js';
 
 /** 已认证页面每25秒续在线、15秒查看邀请；仅竞技功能开放时运行。 */
 export function initArenaPresence(){
   let user=null,epoch=0,dead=false,enabled=false,timer=null,inFlight=false;
-  const tab=crypto.randomUUID();let dialog=null,current=null;
+  const tab=createRequestId();let dialog=null,current=null;
   /** 离开/隐藏只释放本标签租约，让其他可见标签及时接管，不篡改其他账号租约。 */
   function release(){
     if(!user)return;
