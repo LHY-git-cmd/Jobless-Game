@@ -8,6 +8,7 @@ from ..common.security import utc_now
 from ..models.entities.ranking import ChallengeProgress, CompletionRecord, LeaderboardEntry
 from ..repositories import ranking_repository as repository
 from . import auth_service
+from .progression_service import account_level
 
 GAMES = ("mine", "akari", "sudoku")
 
@@ -174,3 +175,10 @@ def rankings_transaction(category, page, page_size, db):
 async def execute(function, *args):
     """所有同步认证、锁与 SQL 共用既有执行槽，不阻塞事件循环。"""
     return await concurrency.bounded_db_call(function, *args)
+
+
+def growth_rankings_transaction(category, page, page_size, db):
+    """等级使用正式成长阈值计算，同等级按经验排序；不引入独立等级或积分存储。"""
+    rows, total = repository.growth_ranking_rows(db, category, page, page_size)
+    return {'category': category, 'page': page, 'page_size': page_size, 'total': total,
+            'entries': [{**dict(row), 'level': account_level(row['xp'])} for row in rows]}

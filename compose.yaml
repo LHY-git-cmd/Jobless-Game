@@ -80,6 +80,10 @@ services:
       DATABASE_URL: mysql+pymysql://jobless_app:${MYSQL_PASSWORD:?请先配置 .env.docker 中的 MYSQL_PASSWORD}@mysql:3306/jobless_game_local?charset=utf8mb4
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       DEV_QUICK_COMPLETE_ENABLED: "false"
+      PROGRESSION_ENABLED: ${PROGRESSION_ENABLED:-false}
+      COSMETICS_ENABLED: ${COSMETICS_ENABLED:-false}
+      PK_ROOMS_ENABLED: ${PK_ROOMS_ENABLED:-false}
+      MATCHMAKING_ENABLED: ${MATCHMAKING_ENABLED:-false}
       DB_POOL_SIZE: "3"
       DB_MAX_OVERFLOW: "0"
       LOGIN_HASH_CONCURRENCY: "1"

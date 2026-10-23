@@ -1,0 +1,551 @@
+{
+  "version": 2,
+  "levels": [
+    {
+      "level_id": "akari-v2-tutorial",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 1,
+      "number": 0,
+      "name": "入门",
+      "difficulty": "tutorial",
+      "focus": "放灯与撤灯",
+      "guide": "点击白格放灯，再点一次撤灯。灯光沿横竖传播，遇到黑墙停止。",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "max_stars": 1,
+      "star_xp": [
+        2
+      ],
+      "t3_ms": 64000,
+      "t2_ms": 128000,
+      "puzzle": {
+        "rows": 4,
+        "cols": 4,
+        "map": [
+          "#.##",
+          "1.##",
+          "###1",
+          "##.."
+        ],
+        "tutorial": true,
+        "checksum": "c4ddfea1ee5e314dccdcad683ef009c6fec8678735537e12a1dbfb60991ad01d"
+      }
+    },
+    {
+      "level_id": "akari-v2-001",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 2,
+      "number": 1,
+      "name": "第1关",
+      "difficulty": "campaign",
+      "focus": "照亮每个角落",
+      "guide": "先寻找明确的放灯位置；灯泡之间不能互相照射，数字只计算上下左右。",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 64000,
+      "t2_ms": 128000,
+      "puzzle": {
+        "rows": 4,
+        "cols": 4,
+        "map": [
+          "#...",
+          "..01",
+          "10#.",
+          "01.#"
+        ],
+        "checksum": "f20224c93c5005a5abe0c9eb17b53db71fa4708394f38f203b439c4c31142734"
+      }
+    },
+    {
+      "level_id": "akari-v2-002",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 3,
+      "number": 2,
+      "name": "第2关",
+      "difficulty": "campaign",
+      "focus": "0的禁放区域",
+      "guide": "0周围不能放灯，但这些白格仍要由其他位置的灯照亮。",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 100000,
+      "t2_ms": 200000,
+      "puzzle": {
+        "rows": 5,
+        "cols": 5,
+        "map": [
+          ".#.#.",
+          ".1#.#",
+          "1.1..",
+          "##0.1",
+          "1.100"
+        ],
+        "checksum": "830e80c791b775a95f2092d3358791b1c8e70a90ae29a323086094493f568d44"
+      }
+    },
+    {
+      "level_id": "akari-v2-003",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 4,
+      "number": 3,
+      "name": "第3关",
+      "difficulty": "campaign",
+      "focus": "1的准确位置",
+      "guide": "1周围必须恰好有一盏灯。结合黑墙、边界与光线排除多余位置。",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 100000,
+      "t2_ms": 200000,
+      "puzzle": {
+        "rows": 5,
+        "cols": 5,
+        "map": [
+          "10.1.",
+          ".1.11",
+          ".0...",
+          ".0..0",
+          "01.10"
+        ],
+        "checksum": "03a4a773b1df4d7ce4619f7480a7b4e98e86ff277f6c0a8193ad48ef18cdf9db"
+      }
+    },
+    {
+      "level_id": "akari-v2-004",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 5,
+      "number": 4,
+      "name": "第4关",
+      "difficulty": "campaign",
+      "focus": "2的相邻约束",
+      "guide": "2周围必须恰好有两盏灯，先看看还有哪些相邻格可以放灯。",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 144000,
+      "t2_ms": 288000,
+      "puzzle": {
+        "rows": 6,
+        "cols": 6,
+        "map": [
+          "2.1..1",
+          ".21.#0",
+          "10...2",
+          "0#....",
+          "02..0.",
+          "......"
+        ],
+        "checksum": "bcace80e66224b66dcc87f002b9f5c1c29919bbb05f757a7c1f9aae46eb41457"
+      }
+    },
+    {
+      "level_id": "akari-v2-005",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 6,
+      "number": 5,
+      "name": "第5关",
+      "difficulty": "campaign",
+      "focus": "3与4的明确落点",
+      "guide": "3或4也只计算上下左右。可用位置刚好够时，就能确定这些灯位。",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 144000,
+      "t2_ms": 288000,
+      "puzzle": {
+        "rows": 6,
+        "cols": 6,
+        "map": [
+          "..1.#0",
+          "....10",
+          ".30...",
+          "...03.",
+          "..11.3",
+          ".1..2."
+        ],
+        "checksum": "38de49c90d1369d8b100608a8d3171af0bdd95e231ef49a5d7fea344ec44fc06"
+      }
+    },
+    {
+      "level_id": "akari-v2-006",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 7,
+      "number": 6,
+      "name": "第6关",
+      "difficulty": "campaign",
+      "focus": "数字之间的联动",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 144000,
+      "t2_ms": 288000,
+      "puzzle": {
+        "rows": 6,
+        "cols": 6,
+        "map": [
+          ".#.2.0",
+          "..3...",
+          "...1.#",
+          "...1..",
+          "10...#",
+          "0..3.1"
+        ],
+        "checksum": "b8521c7e51d266931caf5d03bce170b9d4d302abeca745ee497db029d8126ff3"
+      }
+    },
+    {
+      "level_id": "akari-v2-007",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 8,
+      "number": 7,
+      "name": "第7关",
+      "difficulty": "campaign",
+      "focus": "共享邻格",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 196000,
+      "t2_ms": 392000,
+      "puzzle": {
+        "rows": 7,
+        "cols": 7,
+        "map": [
+          "#...1..",
+          "0......",
+          ".......",
+          "0.2....",
+          "......2",
+          ".3...3.",
+          "2..01.."
+        ],
+        "checksum": "6b8f5525f791452876738a71851a804ef777266fe5c4fa2ffc6782748e0f7e40"
+      }
+    },
+    {
+      "level_id": "akari-v2-008",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 9,
+      "number": 8,
+      "name": "第8关",
+      "difficulty": "campaign",
+      "focus": "寻找唯一光源",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 196000,
+      "t2_ms": 392000,
+      "puzzle": {
+        "rows": 7,
+        "cols": 7,
+        "map": [
+          "1...#..",
+          ".3.....",
+          ".......",
+          ".#.1...",
+          "1......",
+          "#..2..#",
+          ".2..1#."
+        ],
+        "checksum": "5914159820925f34d9bb9e898e0017a2fef14bc04b711c5461feed1027518dca"
+      }
+    },
+    {
+      "level_id": "akari-v2-009",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 10,
+      "number": 9,
+      "name": "第9关",
+      "difficulty": "campaign",
+      "focus": "交叉通道",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 196000,
+      "t2_ms": 392000,
+      "puzzle": {
+        "rows": 7,
+        "cols": 7,
+        "map": [
+          ".0.....",
+          ".1..#.0",
+          "...1#.1",
+          ".2.....",
+          "2..2..#",
+          "...1...",
+          ".#..2.."
+        ],
+        "checksum": "9557b87d7045fdc9289d60c8773926912d184ae2c4ee717fa3c3bd427a5a83d4"
+      }
+    },
+    {
+      "level_id": "akari-v2-010",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 11,
+      "number": 10,
+      "name": "第10关",
+      "difficulty": "campaign",
+      "focus": "连锁照明",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 256000,
+      "t2_ms": 512000,
+      "puzzle": {
+        "rows": 8,
+        "cols": 8,
+        "map": [
+          "...1....",
+          ".211..01",
+          "....#000",
+          "..1..##0",
+          "0.....##",
+          ".....2..",
+          "..2....0",
+          "...1#..."
+        ],
+        "checksum": "3ff364dcbf74078701d30d664a23b4c3cd4abb4ef0cee3a9846b0f48ae68886d"
+      }
+    },
+    {
+      "level_id": "akari-v2-011",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 12,
+      "number": 11,
+      "name": "第11关",
+      "difficulty": "campaign",
+      "focus": "观察外围线索",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 256000,
+      "t2_ms": 512000,
+      "puzzle": {
+        "rows": 8,
+        "cols": 8,
+        "map": [
+          "..0##0.1",
+          "..11.#..",
+          "1...2...",
+          ".2....1.",
+          ".....0#.",
+          "##..#..1",
+          ".0......",
+          "......#."
+        ],
+        "checksum": "cb355fb70f442e9dcd795080f479883d1348f954f60220c9cf85d0da2d063e76"
+      }
+    },
+    {
+      "level_id": "akari-v2-012",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 13,
+      "number": 12,
+      "name": "第12关",
+      "difficulty": "campaign",
+      "focus": "减少数字提示",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 256000,
+      "t2_ms": 512000,
+      "puzzle": {
+        "rows": 8,
+        "cols": 8,
+        "map": [
+          ".2....00",
+          "..1.....",
+          "0......1",
+          "..200...",
+          ".#..#.1.",
+          "..30.2.1",
+          ".2.#....",
+          "00.#..#."
+        ],
+        "checksum": "0d567f1dd46f1b887852210b3fe2bf48a650d1928b4800e19d5349bf25eb8856"
+      }
+    },
+    {
+      "level_id": "akari-v2-013",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 14,
+      "number": 13,
+      "name": "第13关",
+      "difficulty": "campaign",
+      "focus": "跨区联动",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 324000,
+      "t2_ms": 648000,
+      "puzzle": {
+        "rows": 9,
+        "cols": 9,
+        "map": [
+          "...#..1.1",
+          ".2.......",
+          "..0..1..#",
+          "..0.1....",
+          "1...2....",
+          "......#1.",
+          "......01#",
+          "0...#1#..",
+          "..2.#..#."
+        ],
+        "checksum": "68de8f0797980f3320dff47c94bbbb84d282725f70d4349c547006fa163d9c0c"
+      }
+    },
+    {
+      "level_id": "akari-v2-014",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 15,
+      "number": 14,
+      "name": "第14关",
+      "difficulty": "campaign",
+      "focus": "完整推理链",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 324000,
+      "t2_ms": 648000,
+      "puzzle": {
+        "rows": 9,
+        "cols": 9,
+        "map": [
+          "....2.1..",
+          ".........",
+          "....1....",
+          "..1#...4.",
+          "0.....#..",
+          "#.1..#...",
+          ".1.2##.01",
+          ".1...#.2.",
+          ".....1..#"
+        ],
+        "checksum": "c002a80341b726376cb4746d5e834ef2ba7118248a655ec129a148b8fe5d5799"
+      }
+    },
+    {
+      "level_id": "akari-v2-015",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 2,
+      "reward_policy_version": 1,
+      "order": 16,
+      "number": 15,
+      "name": "第15关",
+      "difficulty": "campaign",
+      "focus": "最终灯塔",
+      "guide": "",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 400000,
+      "t2_ms": 800000,
+      "puzzle": {
+        "rows": 10,
+        "cols": 10,
+        "map": [
+          ".3.1..##.#",
+          "2..1...1#.",
+          "#.1......#",
+          "......#...",
+          ".2...3.4..",
+          "#..1..3..#",
+          "..#..#####",
+          "#.........",
+          "#.02..0.1.",
+          "#0........"
+        ],
+        "checksum": "428e7476ebf11fe4d4a06e69f0e9cd39de236d6c7679723fef093dd8f984115e"
+      }
+    }
+  ]
+}

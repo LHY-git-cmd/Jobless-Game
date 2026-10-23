@@ -88,3 +88,9 @@ docker compose --env-file .env.docker up -d --build --wait --wait-timeout 180
 - 本次覆盖真实 MySQL/Flyway 的容器 HTTP 链路与持久化，不等同于既有四项专用数据库单元/并发联调，也未进行目标服务器部署、容量压测或迁移峰值测量。
 
 Compose 服务依赖与内存限制参考 [Docker 官方说明](https://docs.docker.com/reference/compose-file/services/)，迁移镜像用法参考 [Flyway 官方说明](https://documentation.red-gate.com/fd/flyway-docker-321585710.html)。
+
+## 前端模块与缓存更新
+
+HTML、`/src/` 下 JavaScript 和根目录样式使用 `Cache-Control: no-cache`，浏览器复用前验证 ETag/Last-Modified，未修改时可返回 304；`/assets/` 保留七天缓存，API 继续 no-store。本地 FastAPI 采用同一策略。代码和样式不再手工维护 `?v=`。
+
+更新时成套替换网页与全部模块，在既有维护窗口完成，避免新旧文件混用；宝塔站点须合并最新 Nginx 模板并通过 `nginx -t` 后重载。核验首页、论坛、`/src/main.js`、`/styles.css` 的实际响应头及条件请求，不能仅凭模板宣称生效。旧强缓存可能要到期或一次性清理后才会取得新策略，已打开页面需重新加载。回退时恢复同一版本整套前端及对应配置，保留玩家存档。

@@ -234,7 +234,7 @@ def main():
                     # 三页共用 Cookie，刷新与导航恢复首次显示名。
                     for destination in ["index.html", "ranking.html", "forum.html"]:
                         navigate(destination)
-                        wait("document.querySelector('.auth-user').textContent === 'Player1'")
+                        wait("document.querySelector('.auth-username').textContent === 'Player1'")
                     checks.append("刷新、三页会话恢复及首次显示名保留")
                     click(".auth-logout")
                     wait("!document.querySelector('.auth-open').classList.contains('hidden')")

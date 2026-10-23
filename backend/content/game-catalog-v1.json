@@ -1,0 +1,556 @@
+{
+  "policy": {
+    "version": 1,
+    "level_xp": [
+      0,
+      90,
+      180,
+      270,
+      500,
+      800
+    ],
+    "milestone_xp": {
+      "completion": 30,
+      "star": 10,
+      "three_star_bonus": 20
+    },
+    "theme_stars": 10,
+    "attempt_days": 7,
+    "history_days": 30,
+    "tombstone_days": 7,
+    "room_wait_seconds": 300,
+    "countdown_seconds": 5,
+    "match_seconds": 600,
+    "reconnect_seconds": 30,
+    "draw_ms": 1000,
+    "ticket_seconds": 60
+  },
+  "levels": [
+    {
+      "level_id": "akari-001",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 1,
+      "name": "第一束光",
+      "difficulty": "beginner",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 100000,
+      "t2_ms": 200000,
+      "puzzle": {
+        "rows": 5,
+        "cols": 5,
+        "map": [
+          "...1.",
+          ".....",
+          "0..0.",
+          "0..0#",
+          "0..00"
+        ],
+        "checksum": "2dc303db7952dc67d25eb46b00956b753682309c1b814fa582a352037e8e7aa8"
+      }
+    },
+    {
+      "level_id": "akari-002",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 2,
+      "name": "墙后的光",
+      "difficulty": "beginner",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 100000,
+      "t2_ms": 200000,
+      "puzzle": {
+        "rows": 5,
+        "cols": 5,
+        "map": [
+          "10#.#",
+          ".2..0",
+          "1#3..",
+          "0...0",
+          "#...."
+        ],
+        "checksum": "6ccc5354c696e32648820be5aae54ff777ba9ccd1890374c7cd761142a2e4d16"
+      }
+    },
+    {
+      "level_id": "akari-003",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 3,
+      "name": "浅滩信号",
+      "difficulty": "beginner",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 100000,
+      "t2_ms": 200000,
+      "puzzle": {
+        "rows": 5,
+        "cols": 5,
+        "map": [
+          "00.0.",
+          ".....",
+          "0..2.",
+          "#.2..",
+          "#...0"
+        ],
+        "checksum": "eeba5b9bdf92b2e023831751583db456ff8dc9a4dc447ac2343b36bf68c3d0b7"
+      }
+    },
+    {
+      "level_id": "akari-004",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 4,
+      "name": "相邻的约定",
+      "difficulty": "normal",
+      "minimum_level": 2,
+      "prerequisite_level_id": "akari-003",
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 144000,
+      "t2_ms": 288000,
+      "puzzle": {
+        "rows": 6,
+        "cols": 6,
+        "map": [
+          "#.....",
+          "..#.1.",
+          "0...1.",
+          "01#...",
+          "#.21#1",
+          "##.#.."
+        ],
+        "checksum": "e8a73507a5cbc80d7576c0815ce18258066c241e94d478226d379fa6b6c8bb13"
+      }
+    },
+    {
+      "level_id": "akari-005",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 5,
+      "name": "数字回廊",
+      "difficulty": "normal",
+      "minimum_level": 2,
+      "prerequisite_level_id": "akari-003",
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 144000,
+      "t2_ms": 288000,
+      "puzzle": {
+        "rows": 6,
+        "cols": 6,
+        "map": [
+          "1...1.",
+          "0.#..#",
+          "..##..",
+          "..1.2#",
+          "..02#.",
+          "0#...#"
+        ],
+        "checksum": "a37ca1ddd3658983a7e1bea62d51e40ad38217829f6a1fb37e9d2b6d2005f76e"
+      }
+    },
+    {
+      "level_id": "akari-006",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 6,
+      "name": "灯塔小径",
+      "difficulty": "normal",
+      "minimum_level": 2,
+      "prerequisite_level_id": "akari-003",
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 144000,
+      "t2_ms": 288000,
+      "puzzle": {
+        "rows": 6,
+        "cols": 6,
+        "map": [
+          ".2....",
+          "...1..",
+          ".....1",
+          "1.....",
+          "..00#0",
+          ".10#.1"
+        ],
+        "checksum": "c893de2e5082b5ddf337875dad8bbe52a1f1c36c817ec83447dc66d798e6c775"
+      }
+    },
+    {
+      "level_id": "akari-007",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 7,
+      "name": "交叉光影",
+      "difficulty": "normal",
+      "minimum_level": 3,
+      "prerequisite_level_id": "akari-006",
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 196000,
+      "t2_ms": 392000,
+      "puzzle": {
+        "rows": 7,
+        "cols": 7,
+        "map": [
+          "..1..#.",
+          "....1..",
+          ".0.0##1",
+          "0...0.1",
+          "102#0..",
+          ".3..0.#",
+          "...0..#"
+        ],
+        "checksum": "41abfdb250a3d40fcd30fd68774c960e39ee0cddf57762e616c98c35ba1a1298"
+      }
+    },
+    {
+      "level_id": "akari-008",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 8,
+      "name": "深蓝回声",
+      "difficulty": "normal",
+      "minimum_level": 3,
+      "prerequisite_level_id": "akari-006",
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 196000,
+      "t2_ms": 392000,
+      "puzzle": {
+        "rows": 7,
+        "cols": 7,
+        "map": [
+          "...#1..",
+          "..1....",
+          "...13.#",
+          "..##.2.",
+          "2#..31.",
+          ".2....1",
+          "......."
+        ],
+        "checksum": "1a8e451aebfb92be60950de783d3b4d3d1089242ec7c5cd26c6cea2110315822"
+      }
+    },
+    {
+      "level_id": "akari-009",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 9,
+      "name": "群岛之光",
+      "difficulty": "normal",
+      "minimum_level": 3,
+      "prerequisite_level_id": "akari-006",
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 256000,
+      "t2_ms": 512000,
+      "puzzle": {
+        "rows": 8,
+        "cols": 8,
+        "map": [
+          "..2.....",
+          "##.3..0.",
+          "#...3...",
+          "11#..3..",
+          ".#.##..#",
+          "#.....1.",
+          ".01..1#.",
+          "...0...1"
+        ],
+        "checksum": "ce09ebddf21fd65848d1de44e8ae8dbec07485fd710c6d4728015ad785f781b9"
+      }
+    },
+    {
+      "level_id": "akari-010",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 10,
+      "name": "远方灯塔",
+      "difficulty": "normal",
+      "minimum_level": 4,
+      "prerequisite_level_id": "akari-009",
+      "modes": [
+        "campaign"
+      ],
+      "t3_ms": 400000,
+      "t2_ms": 800000,
+      "puzzle": {
+        "rows": 10,
+        "cols": 10,
+        "map": [
+          "..0......1",
+          "...1..#...",
+          "..#.#0#.0.",
+          ".1...##...",
+          "1.#.2.2...",
+          "0...#.0...",
+          "....#000..",
+          "1.2.......",
+          "#11...0..2",
+          "....1#...."
+        ],
+        "checksum": "b397d7c638aa5027e7e3227b049f6a0e504e8dfb6d43a0a26dbd8a4892aaaffa"
+      }
+    },
+    {
+      "level_id": "mine-beginner-001",
+      "game_id": "mine",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 1,
+      "name": "扫雷初级",
+      "difficulty": "beginner",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "qualification"
+      ],
+      "puzzle": {
+        "rows": 10,
+        "cols": 10,
+        "mines": 10,
+        "checksum": "8a54e0fae2c6d39d77e9b084adbbf099ef43c60ecfd6fdfe0bbe06ab1b75bbd2"
+      }
+    },
+    {
+      "level_id": "sudoku-beginner-001",
+      "game_id": "sudoku",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 1,
+      "name": "数独初级",
+      "difficulty": "beginner",
+      "minimum_level": 1,
+      "prerequisite_level_id": null,
+      "modes": [
+        "qualification"
+      ],
+      "puzzle": {
+        "rows": 9,
+        "cols": 9,
+        "values": [
+          5,
+          3,
+          0,
+          0,
+          7,
+          0,
+          0,
+          0,
+          0,
+          6,
+          0,
+          0,
+          1,
+          9,
+          5,
+          0,
+          0,
+          0,
+          0,
+          9,
+          8,
+          0,
+          0,
+          0,
+          0,
+          6,
+          0,
+          8,
+          0,
+          0,
+          0,
+          6,
+          0,
+          0,
+          0,
+          3,
+          4,
+          0,
+          0,
+          8,
+          0,
+          3,
+          0,
+          0,
+          1,
+          7,
+          0,
+          0,
+          0,
+          2,
+          0,
+          0,
+          0,
+          6,
+          0,
+          6,
+          0,
+          0,
+          0,
+          0,
+          2,
+          8,
+          0,
+          0,
+          0,
+          0,
+          4,
+          1,
+          9,
+          0,
+          0,
+          5,
+          0,
+          0,
+          0,
+          0,
+          8,
+          0,
+          0,
+          7,
+          9
+        ],
+        "checksum": "52b7f1db72a69d9a651a39656c548e6909c811af961b5dec2500465a70f7d0a2"
+      }
+    }
+  ],
+  "pk_puzzles": [
+    {
+      "level_id": "pk-akari-001",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 11,
+      "name": "竞速灯塔",
+      "difficulty": "normal",
+      "minimum_level": 4,
+      "prerequisite_level_id": "akari-009",
+      "modes": [
+        "pk"
+      ],
+      "t3_ms": 196000,
+      "t2_ms": 392000,
+      "puzzle": {
+        "rows": 7,
+        "cols": 7,
+        "map": [
+          "10..#..",
+          ".#..2..",
+          ".....1.",
+          "#..0.2.",
+          ".#.....",
+          ".##1.#.",
+          "0#00..."
+        ],
+        "checksum": "cfd0d85b7f3d1ff574d3c6d388f9d399c1f295f62a3c17e8600ff45ceedb4ede"
+      }
+    },
+    {
+      "level_id": "pk-akari-002",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 12,
+      "name": "竞速灯塔",
+      "difficulty": "normal",
+      "minimum_level": 4,
+      "prerequisite_level_id": "akari-009",
+      "modes": [
+        "pk"
+      ],
+      "t3_ms": 256000,
+      "t2_ms": 512000,
+      "puzzle": {
+        "rows": 8,
+        "cols": 8,
+        "map": [
+          "...0....",
+          ".2...1#.",
+          ".120...1",
+          "....1#.#",
+          ".....1.#",
+          "..1.#..#",
+          "........",
+          "1..#0#0."
+        ],
+        "checksum": "3e9c020cc64f3e3281b3bd58be426138e55acc55588ce396217b2d61d21a2f7e"
+      }
+    },
+    {
+      "level_id": "pk-akari-003",
+      "game_id": "akari",
+      "level_version": 1,
+      "rules_version": 1,
+      "reward_policy_version": 1,
+      "order": 13,
+      "name": "竞速灯塔",
+      "difficulty": "normal",
+      "minimum_level": 4,
+      "prerequisite_level_id": "akari-009",
+      "modes": [
+        "pk"
+      ],
+      "t3_ms": 256000,
+      "t2_ms": 512000,
+      "puzzle": {
+        "rows": 8,
+        "cols": 8,
+        "map": [
+          "#..0#...",
+          ".#.1...1",
+          "1..0.0.0",
+          "1....2..",
+          "...#1.3.",
+          ".1......",
+          ".....1.2",
+          ".2...1.."
+        ],
+        "checksum": "81585bba3367fd0a7bb78902244b733df17b08677f593bcaa7673ce2ee187930"
+      }
+    }
+  ]
+}

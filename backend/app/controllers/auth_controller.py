@@ -69,14 +69,14 @@ async def login(payload: LoginRequest, request: Request, response: Response, db:
     enforce_same_origin(request)
     user, created, raw_token, expires_at = await auth_service.login(payload, client_key(request), db, settings)
     set_session_cookie(response, raw_token, settings, expires_at)
-    return LoginResponse(user=UserResponse(id=user.id, username=user.username, avatar_id=user.avatar_id or 1), created=created)
+    return LoginResponse(user=UserResponse(id=user.id, player_id=user.player_id, username=user.username, avatar_id=user.avatar_id or 1), created=created)
 
 
 @router.get("/me", response_model=UserResponse)
 async def me(request: Request, db: Session = Depends(get_db)):
     """提取 Cookie 后查询当前用户，仅输出公开字段。"""
     user = await auth_service.get_current_user(request.cookies.get(settings.session_cookie_name), db)
-    return UserResponse(id=user.id, username=user.username, avatar_id=user.avatar_id or 1)
+    return UserResponse(id=user.id, player_id=user.player_id, username=user.username, avatar_id=user.avatar_id or 1)
 
 
 @router.post("/logout", status_code=204)

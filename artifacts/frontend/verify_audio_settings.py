@@ -51,10 +51,10 @@ def main():
                     evaluate(f"(() => {{const r=document.getElementById('settings-{name}-volume'); r.value={value!r}; r.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
 
                 command("Page.navigate", {"url": base + "index.html"})
-                wait_for(evaluate, "document.querySelector('.auth-user')?.textContent === '恢复测试'")
+                wait_for(evaluate, "document.querySelector('.auth-username')?.textContent === '恢复测试'")
                 assert evaluate("document.querySelector('.auth-user').tagName") == "BUTTON"
                 assert evaluate("document.getElementById('global-music') === null")
-                click(".auth-user")
+                click(".auth-settings")
                 assert evaluate("document.getElementById('game-settings').open")
                 assert evaluate("document.getElementById('settings-music-enabled').getAttribute('aria-checked')") == "true"
                 assert evaluate("document.getElementById('settings-effects-enabled').getAttribute('aria-checked')") == "true"
@@ -82,10 +82,10 @@ def main():
                 click("#settings-music-enabled")
                 key("Escape", "Escape", 27)
                 assert evaluate("!document.getElementById('game-settings').open")
-                assert evaluate("document.activeElement.classList.contains('auth-user')")
+                assert evaluate("document.activeElement.classList.contains('auth-settings')")
                 command("Page.reload")
-                wait_for(evaluate, "document.querySelector('.auth-user')?.textContent === '恢复测试'")
-                click(".auth-user")
+                wait_for(evaluate, "document.querySelector('.auth-username')?.textContent === '恢复测试'")
+                click(".auth-settings")
                 assert evaluate("document.getElementById('settings-music-enabled').getAttribute('aria-checked')") == "false"
                 assert evaluate("document.getElementById('settings-effects-enabled').getAttribute('aria-checked')") == "false"
                 assert evaluate("document.getElementById('settings-music-value').textContent") == "40%"
@@ -97,7 +97,7 @@ def main():
                 assert evaluate("document.getElementById('mine-sound').textContent") == "音效：关"
                 click("#mine-sound")
                 click("#back-button")
-                click(".auth-user")
+                click(".auth-settings")
                 assert evaluate("document.getElementById('settings-effects-enabled').getAttribute('aria-checked')") == "true"
                 for width, height, suffix in [(1280, 1000, "desktop"), (375, 812, "mobile"), (812, 375, "landscape")]:
                     command("Emulation.setDeviceMetricsOverride", {"width": width, "height": height, "deviceScaleFactor": 1, "mobile": width < 900})
@@ -106,12 +106,12 @@ def main():
                     png = command("Page.captureScreenshot", {"format": "png"})["data"]
                     (ROOT / f"artifacts/frontend/audio-settings-{suffix}.png").write_bytes(base64.b64decode(png))
                 command("Page.navigate", {"url": base + "ranking.html"})
-                wait_for(evaluate, "document.querySelector('.auth-user')?.textContent === '恢复测试'")
-                click(".auth-user")
+                wait_for(evaluate, "document.querySelector('.auth-username')?.textContent === '恢复测试'")
+                click(".auth-settings")
                 assert evaluate("document.getElementById('settings-music-value').textContent") == "40%"
                 assert evaluate("document.getElementById('settings-effects-value').textContent") == "71%"
                 assert evaluate("document.getElementById('global-music') === null")
-        print("浏览器验收：用户名设置入口、默认开启、背景/音效独立控制、实际音量、刷新跨页、键盘与手机布局均通过。")
+        print("浏览器验收：独立齿轮设置入口、默认开启、背景/音效独立控制、实际音量、刷新跨页、键盘与手机布局均通过。")
     finally:
         server.shutdown()
         server.server_close()

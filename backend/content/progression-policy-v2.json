@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "level_xp": [
+    0,
+    18,
+    36,
+    54,
+    72,
+    90
+  ],
+  "countdown_seconds": 3
+}

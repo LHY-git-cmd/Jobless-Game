@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b3c"><title>竞技模式 · 无职游戏</title>
+  <link rel="icon" href="./favicon.ico"><link rel="stylesheet" href="./styles/base.css"><link rel="stylesheet" href="./styles/pages/journey.css">
+  <link rel="stylesheet" href="./styles/pages/arena.css"><link rel="stylesheet" href="./styles/components/energy.css"><link rel="stylesheet" href="./styles/components/navigation.css">
+</head>
+<body>
+  <div class="world-background" aria-hidden="true"></div>
+  <div id="landing" class="page">
+    <header class="landing-header">
+      <div class="player-profile" data-player-profile aria-label="账号与成长"></div>
+      <nav class="site-nav" aria-label="主导航"><a href="./index.html">首页</a><a href="./pk.html" aria-current="page">竞技模式</a></nav>
+      <div class="auth-controls" aria-label="账号"></div>
+    </header>
+    <main class="arena-content" aria-labelledby="arena-title">
+      <div class="arena-heading"><div><p class="eyebrow">同场较量 / ARENA</p><h1 id="arena-title">竞技模式</h1></div><div class="arena-time"><span id="arena-clock-label">等待开始</span><strong id="arena-clock">00:00</strong></div></div>
+      <div class="arena-player-meta"><span id="arena-own-id"></span><span>竞技积分 <strong id="arena-points">100</strong></span><a href="./ranking.html?category=points">积分排行 ↗</a></div>
+      <section class="arena-lobby" aria-label="双人竞技大厅">
+        <div class="arena-versus">
+          <div class="arena-player"><div id="arena-self-avatar" class="arena-avatar"></div><strong id="arena-self-name">请先登录</strong><span id="arena-self-status">未准备</span></div>
+          <span class="arena-vs" aria-hidden="true">VS</span>
+          <div class="arena-player"><button id="arena-invite-open" class="arena-avatar arena-add" type="button" aria-label="搜索玩家并邀请对战" title="搜索玩家并邀请对战"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 6v20M6 16h20"/></svg></button><div id="arena-opponent-avatar" class="arena-avatar" hidden></div><strong id="arena-opponent-name">邀请一位对手</strong><span id="arena-opponent-status">或开始自动匹配</span></div>
+        </div>
+        <div class="arena-controls"><button id="arena-action" class="journey-primary" type="button">开始匹配</button><div class="arena-mode"><label for="arena-mode">选择模式</label><select id="arena-mode"><option value="mine">扫雷</option><option value="akari" selected>照明</option><option value="sudoku">数独</option></select></div></div>
+        <p id="arena-message" class="journey-status" role="status">正在确认竞技资格…</p>
+        <p id="arena-connection" class="arena-muted" role="status"></p>
+        <div class="arena-secondary"><button id="arena-refresh" type="button" aria-label="刷新竞技状态" title="刷新竞技状态"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 6.1A8 8 0 0 1 19.8 12M4.2 12A8 8 0 0 0 17.9 17.9"/></svg></button><button id="arena-leave" type="button" hidden>离开房间</button><button id="arena-cancel-invite" type="button" hidden>取消邀请</button><a class="journey-link" href="./index.html">返回首页 ↗</a></div>
+      </section>
+      <section id="arena-game" class="journey-panel" hidden aria-label="竞技棋盘"><div class="section-heading"><h2 id="arena-game-title">对局进行中</h2><span>比赛上限10分钟</span></div><p id="arena-game-help" class="arena-muted"></p><div id="arena-board" class="formal-viewport" role="region" tabindex="0" aria-label="竞技棋盘，可在区域内滚动"></div><button id="arena-submit" class="journey-primary" type="button">提交解答</button><p id="arena-result" class="formal-result" role="status" hidden></p></section>
+      <section id="arena-invitations" class="journey-panel" hidden aria-labelledby="arena-invitations-title"><h2 id="arena-invitations-title">收到的对战邀请</h2><div id="arena-incoming-list"></div></section>
+      <p class="arena-rules">5级解锁 · 初始100积分 · 胜利+20 / 失败−10 · 平局不变<br>双方准备后3秒开局；10分钟内先正确完成获胜，1秒内均完成算平局。踩雷、对局中退出判负，断线宽限30秒。</p>
+    </main>
+    <dialog id="arena-search-dialog" class="journey-rules" aria-labelledby="arena-search-title"><h2 id="arena-search-title">邀请玩家</h2><form id="arena-search-form"><label for="arena-search-query">8位玩家ID或完整用户名</label><div class="arena-search-row"><input id="arena-search-query" required maxlength="64" autocomplete="off"><button type="submit">搜索</button></div></form><p id="arena-search-message" role="status">仅可邀请在线、空闲且已达5级的玩家。</p><div id="arena-search-results"></div><button id="arena-search-close" type="button">关闭</button></dialog>
+    <dialog id="arena-leave-dialog" class="journey-rules" aria-labelledby="arena-leave-title"><h2 id="arena-leave-title">确认退出对局？</h2><p id="arena-leave-description"></p><div class="journey-actions"><button id="arena-leave-cancel" type="button" autofocus>继续对局</button><button id="arena-leave-confirm" class="journey-primary" type="button">确认退出</button></div></dialog>
+    <footer class="landing-footer"><span>光影之间，各有精彩。</span></footer>
+  </div>
+  <script type="module" src="./src/pages/pk.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+/* 按整改前顺序装配，保持已有层叠与响应式覆盖。 */
+@import "./components/layout.css";
+@import "./components/legacy-games.css";
+@import "./components/responsive.css";
+@import "./components/account.css";
+@import "./components/ranking.css";
+@import "./components/personal-records.css";
+@import "./components/settings-avatar.css";
+@import "./components/forum.css";

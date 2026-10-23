@@ -1,0 +1,42 @@
+/* 竞技大厅沿用闯关页账号与导航；双人位置、主操作和时间对应用户手绘。 */
+.arena-content { width:min(100%,960px); margin:28px auto 0; }
+.arena-heading { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:20px 0 24px; }
+.arena-heading h1 { margin:0; font:600 clamp(42px,6vw,72px)/1.3 "Songti SC",SimSun,serif; letter-spacing:6px; }
+.arena-time { display:flex; flex-direction:column; gap:8px; text-align:right; color:var(--muted); }
+.arena-time strong { font:600 clamp(28px,4vw,42px)/1.3 Georgia,serif; color:var(--gold); font-variant-numeric:tabular-nums; }
+.arena-time { flex:none; }.arena-heading>div:first-child { min-width:0; }
+.arena-player-meta { display:flex; flex-wrap:wrap; align-items:center; gap:12px 24px; margin-bottom:20px; color:var(--muted); font-size:14px; }
+.arena-player-meta strong,.arena-player-meta a { color:var(--gold); }
+.arena-lobby { padding:clamp(20px,4vw,44px); border:1px solid var(--line); border-radius:20px; background:color-mix(in srgb,var(--surface) 94%,transparent); box-shadow:0 18px 60px #02121b44; }
+.arena-versus { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:clamp(12px,4vw,48px); padding:18px 0 40px; }
+.arena-player { display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; min-width:0; }
+.arena-player>strong { font-size:clamp(17px,2.5vw,24px); overflow-wrap:anywhere; max-width:100%; }
+.arena-player>span { color:var(--muted); font-size:14px; }
+.arena-avatar { display:grid; place-items:center; width:clamp(80px,12vw,124px); height:clamp(80px,12vw,124px); border:1px solid #b8cdd666; border-radius:24px; background:var(--surface-raised); overflow:hidden; }
+.arena-avatar img { display:block; width:100%; height:100%; object-fit:cover; margin:0; border:0; border-radius:0; }
+.arena-add { color:var(--gold); padding:24px; border-style:dashed; }
+.arena-add svg { width:100%; height:100%; fill:none; stroke:currentColor; stroke-width:1.5; }
+.arena-vs { color:var(--gold); font:600 clamp(28px,5vw,48px)/1 Georgia,serif; }
+.arena-controls { display:grid; grid-template-columns:minmax(160px,1fr) minmax(180px,1fr); gap:24px; align-items:end; padding-top:24px; border-top:1px solid var(--line); }
+#arena-action { min-height:56px; font-size:19px; }
+.arena-mode { display:grid; gap:8px; color:var(--muted); font-size:13px; }
+.arena-mode select,.arena-search-row input { width:100%; min-width:0; min-height:48px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-raised); color:var(--paper); font:inherit; }
+.arena-mode select:focus-visible,.arena-search-row input:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+.arena-secondary { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.arena-secondary a { margin-left:auto; }
+#arena-refresh { width:44px; height:44px; padding:0; font-size:26px; color:var(--gold); }
+.arena-muted,.arena-rules { color:var(--muted); line-height:1.8; font-size:14px; }
+.arena-rules { margin:24px 0 40px; }
+#arena-game,#arena-invitations { margin-top:24px; }
+.arena-search-row { display:flex; gap:8px; margin-top:10px; }
+.arena-search-result,.arena-incoming { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:16px 0; border-top:1px solid var(--line); }
+.arena-search-result img { width:44px; height:44px; border-radius:50%; }.arena-search-result>span { flex:1; min-width:80px; overflow-wrap:anywhere; }
+.arena-search-result button { margin-left:auto; }
+.formal-board.formal-mine .formal-cell { font-weight:700; }
+@media(max-width:600px) {
+  .arena-content { margin-top:8px; }.arena-heading { gap:12px; }.arena-heading h1 { font-size:clamp(30px,9vw,40px); letter-spacing:1px; }
+  .arena-time { font-size:12px; }.arena-time strong { font-size:28px; }.arena-versus { padding-bottom:28px; gap:12px; }
+  .arena-avatar { border-radius:18px; }.arena-controls { grid-template-columns:1fr; gap:18px; }
+  .arena-mode { grid-row:1; }.arena-player>span { font-size:12px; }.arena-secondary { gap:8px; }
+  .arena-search-row { flex-wrap:wrap; }.arena-search-row input { flex:1; }.arena-search-row button { flex:none; }
+}

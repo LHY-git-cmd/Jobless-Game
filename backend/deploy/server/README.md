@@ -114,3 +114,9 @@ Flyway 迁移通过不代表数据库行为完全相同，真实登录、并发�
 - Docker Desktop 验证通过共享独立测试容器网络模拟本机回环，未启用 Desktop 宿主机网络；目标 Linux 的宿主机网络、防火墙、SELinux、宝塔实际配置及资源峰值仍须服务器验收。
 - 所有数据仅存在独立本机测试库中，不接触服务器数据库。详细日志位于被 Git 忽略的 `artifacts/server-deploy/`。
 - 后续补充 HTTP UUID 修复：前端 50 项自动化测试通过；`artifacts/frontend/verify_http_start.py` 使用真正非安全的 HTTP 域名页面完成登录、开局失败重试及重新开始共 4 项验证，无未处理异常。HTTP 浏览器测试使用临时 SQLite，仅验证浏览器限制和交互，不替代前述 MySQL 验收。
+
+## 前端模块与缓存更新
+
+HTML、`/src/` 下 JavaScript 和根目录样式使用 `Cache-Control: no-cache`，浏览器复用前验证 ETag/Last-Modified，未修改时可返回 304；`/assets/` 保留七天缓存，API 继续 no-store。本地 FastAPI 采用同一策略。代码和样式不再手工维护 `?v=`。
+
+更新时成套替换网页与全部模块，在既有维护窗口完成，避免新旧文件混用；宝塔站点须合并最新 Nginx 模板并通过 `nginx -t` 后重载。核验首页、论坛、`/src/main.js`、`/styles.css` 的实际响应头及条件请求，不能仅凭模板宣称生效。旧强缓存可能要到期或一次性清理后才会取得新策略，已打开页面需重新加载。回退时恢复同一版本整套前端及对应配置，保留玩家存档。

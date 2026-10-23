@@ -1,0 +1,14 @@
+/* 同源页面选择启用原生跨页过渡；保留链接默认行为，不人为延迟点击或拦截返回。
+ * 浏览器条件与用法：https://developer.chrome.com/docs/web-platform/view-transitions/cross-document
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  .world-background { view-transition-name: island-backdrop; }
+  ::view-transition-old(root) { animation: portal-leave 150ms ease-out both; }
+  ::view-transition-new(root) { animation: portal-arrive 240ms cubic-bezier(.2, .7, .2, 1) both; }
+  ::view-transition-group(island-backdrop),
+  ::view-transition-old(island-backdrop),
+  ::view-transition-new(island-backdrop) { animation: none; }
+  @keyframes portal-leave { to { opacity: 0; transform: translateY(-4px); } }
+  @keyframes portal-arrive { from { opacity: 0; transform: translateY(8px); } }
+}

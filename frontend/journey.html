@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b3c"><meta name="description" content="扫雷、照明与数独新版选关页，记录星数、等级与成长。">
+  <title>新版选关 · 无职游戏</title>
+  <link rel="icon" href="./favicon.ico"><link rel="stylesheet" href="./styles/base.css"><link rel="stylesheet" href="./styles/pages/journey.css"><link rel="stylesheet" href="./styles/pages/mine.css"><link rel="stylesheet" href="./styles/pages/sudoku.css"><link rel="stylesheet" href="./styles/pages/akari.css"><link rel="stylesheet" href="./styles/components/energy.css"><link rel="stylesheet" href="./styles/components/navigation.css">
+</head>
+<body>
+  <div class="world-background" aria-hidden="true"></div>
+  <div class="page journey-page catalog-page">
+    <header class="landing-header">
+      <div class="player-profile" data-player-profile aria-label="账号与成长"></div>
+      <div class="journey-header-actions">
+        <button type="button" id="journey-refresh" class="journey-refresh" title="刷新资料" aria-label="刷新资料">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 19.8 12M4.2 12A8 8 0 0 0 17.9 17.9"/></svg>
+        </button>
+        <div class="auth-controls" aria-label="账号"></div>
+      </div>
+    </header>
+    <main>
+      <a class="journey-link" href="./challenge.html">← 返回选择游戏</a>
+      <section class="journey-section" aria-labelledby="levels-title">
+        <div class="section-heading"><h1 id="levels-title">选择关卡</h1></div>
+        <div id="catalog-empty" class="catalog-empty">
+          <div id="catalog-art" class="catalog-art" aria-hidden="true"></div><p class="eyebrow">下一段旅程</p>
+          <h2 id="catalog-empty-title">关卡重新设计中</h2><p>原有关卡已暂时下线。<br>新关卡准备好后，会在这里开放选择。</p><a class="journey-link" href="./index.html">回到首页 →</a>
+        </div>
+      </section>
+      <div class="journey-actions"><button type="button" id="journey-login">登录</button></div>
+      <p id="journey-status" class="journey-status" role="status">正在同步账号资料…</p>
+      <!-- 双人竞速与主题面板暂不展示，等待用户后续规划位置。 -->
+      <div class="journey-bottom" hidden>
+        <section class="journey-panel" aria-labelledby="eligibility-title"><p class="eyebrow">一起探索</p><h2 id="eligibility-title">双人竞速</h2><p>完成对应正式关卡即可积累竞速资格，已有资格与通关成果继续保留。</p><div id="journey-qualifications" class="qualification-list"></div><a class="journey-link" href="./pk.html">前往双人竞速 →</a></section>
+        <section class="journey-panel" aria-labelledby="themes-title"><p class="eyebrow">给旅程一点颜色</p><h2 id="themes-title">我的主题</h2><p>已解锁的主题与星数继续保留。</p><div id="journey-cosmetics" class="journey-actions"></div><button type="button" id="theme-preview-reset" hidden>结束预览，恢复已装备主题</button><p id="theme-message" role="status"></p></section>
+      </div>
+    </main>
+    <footer class="landing-footer"><a href="./challenge.html">返回选择游戏 ↗</a><span>下一道谜题，值得等待。</span></footer>
+  </div>
+  <script type="module" blocking="render" src="./src/pages/journey.js"></script>
+</body>
+</html>

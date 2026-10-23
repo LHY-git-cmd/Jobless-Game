@@ -64,6 +64,26 @@ class TransactionTests(TestCase):
         session = self.db.add.call_args_list[-1].args[0]
         self.assertEqual(session.token_hash, hash_session_token(raw))
         self.assertGreater(expires, utc_now() + timedelta(days=6))
+        self.assertEqual(user.player_id, 10000008)
+
+    def test_player_id_is_stable_unique_and_eight_digits(self):
+        """已有主键立即对应公开八位ID，数据库重新加载不改变编号。"""
+        values = [User(id=uid).player_id for uid in (1, 2, 90000000)]
+        self.assertEqual(values, [10000000, 10000001, 99999999])
+        self.assertEqual(User(id=self.user.id).player_id, self.user.player_id)
+
+    def test_registration_rolls_back_when_eight_digit_ids_are_exhausted(self):
+        """容量用尽不能创建九位玩家ID或残留未完成的账号。"""
+        self.db.scalar.return_value = None
+        def assign_exhausted_id():
+            """模拟数据库序列已超出八位编号容量。"""
+            self.db.add.call_args_list[0].args[0].id = 90000001
+        self.db.flush.side_effect = assign_exhausted_id
+        with self.assertRaises(AppError) as error:
+            auth_service.login_transaction(LoginRequest(username="新玩家", password="secret1"), self.db, self.config)
+        self.assertEqual(error.exception.status_code, 503)
+        self.db.rollback.assert_called_once()
+        self.db.commit.assert_not_called()
 
     def test_existing_user_and_wrong_password(self):
         self.db.scalar.return_value = self.user
@@ -108,6 +128,7 @@ class APITests(TestCase):
         with patch.object(auth_service, "login_transaction", return_value=(user, False, "random-token", utc_now() + timedelta(days=7))):
             response = self.client.post("/api/auth/login", json={"username": "玩家", "password": "secret1"})
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["user"]["player_id"], 10000000)
         cookie = response.headers["set-cookie"]
         self.assertIn("HttpOnly", cookie)
         self.assertIn("SameSite=lax", cookie)
@@ -116,6 +137,7 @@ class APITests(TestCase):
         session.user = user
         self.db.scalar.return_value = session
         self.assertEqual(self.client.get("/api/auth/me").json()["username"], "玩家")
+        self.assertEqual(self.client.get("/api/auth/me").json()["player_id"], 10000000)
         self.assertEqual(self.client.post("/api/auth/logout").status_code, 204)
         self.db.execute.assert_called_once()
         self.db.commit.assert_called()

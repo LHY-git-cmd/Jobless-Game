@@ -1,0 +1,16 @@
+/* 首页模式入口沿用海岛卡片；闯关游戏入口在独立页面展示。 */
+.mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mode-card { min-height: 176px; padding: 40px 28px 28px; gap: 24px; }
+.mode-art { display: grid; place-items: center; flex: 0 0 76px; width: 76px; height: 76px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-raised); color: var(--gold); }
+.mode-art svg { width: 48px; height: 48px; }
+.mode-card .level-title { font-size: clamp(24px, 2.4vw, 30px); }
+.mode-card .level-description { font-size: 14px; }
+@media (max-width: 850px) {
+  .mode-card { flex-direction: row; align-items: center; padding: 40px 20px 24px; gap: 16px; }
+  .mode-art { flex-basis: 56px; width: 56px; height: 56px; border-radius: 12px; }
+  .mode-art svg { width: 36px; height: 36px; }
+}
+@media (max-width: 600px) {
+  .mode-grid { grid-template-columns: 1fr; }
+  .mode-card { min-height: 160px; }
+}

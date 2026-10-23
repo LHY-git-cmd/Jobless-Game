@@ -1,0 +1,31 @@
+/* 首页右侧个人档案：与左侧介绍并排，窄屏按文档顺序放到介绍下方。 */
+.landing-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, 400px); align-items: center; gap: clamp(32px, 5vw, 80px); padding: clamp(24px, 4vh, 56px) 0 32px; }
+.landing-intro .landing-hero { padding: 0; min-width: 0; }
+.personal-records { display: flex; flex-direction: column; min-width: 0; min-height: 430px; padding: 24px; border: 1px solid #c2d5dd66; border-top-color: #e6e2ca88; border-radius: 16px; background: #102b3ce8; box-shadow: 0 16px 48px #06162444, inset 0 1px #fff1; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.records-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.records-eyebrow { margin: 0 0 8px; font-size: 10px; letter-spacing: 1.6px; color: var(--gold); }
+.records-header h2 { margin: 0; font-size: 22px; font-weight: 500; letter-spacing: 2px; }
+.records-refresh { flex-shrink: 0; min-height: 44px; padding: 8px 10px; background: transparent; border-color: transparent; color: var(--muted); font-size: 13px; }
+.records-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 18px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: #071e3266; }
+.records-tabs button { min-width: 0; min-height: 44px; padding: 8px 4px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--muted); font-size: 13px; }
+.records-tabs button[aria-selected=true] { color: var(--gold-ink); border-color: var(--gold); background: var(--gold); font-weight: 600; }
+.records-panel { flex: 1; min-width: 0; }
+.records-panel:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 4px; }
+.records-status { margin: 16px 0; color: var(--muted); font-size: 14px; line-height: 1.8; }
+.records-status:empty { display: none; }
+.records-login { margin-top: 8px; color: var(--gold); border-color: #f0d49a66; background: #1d3b4c; font-size: 14px; }
+.records-best { padding: 0 0 16px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.records-best-heading { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 13px; }
+.records-best-mark { font-size: 24px; line-height: 1; color: var(--gold); }
+#records-best-time { display: inline-block; margin: 6px 12px 0 0; color: var(--gold); font-size: 38px; line-height: 1.4; font-weight: 500; }
+.records-best-date { display: inline-block; color: var(--muted); font-size: 12px; }
+.records-breakdown { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.records-recent h3 { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 4px; font-size: 14px; font-weight: 400; }
+.records-recent h3 > span { color: var(--muted); font-size: 12px; }
+.records-list { list-style: none; margin: 0; padding: 0; }
+.records-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 48px; padding: 9px 0; font-variant-numeric: tabular-nums; }
+.records-position { color: #b7c9d3bb; font-size: 11px; }
+.records-date { color: var(--muted); font-size: 12px; }
+.records-badge { display: inline-block; margin-left: 8px; padding: 1px 5px; border: 1px solid #f0d49a55; border-radius: 4px; color: var(--gold); font-size: 10px; line-height: 1.5; }
+.records-list strong { font-size: 16px; font-weight: 500; }
+.records-footer { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.7; }

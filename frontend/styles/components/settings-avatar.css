@@ -1,0 +1,75 @@
+/* 用户名的游戏设置：独立音频开关与原生音量滑块，沿用登录弹窗的材质。 */
+.settings-card .settings-intro { margin: 12px 0 24px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.settings-audio { padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: #071e3244; }
+.settings-audio + .settings-audio { margin-top: 16px; }
+.settings-audio-heading, .settings-volume-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.settings-audio h3 { margin: 0; font-size: 16px; font-weight: 500; }
+.settings-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 10px; font-size: 13px; }
+.settings-toggle[aria-checked="true"] { border-color: #f0d49a88; color: var(--gold); background: #f0d49a12; }
+.settings-switch-track { position: relative; width: 28px; height: 16px; border-radius: 20px; background: #b7c9d366; }
+.settings-switch-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--paper); }
+.settings-toggle[aria-checked="true"] .settings-switch-track { background: var(--gold); }
+.settings-toggle[aria-checked="true"] .settings-switch-track::after { transform: translateX(12px); background: var(--gold-ink); }
+.settings-volume-heading { margin-top: 18px; color: var(--muted); font-size: 13px; }
+.settings-volume-heading output { color: var(--gold); font-variant-numeric: tabular-nums; }
+.settings-audio input[type="range"] { display: block; width: 100%; height: 44px; margin: 4px 0 0; padding: 0; accent-color: var(--gold); cursor: pointer; }
+.settings-audio input[type="range"]:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 6px; }
+.settings-card .settings-note { margin: 22px 0 0; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.7; }
+@media (max-width: 850px) {
+  .landing-intro { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-block: 28px 36px; }
+  .personal-records { width: 100%; min-height: 320px; }
+}
+@media (max-width: 600px) {
+  .landing-intro { padding-top: 30px; }
+  .landing-intro .landing-hero { padding-inline: 8px; }
+  .personal-records { padding: 20px; }
+  .records-header h2 { font-size: 20px; }
+  .records-header { margin-bottom: 16px; }
+  .records-list li { grid-template-columns: 18px minmax(0, 1fr) auto; gap: 6px; }
+  .records-badge { margin-left: 5px; }
+}
+
+/* 预设头像共享磁盘文件；固定尺寸避免加载抖动，账号入口和排行榜保留文字身份。 */
+.avatar-image { display: block; flex: 0 0 auto; object-fit: cover; border-radius: 50%; background: #d4dee4; }
+.avatar-unavailable { visibility: hidden; }
+.auth-user { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px; text-align: left; }
+.auth-user.hidden { display: none; }
+.auth-username { min-width: 0; overflow-wrap: anywhere; }
+.auth-avatar { width: 28px; height: 28px; }
+.ranking-identity { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.ranking-identity > span { min-width: 0; overflow-wrap: anywhere; }
+.settings-avatar { margin-bottom: 20px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: #071e3244; }
+.settings-avatar-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.settings-avatar h3 { margin: 0; color: var(--paper); font-size: 16px; font-weight: 500; }
+.avatar-account-note { color: var(--muted); font-size: 12px; }
+.avatar-current { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+.avatar-preview { width: 64px; height: 64px; flex: 0 0 auto; border: 1px solid #f0d49a88; border-radius: 50%; }
+.avatar-preview .avatar-image { width: 100%; height: 100%; }
+.avatar-caption { margin: 0 0 6px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+/* 头像操作下方右侧展示玩家编号，可直接选中文字用于邀请。 */
+.avatar-player-id { margin: 10px 0 0; color: var(--paper); font-size: 14px; line-height: 1.5; text-align: right; }
+.avatar-player-id span { color: var(--gold); font-size: 16px; font-variant-numeric: tabular-nums; user-select: text; white-space: nowrap; }
+.avatar-expand, .avatar-retry { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+.avatar-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-height: 260px; overflow-y: auto; padding: 5px; margin: 12px -5px 12px; scroll-padding: 5px; }
+.avatar-option { position: relative; width: 100%; min-width: 44px; min-height: 44px; aspect-ratio: 1; padding: 4px; border: 2px solid transparent; border-radius: 14px; background: #102b3c99; }
+.avatar-option .avatar-image { width: 100%; height: 100%; border-radius: 9px; }
+.avatar-option[aria-pressed="true"] { border-color: var(--gold); background: #f0d49a22; }
+.avatar-option[aria-pressed="true"]::after { content: "✓"; position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--gold); color: var(--gold-ink); font-size: 12px; font-weight: 700; }
+.avatar-option:focus-visible, .avatar-expand:focus-visible, .avatar-retry:focus-visible, .avatar-save:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.avatar-save { width: 100%; min-height: 44px; padding: 10px 12px; border-color: #f0d49a88; background: #f0d49a18; color: var(--gold); font-size: 14px; }
+.avatar-retry { margin-bottom: 12px; }
+.avatar-status { min-height: 18px; margin: 10px 0 0; color: #ffdfb4; font-size: 12px; line-height: 1.6; }
+.avatar-status:empty { display: none; }
+.settings-avatar [hidden] { display: none !important; }
+.settings-dialog, .avatar-grid { scrollbar-width: thin; scrollbar-color: #748e99 #17384d; }
+@media (max-width: 600px) {
+  .auth-user { max-width: 132px; gap: 6px; padding-inline: 8px; }
+  .settings-avatar { padding: 14px 12px; }
+  .avatar-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ranking-identity { gap: 6px; }
+  .ranking-identity .avatar-image { width: 28px; height: 28px; }
+}
+@media (max-width: 360px) {
+  .auth-user { max-width: 112px; }
+  .avatar-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

@@ -11,6 +11,7 @@ from ..common.config import Settings, get_settings
 from ..common.exceptions import AppError, ExecutionBusyError
 from ..common.security import PASSWORD_HASHER, hash_password, hash_session_token, new_session_token, utc_now, verify_password
 from ..models.entities import AuthSession, User
+from ..models.entities.user import MAX_PLAYER_ACCOUNT_ID
 from ..models.schemas.auth import LoginRequest
 from ..repositories import session_repository, user_repository
 from .auth_rules import username_key, validate_password, validate_username
@@ -53,6 +54,10 @@ def login_transaction(payload: LoginRequest, db: Session, config: Settings) -> t
         user_repository.add(db, user)
         try:
             db.flush()
+            # 八位编号耗尽时回滚新账号，不允许分配九位ID或复用旧号。
+            if user.id > MAX_PLAYER_ACCOUNT_ID:
+                db.rollback()
+                raise AppError(503, "玩家编号已用尽，暂时无法创建新账号。")
             created = True
         except IntegrityError:
             db.rollback()
@@ -102,6 +107,8 @@ def logout_transaction(raw_token: str | None, db: Session) -> None:
     if raw_token:
         session_repository.remove_by_token_hash(db, hash_session_token(raw_token))
         db.commit()
+        from .pk_runtime import runtime
+        runtime.revoke(raw_token)
 
 
 async def logout(raw_token: str | None, db: Session) -> None:

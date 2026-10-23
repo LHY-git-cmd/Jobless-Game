@@ -1,6 +1,6 @@
 # 项目目录树
 
-更新日期：2026-10-21。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
+更新日期：2026-10-23。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
 
 ```text
 crawler-portal/                            # 项目根目录：前端、登录后端、素材及文档
@@ -17,6 +17,26 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │
 ├── .tools/                               # 本地辅助工具与临时提交辅助脚本；不纳入版本管理
 ├── backend/                              # FastAPI 登录、独立关卡、排行榜、Flyway 与部署支持
+│   ├── content/                          # 冻结关卡、规则门槛与独立PK题库
+│   │   ├── game-catalog-v1.json           # 十关照明、三题PK、历史初级扫雷/数独与建议参数v1
+│   │   ├── progression-policy-v2.json     # 0/18/36/54/72/90等级阈值与3秒竞技倒计时
+│   │   ├── campaign-rewards-v3.json       # 普通关首次三星当局新增经验双倍的追加冻结版本
+│   │   ├── arena-puzzles-v1.json          # 独立照明10×10及简单数独竞技题池
+│   │   ├── mine-catalog-v2.json           # 教学与四档各三规格，共十三项扫雷、时限及逐星经验
+│   │   ├── sudoku-catalog-v2.json         # 数独五档十三题、尺寸、推理技巧、时限及逐星经验
+│   │   ├── akari-catalog-v2.json          # 照明入门及第1～15关的冻结地图和参数
+│   │   ├── akari-audit-v2.json            # 照明离线逻辑推理及内部递进度量，不下发浏览器
+│   │   ├── akari-catalog-v3.json          # 七步入门及第10～15关10×10的追加版本目录
+│   │   ├── akari-catalog-v4.json          # 照明按时间评星、普通关统一2/4/6经验的版本目录
+│   │   ├── akari-audit-v3.json            # 最新16题的离线唯一解与递进推理审计
+│   │   └── sudoku-audit-v2.json           # 开发机离线唯一解和逐步推理记录，不下发浏览器
+│   ├── sudoku_content.py                 # 有界离线构造、两解搜索及四档逻辑分级器
+│   ├── akari_content.py                  # 照明确定性逻辑、单层反证、唯一性及16关离线构建
+│   ├── content_check.py                  # 开发机唯一解、初级单候选与只生成新文件的题库工具
+│   ├── cleanup_game_history.py           # 有界历史清理，保留永久成长与资格
+│   ├── export_game_contract.py           # 从实际v1路由和DTO导出/核对契约草案
+│   ├── verify_progression_mysql.py       # 独立临时MySQL5.7/Flyway及并发联调入口
+│   ├── probe_pk_capacity.py              # 专用测试会话HTTP/SSE共存观测，默认30分钟
 │   ├── README.md                         # 本地运行、迁移、宝塔部署及资源验收说明
 │   ├── .env.example                      # 不含真实凭据的应用配置模板
 │   ├── flyway.conf.example               # 不含真实凭据的 Flyway 配置模板
@@ -33,6 +53,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── auth_controller.py        # 登录、当前用户、注销路由及同源校验
 │   │   │   ├── avatar_controller.py      # 当前登录账号更换预设头像的同源接口
 │   │   │   ├── forum_controller.py       # 论坛公开读取、同源写入及账号消息路由
+│   │   │   ├── progression_controller.py # 正式关卡、尝试、成长、资格和外观REST资源
+│   │   │   ├── pk_controller.py          # 房间、成员、提交、匹配票及不持DB的SSE响应
+│   │   │   ├── pk_ingress.py             # 终盘入口时间/待处理任务登记与取消清理
 │   │   │   └── ranking_controller.py     # 挑战创建/重开/通关、个人记录与公开排行榜路由
 │   │   ├── services/                    # 业务层：流程、事务与登录专属资源限制
 │   │   │   ├── __init__.py               # 业务层包标识
@@ -41,41 +64,73 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── forum_service.py          # 论坛幂等、频率、归属、点赞与通知原子事务
 │   │   │   ├── auth_rules.py             # 用户名计数、账号键和密码长度规则
 │   │   │   ├── login_limiter.py          # 有界单进程登录频率保护
+│   │   │   ├── game_rules.py             # 照明/数独终盘验证、毫秒星级及版本化逐星经验
+│   │   │   ├── progression_service.py    # 矩形扫雷/教学/首击安全、冻结计时及幂等奖励/资格事务
+│   │   │   ├── energy_service.py         # 账号体力、30分钟恢复、普通扣返及免费教学
+│   │   │   ├── pk_service.py             # 三模式房间、HTTP先后排序、积分及分池FIFO事务
+│   │   │   ├── arena_service.py          # 账号积分、唯一结算、精确用户搜索及定向邀请
+│   │   │   ├── arena_games.py            # 三模式竞技题池与服务端隐藏扫雷揭格
+│   │   │   ├── pk_runtime.py             # 有限SSE队列、接收窗口及单进程运行索引
+│   │   │   ├── pk_lifecycle.py           # 唯一调度任务、重启作废和有界状态转换
 │   │   │   └── ranking_service.py        # 独立关卡重开/通关、幂等与单项成绩保留事务
 │   │   ├── repositories/                # 数据访问层：对应 Mapper，不提交业务事务
 │   │   │   ├── __init__.py               # 数据访问层包标识
 │   │   │   ├── user_repository.py        # 用户查询和保存
 │   │   │   ├── session_repository.py     # 会话查询、保存、注销与过期分批删除
 │   │   │   ├── forum_repository.py       # 当前锁定读、有限游标、作者/点赞关联及通知SQL
+│   │   │   ├── progression_repository.py # 当前锁定读、有限列表与固定顺序用户锁
 │   │   │   └── ranking_repository.py     # 用户行锁、进度/成绩读写、保留与榜单分页 SQL
 │   │   ├── models/                      # 模型层：数据库实体和接口数据结构
 │   │   │   ├── __init__.py               # 模型层包标识
 │   │   │   ├── entities/                # ORM 数据库实体，不自动建表
 │   │   │   │   ├── __init__.py           # 注册用户、会话、排行榜及论坛实体映射
-│   │   │   │   ├── user.py               # 用户实体
+│   │   │   │   ├── user.py               # 用户实体及从10000000起递增的固定八位玩家ID
 │   │   │   │   ├── auth_session.py       # 账号会话实体
 │   │   │   │   ├── forum.py              # 帖子、评论、两类点赞与站内通知五表实体
+│   │   │   │   ├── arena.py               # 竞技积分摘要、永久唯一流水与有期邀请
+│   │   │   │   ├── progression.py        # 关卡版本、尝试/快照、永久成长/资格/幂等凭据
+│   │   │   │   ├── cosmetic.py           # 有限主题目录、永久权益与装配版本
+│   │   │   │   ├── pk.py                 # 双人房间、成员、不可变提交和唯一占用
+│   │   │   │   ├── matchmaking.py        # 有界匹配票及到达/过期索引
 │   │   │   │   └── ranking.py            # 当前轮次、不可变通关快照与最佳摘要实体
 │   │   │   └── schemas/                 # 请求 DTO 与脱敏响应模型
 │   │   │       ├── __init__.py           # 接口模型包标识
 │   │   │       ├── auth.py               # 登录输入、用户输出及登录结果
 │   │   │       ├── avatar.py             # 仅接收清单有效编号的严格头像写入请求
 │   │   │       ├── forum.py              # 文字长度/作者隔离、UUID幂等及已读边界DTO
+│   │   │       ├── progression.py        # 正式尝试/终盘/外观严格DTO，不接收客户端奖励
+│   │   │       ├── pk.py                 # 三模式/邀请/在线心跳及准备终盘严格DTO
 │   │   │       └── ranking.py            # 严格挑战请求 DTO 和脱敏成绩/榜单响应模型
 │   │   └── common/                      # 公共层：跨业务基础设施，不反向依赖业务
 │   │       ├── __init__.py               # 公共层包标识
 │   │       ├── config.py                 # 环境配置，保持读取 backend/.env
+│   │       ├── game_catalog.py           # 版本化题库与公开元数据读取，不提前发题
 │   │       ├── avatar_catalog.py         # 缓存共用清单编号并核验静态资源存在性
 │   │       ├── database.py               # 实体基类、有界连接池和会话生命周期
 │   │       ├── security.py               # Argon2id、token 摘要与 UTC 时间工具
 │   │       ├── exceptions.py             # 公共业务异常及统一 HTTP 异常处理
-│   │       ├── middleware.py             # 请求体上限及 API 安全响应头
+│   │       ├── middleware.py             # 请求体上限、API安全响应头及本地静态缓存验证
 │   │       └── concurrency.py            # 有界执行槽、线程池和取消时的资源保护
 │   ├── migrations/                       # Flyway 版本化 SQL，执行后不可直接修改
 │   │   ├── V1__create_auth_tables.sql     # 用户、会话与相关唯一/到期索引
 │   │   ├── V2__create_ranking_tables.sql  # 当前轮次、成绩、最佳摘要及排序/去重索引
 │   │   ├── V3__add_user_avatar.sql       # 用户预设头像编号，新老账号默认001
-│   │   └── V4__create_forum_tables.sql   # 文字论坛、点赞、站内通知及外键/去重/分页索引
+│   │   ├── V4__create_forum_tables.sql   # 文字论坛、点赞、站内通知及外键/去重/分页索引
+│   │   ├── V5__create_progression_tables.sql # 正式尝试/成长/资格和冻结题库种子
+│   │   ├── V6__create_cosmetic_tables.sql # 主题目录、永久权益与装配配置
+│   │   ├── V7__create_pk_room_tables.sql  # 双人房间、成员、提交与用户占用
+│   │   ├── V8__create_matchmaking_tickets.sql # 排队票及占用票据关联
+│   │   ├── V9__index_game_history_retention.sql # 终态时间索引，支持有界清理
+│   │   ├── V10__publish_mine_difficulties.sql # 扫雷五档原七项不可变关卡与独立奖励定义
+│   │   ├── V11__expand_mine_board_choices.sql # 中等/困难/地狱新增六个矩形棋盘，不改旧定义
+│   │   ├── V12__publish_sudoku_difficulties.sql # 数独教学与四档各三题，保留历史定义
+│   │   ├── V13__publish_akari_levels.sql   # 照明入门及15关，保留旧定义及永久资格
+│   │   ├── V14__expand_akari_tutorial_and_boards.sql # 教学及第10～15关追加版本2，不改旧定义
+│   │   ├── V15__create_player_energy.sql # 账号体力状态与随尝试回收的扣返凭证
+│   │   ├── V16__align_akari_timed_rewards.sql # 追加照明15关按用时评分版本，保留旧奖励
+│   │   ├── V17__index_growth_rankings.sql # 星数与等级/经验排行榜分页索引
+│   │   ├── V18__publish_first_three_star_bonus.sql # 追加39个普通关首次三星双倍奖励版本
+│   │   └── V19__create_arena_scores_and_invitations.sql # 三模式房间字段、积分账户/流水及邀请
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -95,13 +150,49 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── jobless-auth.service.example  # 可选单 worker systemd 服务
 │   │   └── logrotate.conf.example        # 可选日志轮转，避免与宝塔重复配置
 │   └── tests/                            # 后端安全、资源及真实数据库联调测试
+│       ├── test_static_cache.py          # 页面/模块/样式缓存验证、304及两套Nginx策略契约
 │       ├── test_auth.py                  # 真实哈希与数据库替身单元/API 测试
 │       ├── test_avatar.py                # 头像存储、严格编号/来源/体积、账号隔离和三个分榜跟随
 │       ├── test_mysql_integration.py     # 专用 MySQL/Flyway、登录/排行/论坛V4并发和外键联调
 │       ├── test_forum.py                 # 论坛权限、文字/请求体、幂等、归属、通知及事务回滚
+│       ├── test_game_content.py          # 题库唯一解、评分边界、无死锁与初级难度
+│       ├── test_sudoku_content.py        # 数独唯一性、真实技巧分级和伪造推理拒绝
+│       ├── test_sudoku_api.py            # 数独13题判题、教学、暂停、奖励及资格隔离
+│       ├── test_akari_content.py          # 照明16关唯一性、逻辑递进及冻结迁移一致性
+│       ├── test_akari_api.py              # 照明目录、16关判题、权威时钟及历史资格
+│       ├── test_akari_rewards.py          # 时间毫秒边界、2/4/6经验、升星补差及版本兼容
+│       ├── test_energy.py                 # 体力恢复边界、扣返幂等、零体力重开回滚及账号隔离
+│       ├── test_mine_redesign.py         # 五档矩形扫雷、教学步骤、首击安全、经验补差及冻结时间
+│       ├── test_mine_pause.py            # 服务器暂停/继续、防重版本、账号隔离及有效时长结算
+│       ├── test_progression_v1.py        # 尝试/成长/资格/主题/版本/权限及回滚契约
+│       ├── test_pk_v1.py                 # 房间/匹配/平局/资格组合/超时及容量边界
+│       ├── test_pk_events.py             # 有界队列、单账号流与鉴权后DB释放
+│       ├── test_game_cleanup.py          # 历史墓碑/回收不删除永久权益
+│       ├── test_pk_probe.py              # 本地HTTP/SSE观测工具烟测
+│       ├── test_arena_growth.py          # 等级阈值、首次三星当局翻倍与历史奖励兼容
+│       ├── test_arena_pk.py              # 三模式/在线邀请/积分/并发踩雷/独立题池验收
 │       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
+│   ├── game-progression-openapi.json       # 当前v1路径与严格DTO的OpenAPI契约草案
+│   ├── game-progression-pk-report.md       # 成长/资格/房间匹配实现证据及环境验收边界
+│   ├── game-progression-pk-plan.md         # RESTful关卡成长/主题/房间匹配方案、数据契约及2核2GB验收
+│   ├── frontend-structure-plan.md         # 已授权的目录整改范围、步骤与验收
+│   ├── frontend-structure-report.md       # 目录迁移、测试基线与浏览器/打包证据
+│   ├── frontend-refactor-plan.md          # 已确认的多页前端模块化、缓存与请求层重构计划
+│   ├── frontend-refactor-report.md        # 重构产出、测试统计、环境待验收及发布回退说明
+│   ├── mine-multilevel-mvp-plan.md         # 扫雷MVP与已确认的三尺寸九关扩展/兼容验收计划
+│   ├── mine-multilevel-mvp-report.md       # MVP实际效果、测试统计、预览地址与边界说明
+│   ├── mine-difficulty-redesign-plan.md    # 已确认的扫雷五档、教学、矩形棋盘及账号奖励计划
+│   ├── mine-difficulty-redesign-report.md  # 扫雷重制效果、验收统计、本地预览及发布条件
+│   ├── sudoku-implementation-plan.md       # 已确认的数独五档13关、推理分级、参考图界面及计时成长计划
+│   ├── sudoku-implementation-report.md     # 数独实现、真实MySQL/浏览器证据、旧失败及本地体验
+│   ├── akari-implementation-plan.md        # 已授权的照明入门及15关实施和验收方案
+│   ├── energy-implementation-plan.md       # 已授权的账号体力、原子扣返与首页面板调整方案
+│   ├── pk-arena-implementation-plan.md      # 已确认的三模式竞技大厅、在线邀请和积分实施方案
+│   ├── pk-arena-implementation-report.md    # 等级奖励/竞技产出、回归证据及MySQL5.7验收限制
+│   ├── energy-implementation-report.md     # 体力机制、测试证据及本地预览/发布边界
+│   ├── akari-implementation-report.md      # 照明关卡、逻辑递进、测试及发布条件
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
 │   ├── ranking-implementation-plan.md     # 已确认的逐关挑战、开发通关及排行榜实施计划
@@ -111,83 +202,192 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── forum-implementation-plan.md       # 文字论坛需求、技术选型、接口/数据设计与实施计划
 │   └── forum-implementation-report.md     # 论坛实际产出、测试统计与MySQL/服务器待验收项
 │
-├── frontend/                             # 可独立预览的网页前端及其测试
-│   ├── favicon.ico                       # 用户海岛图片居中裁切的多尺寸浏览器标签图标
-│   ├── index.html                        # 游戏入口、三关界面及游戏弹窗
-│   ├── ranking.html                      # 排行榜默认入口，展示扫雷分榜及三个单项导航
-│   ├── ranking-mine.html                 # 扫雷历史最佳通关排行
-│   ├── ranking-akari.html                # 照明历史最佳通关排行
-│   ├── ranking-sudoku.html               # 数独历史最佳通关排行
-│   ├── forum.html                        # 正文列表、卡片下展开评论、直接回复及只填正文发布
-│   ├── forum-post.html                   # 可收藏帖子正文、评论/两层回复及通知定位
-│   ├── styles.css                        # 页面布局、海岛风格、棋盘及弹窗样式
-│   ├── package.json                      # 前端项目元信息与 Node.js 测试命令
-│   │
-│   ├── src/                              # 浏览器运行的 JavaScript 源码
-│   │   ├── main.js                       # 首页自由选关、独立重开/续玩、规则计时与单关结算
-│   │   ├── game.js                       # 扫雷棋盘与规则逻辑
-│   │   ├── akari.js                      # 照明题盘、灯光与通关判断
-│   │   ├── sudoku.js                     # 数独题盘、正式答案/候选笔记、旧存档兼容与通关判断
-│   │   ├── session.js                    # 各关独立开始/冻结/重开计时；不是账号登录会话
-│   │   ├── progress.js                   # 按账号保存棋局/候选笔记、绝对计时起点及待确认请求
-│   │   ├── audio-settings.js             # 音乐/音效独立开关、音量偏好持久化与订阅同步
-│   │   ├── settings.js                   # 共享游戏设置：头像选择、音频开关/滑块和键盘焦点
-│   │   ├── avatar.js                     # 固定图片路径、清单读取、错误回退及按账号隔离保存状态
-│   │   ├── avatar-picker.js              # 设置中的头像网格、按需加载、明确保存和失败重试
-│   │   ├── auth.js                       # 共享登录弹窗、会话恢复、用户名设置入口及退出
-│   │   ├── auth-client.js                # 同源 Cookie API 客户端与错误处理
-│   │   ├── auth-validation.js            # 与后端一致的用户名/密码校验
-│   │   ├── auth-game.js                  # 首页三个独立关卡的登录拦截与授权续接
-│   │   ├── auth-page.js                  # 排行榜共享登录及站内消息初始化
-│   │   ├── forum-client.js               # 同源请求、码点校验、固定重试负载和账号响应隔离
-│   │   ├── forum-view.js                 # 紧凑纯文本卡片、左评论数/右图标、红色拇指点赞及输入计数
-│   │   ├── forum-page.js                 # 正文游标页、评论输入保留、发布模态和返回位置恢复
-│   │   ├── forum-discussion.js           # 单帖限高/评论内滚动、单一两行回复框、纸飞机及草稿续接
-│   │   ├── forum-post-page.js            # 主题详情、评论/回复分页、上下文定位及账号切换
-│   │   ├── notifications.js              # 全站/游戏铃铛、已读边界、可见性轮询及失败退避
-│   │   ├── mine-effects.js               # 扫雷连锁爆炸动画与音效控制
-│   │   ├── ranking-client.js             # 同源请求、HTTP 兼容 UUID、挑战幂等负载及失败重试
-│   │   ├── ranking-page.js               # 三个单项榜共享分页、反馈与玩家头像渲染
-│   │   ├── personal-records.js           # 首页我的通关记录：分类、最佳/最近三次、账号隔离与刷新
-│   │   ├── music.js                      # 背景/胜利音独立控制、实时音量、手势解锁与播放位置管理
-│   │   └── dev-quick-complete.js          # 可移除的开发验收：只求解当前关合法终盘
-│   │
-│   ├── assets/                           # 网页直接加载的处理后静态素材
-│   │   ├── favicon.png                   # 海岛方形图标的 180px PNG 预览
-│   │   ├── island.webp                   # 桌面海岛背景
-│   │   ├── island-mobile.webp            # 手机海岛背景
-│   │   ├── minesweeper.webp              # 扫雷入口图
-│   │   ├── bulb.webp                     # 照明入口图
-│   │   ├── avatars/                      # 用户共用的硬盘预设头像，账号只保存编号
-│   │   │   └── v1/                       # 版本化成品；修改内容后使用新版本路径
-│   │   │       ├── catalog.json           # 前后端共用的25个有效编号和站内图片路径
-│   │   │       └── *.webp                # 001至025，128px预设头像
-│   │   ├── audio/                        # 网页使用的音频资源
-│   │   │   ├── explosion.wav             # 裁剪处理后的爆炸音效
-│   │   │   ├── background.mp3            # 用户提供的阿尔法脑波背景音乐，低音量循环播放
-│   │   │   └── victory.mp3               # 用户指定的 PVZ 胜利音效；开始结算时播放一次
-│   │   └── minesweeper/                  # 扫雷格子状态素材
-│   │       └── *.webp                    # 覆盖格、打开格、旗帜、地雷、爆炸与数字图片
-│   │
-│   └── test/                             # Node.js 自动化测试，验证规则与页面流程
-│       ├── game.test.js                  # 扫雷规则测试
-│       ├── akari.test.js                 # 照明规则测试
-│       ├── sudoku.test.js                # 数独规则、候选笔记独立性、编辑保护与旧存档兼容
-│       ├── session.test.js               # 关卡计时与结算记录测试
-│       ├── progress.test.js              # 存档往返、灯泡/候选笔记恢复、旧存档、计时与存储异常
-│       ├── audio-settings.test.js        # 默认开启、独立音量、偏好持久化与存储异常
-│       ├── mine-effects.test.js          # 爆炸顺序、动画、实时增益与静音停止测试
-│       ├── auth.test.js                  # 登录规则、密码原样传递及 API 失败语义
-│       ├── forum.test.js                 # 码点长度、冻结重试、点赞串行及旧账号成功/失败隔离
-│       ├── forum-body.test.js            # 正文表单/链接、旧标题隐藏、左评论按钮及右侧图标交互
-│       ├── notifications.test.js         # 浏览器计时器、登录/可见性、账号隔离及已读边界
-│       ├── avatar.test.js                # 头像路径、清单错误、保存重试和退出/换号晚到响应隔离
-│       ├── completion.test.js            # 自由选关、单关重开/结算、规则计时、退出恢复与保存回归
-│       ├── ranking-client.test.js        # HTTP UUID、幂等负载、旧响应隔离及网络失败语义
-│       ├── personal-records.test.js      # 个人记录分类、隐私隔离、失败重试与键盘切换
-│       └── music.test.js                 # 音轨切换、独立音量/静音、同轮一次、播放拒绝与切页状态
+├── frontend/                             # 多页HTML、原生模块与按用途分类的样式/测试
+│   ├── assets/  # 图片、音频及版本化扫雷/头像素材（URL保持不变）
+│   │   └── 图片/音频/avatars/v1/minesweeper/v2等  # 原有素材路径保持
+│   ├── src/  # 模块化前端代码
+│   │   ├── features/  # 按业务归档的账号/音频/论坛等能力
+│   │   │   ├── account/  # 登录、头像、档案与账号接口
+│   │   │   │   ├── auth.js  # 登录/头像/设置/通知装配
+│   │   │   │   ├── avatar-picker.js  # 头像选择窗口
+│   │   │   │   ├── avatar.js  # 头像URL与选择状态
+│   │   │   │   ├── client.js  # 所属业务的同源接口访问
+│   │   │   │   ├── profile.js  # 服务器成长显示及权威结算同步
+│   │   │   │   ├── energy.js  # 权威体力、恢复倒计时、账号及旧修订隔离
+│   │   │   │   └── validation.js  # 用户名和密码校验
+│   │   │   ├── audio/  # 背景/胜利音、偏好及设置窗口
+│   │   │   │   ├── dialog.js  # 音频设置窗口
+│   │   │   │   ├── music.js  # 背景/胜利音生命周期
+│   │   │   │   └── settings.js  # 音量及音效偏好存储
+│   │   │   ├── forum/  # 正文、讨论、接口与展示
+│   │   │   │   ├── client.js  # 所属业务的同源接口访问
+│   │   │   │   ├── discussion.js  # 评论/回复/编辑器与分页
+│   │   │   │   └── view.js  # 论坛节点与正文安全展示
+│   │   │   ├── notifications/  # 可见性轮询、站内消息与账号隔离
+│   │   │   │   └── controller.js  # 所属业务/游戏控制器与生命周期
+│   │   │   ├── pk/  # 竞速事件订阅与重连
+│   │   │   │   ├── presence.js  # 全站可见在线租约、跨标签合并及用户主动接受邀请
+│   │   │   │   └── events.js  # 共享事件或竞速SSE订阅
+│   │   │   ├── progression/  # 正式成长请求与账号草稿存储
+│   │   │   │   ├── client.js  # 所属业务的同源接口访问
+│   │   │   │   ├── attempt-energy.js  # 三游戏体力快照事件及原子重开幂等适配
+│   │   │   │   ├── attempt-exit.js  # 主动退出前核验ETag并条件终止本局
+│   │   │   │   └── journey-store.js  # 按账号、尝试与版本保存草稿
+│   │   │   └── ranking/  # 排行榜读取和个人通关记录
+│   │   │       ├── client.js  # 所属业务的同源接口访问
+│   │   │       └── personal-records.js  # 本人最佳及最近三次通关
+│   │   ├── games/  # 当前游戏规则与棋盘
+│   │   │   ├── exit-confirmation.js  # 三游戏主动退出确认、取消恢复和失败重试
+│   │   │   ├── akari/  # 照明16关规则、会话及页面控制器
+│   │   │   │   ├── rules.js  # 变尺寸照明、覆盖、互斥及数字约束
+│   │   │   │   ├── session.js  # 账号草稿、权威时钟及终盘重试
+│   │   │   │   ├── controller.js  # 入门及15关选关、教学、冲突及下一关
+│   │   │   │   └── tutorial.js  # 七步目标与提示，兼容旧三步教学
+│   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
+│   │   │   │   ├── controller.js  # 所属业务/游戏控制器与生命周期
+│   │   │   │   ├── effects.js  # 爆炸顺序、时间线与音效
+│   │   │   │   ├── session.js  # 正式扫雷会话，legacy内为旧三关计时
+│   │   │   │   └── stars.js  # 可得星级、历史星与新增星汇聚
+│   │   │   ├── sudoku/  # 数独规则与笔记
+│   │   │   │   ├── rules.js  # 4×4/9×9数独规则、手动笔记和冲突检查
+│   │   │   │   ├── controller.js  # 五档选题、参考图棋盘、教学及星级动画
+│   │   │   │   └── session.js  # 正式尝试、账号草稿、连续撤回、暂停及终盘重试
+│   │   │   ├── catalog.js  # 三游戏元数据及稳定导航地址
+│   │   │   └── formal-board.js  # 正式照明/数独/竞速棋盘
+│   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
+│   │   │   ├── game/  # 旧三关会话、控制器、存档与幂等挑战
+│   │   │   │   ├── akari-controller.js
+│   │   │   │   ├── challenge-client.js
+│   │   │   │   ├── controller.js  # 所属业务/游戏控制器与生命周期
+│   │   │   │   ├── dev-quick-complete.js
+│   │   │   │   ├── home.js  # 当前首页入口（legacy内同名为旧首页工厂）
+│   │   │   │   ├── progress-coordinator.js
+│   │   │   │   ├── progress.js
+│   │   │   │   ├── result-dialog.js
+│   │   │   │   ├── session.js  # 正式扫雷会话，legacy内为旧三关计时
+│   │   │   │   ├── sudoku-controller.js
+│   │   │   │   ├── sudoku-answer.js       # 历史验收答案隔离，正式页面不导入
+│   │   │   │   └── ui.js
+│   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
+│   │   │   │   ├── controller.js  # 所属业务/游戏控制器与生命周期
+│   │   │   │   ├── levels.js
+│   │   │   │   ├── practice-controller.js
+│   │   │   │   ├── practice-page.js
+│   │   │   │   ├── practice-store.js
+│   │   │   │   └── rules.js  # 所属游戏规则算法
+│   │   │   ├── README.md  # 所属目录用途和维护约定
+│   │   │   ├── auth-game.js
+│   │   │   └── auth-page.js
+│   │   ├── pages/  # 当前HTML页面入口与装配
+│   │   │   ├── forum-post.js  # 帖子详情页面入口
+│   │   │   ├── forum.js  # 论坛列表页面入口
+│   │   │   ├── home.js  # 首页模式入口与闯关游戏目录共享装配
+│   │   │   ├── journey.js  # 当前选关页与扫雷装配
+│   │   │   ├── pk.js  # 手绘双人大厅、在线邀请、三模式匹配与积分入口
+│   │   │   └── ranking.js  # 星数、等级及有符号竞技积分分页榜
+│   │   ├── shared/  # 无业务反向依赖的DOM/HTTP/事件/生命周期/时间/UUID
+│   │   │   ├── dom.js  # DOM语义名称查询
+│   │   │   ├── events.js  # 共享事件或竞速SSE订阅
+│   │   │   ├── http.js  # 同源JSON、超时、keepalive及错误适配
+│   │   │   ├── lifecycle.js  # 监听/计时器/订阅统一清理
+│   │   │   ├── request-id.js  # 安全UUID及HTTP环境回退
+│   │   │   └── time.js  # 公共时间格式化
+│   │   └── main.js  # 旧模块URL兼容入口，当前HTML不直接引用
+│   ├── styles/  # 样式装配、组件、页面与历史样式
+│   │   ├── components/  # 按原级联顺序拆分的公共组件及响应式样式
+│   │   │   ├── account.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── energy.css  # 头像旁体力、手机适配及首页移除记录后的布局
+│   │   │   ├── forum.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── layout.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── legacy-games.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── navigation.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── personal-records.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── ranking.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── responsive.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   └── settings-avatar.css  # 所属页面/组件样式，声明顺序保留
+│   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
+│   │   │   └── mine-practice.css  # 所属页面/组件样式，声明顺序保留
+│   │   ├── pages/  # 当前HTML页面入口与装配
+│   │   │   ├── modes.css  # 首页双模式入口与响应式卡片
+│   │   │   ├── arena.css  # 手绘竞技大厅、头像对位、邀请/匹配/计时及手机布局
+│   │   │   ├── journey.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── mine.css  # 所属页面/组件样式，声明顺序保留
+│   │   │   ├── akari.css  # 照明选关和深蓝暖金棋盘，手机区域内滚动
+│   │   │   └── sudoku.css  # 参考图数独面板、棋盘状态和窄屏数字键
+│   │   └── base.css  # 按原声明顺序装配8段公共样式
+│   ├── test/  # 按功能分组的Node行为及结构契约
+│   │   ├── features/  # 按业务归档的账号/音频/论坛等能力
+│   │   │   ├── account/  # 登录、头像、档案与账号接口
+│   │   │   │   ├── auth.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── avatar.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── energy.test.js  # 体力修订、恢复节点、网络失败及换号隔离
+│   │   │   │   └── player-profile.test.js  # 所属模块的行为回归测试
+│   │   │   ├── audio/  # 背景/胜利音、偏好及设置窗口
+│   │   │   │   ├── audio-settings.test.js  # 所属模块的行为回归测试
+│   │   │   │   └── music.test.js  # 所属模块的行为回归测试
+│   │   │   ├── forum/  # 正文、讨论、接口与展示
+│   │   │   │   ├── forum-body.test.js  # 所属模块的行为回归测试
+│   │   │   │   └── forum.test.js  # 所属模块的行为回归测试
+│   │   │   ├── notifications/  # 可见性轮询、站内消息与账号隔离
+│   │   │   │   └── notifications.test.js  # 所属模块的行为回归测试
+│   │   │   ├── progression/  # 正式成长请求与账号草稿存储
+│   │   │   │   ├── attempt-energy.test.js  # 原子重开失败不弃旧局、同键重试
+│   │   │   │   ├── attempt-exit.test.js  # 条件退出、丢响应重试和草稿隔离清理
+│   │   │   │   └── progression-client.test.js  # 所属模块的行为回归测试
+│   │   │   └── ranking/  # 排行榜读取和个人通关记录
+│   │   │       └── personal-records.test.js  # 所属模块的行为回归测试
+│   │   ├── fixtures/  # 冻结历史DOM及CSS顺序基线，仅测试，不发布
+│   │   │   ├── css-baseline.json  # 搬迁前CSS规则和顺序哈希
+│   │   │   └── legacy-game.html  # 无脚本的旧首页DOM测试夹具
+│   │   ├── games/  # 当前游戏规则与棋盘
+│   │   │   ├── akari/  # 照明规则
+│   │   │   │   ├── akari-instance.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── akari-session.test.js  # 账号续玩、全部约束、暂停及断网结算
+│   │   │   │   └── akari.test.js  # 所属模块的行为回归测试
+│   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
+│   │   │   │   ├── mine-effects.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── mine-session.test.js  # 所属模块的行为回归测试
+│   │   │   │   └── mine-stars.test.js  # 所属模块的行为回归测试
+│   │   │   ├── sudoku/  # 数独规则与笔记
+│   │   │   │   ├── sudoku.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── sudoku-variant.test.js  # 可变尺寸、笔记边界和无内置答案判题
+│   │   │   │   └── sudoku-session.test.js  # 草稿恢复、连续撤回、嵌套暂停及结算重试
+│   │   │   └── game-catalog.test.js  # 所属模块的行为回归测试
+│   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
+│   │   │   ├── completion.test.js  # 所属模块的行为回归测试
+│   │   │   ├── controller-contracts.test.js  # 所属模块的行为回归测试
+│   │   │   ├── game.test.js  # 所属模块的行为回归测试
+│   │   │   ├── mine-levels.test.js  # 所属模块的行为回归测试
+│   │   │   ├── progress.test.js  # 所属模块的行为回归测试
+│   │   │   ├── ranking-client.test.js  # 所属模块的行为回归测试
+│   │   │   └── session.test.js  # 所属模块的行为回归测试
+│   │   ├── shared/  # 无业务反向依赖的DOM/HTTP/事件/生命周期/时间/UUID
+│   │   │   ├── dom-events.test.js  # 所属模块的行为回归测试
+│   │   │   └── http.test.js  # 所属模块的行为回归测试
+│   │   └── structure.test.js  # 所属模块的行为回归测试
+│   ├── README.md  # 所属目录用途和维护约定
+│   ├── favicon.ico
+│   ├── forum-post.html  # 独立页面入口，URL保持不变
+│   ├── forum.html  # 独立页面入口，URL保持不变
+│   ├── index.html  # 首页：闯关模式和竞技模式两个独立入口
+│   ├── challenge.html  # 闯关模式：扫雷、照明、数独游戏目录
+│   ├── journey.css  # 旧URL兼容入口
+│   ├── journey.html  # 三款游戏独立选关与正式游戏，页面URL保持不变
+│   ├── mine-journey.css  # 旧URL兼容入口
+│   ├── mine-practice.css  # 旧URL兼容入口
+│   ├── mine-practice.html  # 旧练习地址跳转新版扫雷
+│   ├── navigation.css  # 旧URL兼容入口
+│   ├── package.json  # Node内置测试命令，无构建依赖
+│   ├── pk.html  # 独立页面入口，URL保持不变
+│   ├── ranking-akari.html  # 旧照明榜地址，现展示成长榜入口
+│   ├── ranking-mine.html  # 旧扫雷榜地址，现展示成长榜入口
+│   ├── ranking-sudoku.html  # 旧数独榜地址，现展示成长榜入口
+│   ├── ranking.html  # 星数、等级和竞技积分排行榜
+│   └── styles.css  # 旧URL兼容入口
 │
 ├── source/                               # 原始素材和将其转换为网页资源的处理脚本
+│   ├── frontend/                         # 一次性目录整改工具，非网页运行代码
+│   │   └── reorganize.py                 # 映射迁移、相对URL重写、旧挑战隔离及CSS基线生成
 │   ├── audio/                            # 原始音频与裁剪处理脚本
 │   │   ├── 爆炸声.flac                   # 爆炸音效原始文件
 │   │   ├── backmusic-卡农（经典钢琴版）.ncm # 备用原始素材，未接入网页播放
@@ -198,6 +398,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   └── imge/                             # 原始图片与图片提取脚本；保留现有目录拼写
 │       ├── start.jpeg                    # 海岛入口原始图片
 │       ├── 扫雷.jpeg                     # 扫雷原始图片
+│       ├── minesweeper-theme.png          # 用户最新指定的扫雷主题原图，保留不覆盖
+│       ├── prepare_mine_theme.py          # 从指定原图裁切九张v2 WebP棋格/入口素材
 │       ├── 灯泡.png                      # 灯泡原始图片
 │       ├── avatar/                       # 用户提供的25张原始PNG头像，保留编号及原图
 │       │   └── *.png                     # 001至025原图
@@ -210,15 +412,29 @@ crawler-portal/                            # 项目根目录：前端、登录�
     │   └── *.log                         # 完整测试输出；不纳入版本管理
     └── frontend/                         # 前端浏览器验证脚本和验证产物
         ├── verify_login.py               # 早期登录验收材料；当前关卡回归使用 verify_ranking.py
+        ├── verify_arena.py               # 两个独立浏览器验证邀请、三模式对战、积分与手机大厅
+        ├── verify_arena_preview.py       # 固定隔离SQLite预览，保留账号并补齐字段和版本
         ├── verify_ranking.py             # 临时数据库与真实浏览器：独立关卡/结算、开发按钮及三个分榜
         ├── verify_http_start.py          # 非安全 HTTP 浏览器环境下真实登录、开局重试与重新开始
         ├── verify_akari_completion.py     # 照明通关及结果界面验证脚本
         ├── verify_settlement.py          # 三关完成、祝贺与结算流程验证脚本
         ├── verify_live_timers.py         # 游戏实时计时显示验证脚本
         ├── verify_progress.py            # 数独笔记、首页续玩、规则计时、手机布局与刷新/退出恢复验证
-        ├── verify_audio_settings.py      # 用户名设置入口、真实音频音量、跨页偏好与手机/键盘验证
+        ├── verify_audio_settings.py      # 独立齿轮设置入口、音频音量、跨页与手机/键盘验证
         ├── verify_avatars.py             # 真实临时API/Chrome：25图、保存/失败、棋局保持、四榜及窄屏
         ├── verify_forum.py               # 双账号真实论坛/消息、键盘/手机、跨浏览器及游戏续玩
+        ├── verify_refactor.py            # 真实HTTP缓存/304/206、跨页/重启续玩、计时及爆炸卸载恢复
+        ├── verify_game_progression.py     # 双Chrome正式成长/三项资格/主题/房间SSE与匹配验收
+        ├── verify_game_catalog.py         # 新版三卡/空目录/成长/旧关卡下线/过渡及窄屏验收
+        ├── verify_mine_redesign.py       # 五档扫雷真实浏览器/临时SQLite及隔离本地预览
+        ├── verify_mine_stars.py          # 三颗星/时间降星/汇聚/手机操作及换号取消专项浏览器验收
+        ├── verify_mine_pause.py          # 规则/选关/真实标签切换/离页暂停与继续、活动时长星级验收
+        ├── verify_sudoku.py              # 数独13关、教学、奖励/断网、窄屏及隔离本地预览
+        ├── verify_sudoku_interactions.py # 数独键盘/冲突、真实离页、重开、换号及减少动画验收
+        ├── verify_akari_levels.py        # 照明16关真实点击、教学、断网恢复、下一关与44px窄屏验收
+        ├── verify_energy.py              # 三游戏体力、首页面板移除、恢复节点、零体力及隔离预览
+        ├── verify_frontend_structure.py  # 整改前后同状态像素比对、三个分榜及新版入口/资源验收
+        ├── verify_mine_practice.py        # 九关布雷/尺寸/续玩/计时、双向滚动/窄屏及身份隔离
         ├── *.png / *.gif                 # 桌面、手机、导航及游戏状态的截图与动图
         ├── *.log                         # 自动化测试和浏览器运行日志
         ├── chain-frames/                 # 扫雷连锁爆炸逐帧检查材料

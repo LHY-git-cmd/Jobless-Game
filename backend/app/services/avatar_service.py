@@ -17,7 +17,7 @@ def update_transaction(raw_token: str | None, payload: AvatarRequest, db: Sessio
             raise AppError(401, "未登录。")
         user = current[1]
         user_repository.set_avatar(db, user.id, payload.avatar_id)
-        result = {"id": user.id, "username": user.username, "avatar_id": payload.avatar_id}
+        result = {"id": user.id, "player_id": user.player_id, "username": user.username, "avatar_id": payload.avatar_id}
         db.commit()
         return result
     except Exception:

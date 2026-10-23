@@ -6,7 +6,9 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt \
     && useradd --uid 10001 --create-home app
 COPY --chown=10001:10001 backend/app /app/backend/app
+COPY --chown=10001:10001 backend/content /app/backend/content
 COPY --chown=10001:10001 backend/cleanup_sessions.py /app/backend/cleanup_sessions.py
+COPY --chown=10001:10001 backend/cleanup_game_history.py /app/backend/cleanup_game_history.py
 # 当前应用入口同时挂载前端目录，保留目录以兼容；对外静态请求由 Nginx 提供。
 COPY --chown=10001:10001 frontend /app/frontend
 USER 10001:10001

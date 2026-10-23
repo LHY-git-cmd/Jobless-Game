@@ -3,6 +3,7 @@
 from sqlalchemy import delete, func, select
 from ..models.entities import User
 from ..models.entities.ranking import ChallengeProgress, CompletionRecord, LeaderboardEntry
+from ..models.entities.progression import PlayerProgression
 
 
 def add(db, entity):
@@ -65,3 +66,33 @@ def ranking_rows(db, category, page, page_size):
                       .order_by(ranked.c.duration_seconds, ranked.c.achieved_at, ranked.c.user_id)).mappings().all()
     total = db.scalar(select(func.count()).select_from(LeaderboardEntry).where(LeaderboardEntry.category == category))
     return rows, total
+
+
+def growth_ranking_rows(db, category, page, page_size):
+    """先走成长索引取有限页，同分并列名次不因分页改变；无成长摘要不入榜。"""
+    if category=='points':return arena_ranking_rows(db,page,page_size)
+    score = PlayerProgression.total_stars if category == 'stars' else PlayerProgression.xp
+    # 两列同向逆序读取联合索引，兼容 MySQL 5.7；账号编号仅用于并列时稳定分页。
+    ranked = select(PlayerProgression.user_id, PlayerProgression.total_stars, PlayerProgression.xp,
+                    score.label('score')).order_by(score.desc(), PlayerProgression.user_id.desc())\
+        .offset((page - 1) * page_size).limit(page_size).subquery()
+    rank = select(func.count() + 1).select_from(PlayerProgression).where(score > ranked.c.score)\
+        .correlate(ranked).scalar_subquery().label('rank')
+    rows = db.execute(select(ranked.c.user_id, ranked.c.total_stars, ranked.c.xp, rank, User.username, User.avatar_id)
+                      .join(User, User.id == ranked.c.user_id)
+                      .order_by(ranked.c.score.desc(), ranked.c.user_id.desc())).mappings().all()
+    total = db.scalar(select(func.count()).select_from(PlayerProgression))
+    return rows, total
+
+
+def arena_ranking_rows(db,page,page_size):
+    """竞技积分索引分页，同分并列，GET不为所有注册账号创建初始分。"""
+    from ..models.entities.arena import ArenaAccount
+    ranked=select(ArenaAccount.user_id,ArenaAccount.points).order_by(ArenaAccount.points.desc(),ArenaAccount.user_id.desc())\
+        .offset((page-1)*page_size).limit(page_size).subquery()
+    rank=select(func.count()+1).select_from(ArenaAccount).where(ArenaAccount.points>ranked.c.points).correlate(ranked).scalar_subquery().label('rank')
+    rows=db.execute(select(ranked,rank,User.username,User.avatar_id,func.coalesce(PlayerProgression.xp,0).label('xp'),
+        func.coalesce(PlayerProgression.total_stars,0).label('total_stars')).join(User,User.id==ranked.c.user_id)
+        .outerjoin(PlayerProgression,PlayerProgression.user_id==ranked.c.user_id)
+        .order_by(ranked.c.points.desc(),ranked.c.user_id.desc())).mappings().all()
+    return rows,db.scalar(select(func.count()).select_from(ArenaAccount))
