@@ -19,6 +19,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 ├── backend/                              # FastAPI 登录、独立关卡、排行榜、Flyway 与部署支持
 │   ├── content/                          # 冻结关卡、规则门槛与独立PK题库
 │   │   ├── game-catalog-v1.json           # 十关照明、三题PK、历史初级扫雷/数独与建议参数v1
+│   │   ├── progression-policy-v2.json     # 0/18/36/54/72/90等级阈值与3秒竞技倒计时
+│   │   ├── campaign-rewards-v3.json       # 普通关首次三星当局新增经验双倍的追加冻结版本
+│   │   ├── arena-puzzles-v1.json          # 独立照明10×10及简单数独竞技题池
 │   │   ├── mine-catalog-v2.json           # 教学与四档各三规格，共十三项扫雷、时限及逐星经验
 │   │   ├── sudoku-catalog-v2.json         # 数独五档十三题、尺寸、推理技巧、时限及逐星经验
 │   │   ├── akari-catalog-v2.json          # 照明入门及第1～15关的冻结地图和参数
@@ -64,7 +67,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── game_rules.py             # 照明/数独终盘验证、毫秒星级及版本化逐星经验
 │   │   │   ├── progression_service.py    # 矩形扫雷/教学/首击安全、冻结计时及幂等奖励/资格事务
 │   │   │   ├── energy_service.py         # 账号体力、30分钟恢复、普通扣返及免费教学
-│   │   │   ├── pk_service.py             # 双人房间、统一计时、平局及FIFO匹配事务
+│   │   │   ├── pk_service.py             # 三模式房间、HTTP先后排序、积分及分池FIFO事务
+│   │   │   ├── arena_service.py          # 账号积分、唯一结算、精确用户搜索及定向邀请
+│   │   │   ├── arena_games.py            # 三模式竞技题池与服务端隐藏扫雷揭格
 │   │   │   ├── pk_runtime.py             # 有限SSE队列、接收窗口及单进程运行索引
 │   │   │   ├── pk_lifecycle.py           # 唯一调度任务、重启作废和有界状态转换
 │   │   │   └── ranking_service.py        # 独立关卡重开/通关、幂等与单项成绩保留事务
@@ -82,6 +87,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── user.py               # 用户实体
 │   │   │   │   ├── auth_session.py       # 账号会话实体
 │   │   │   │   ├── forum.py              # 帖子、评论、两类点赞与站内通知五表实体
+│   │   │   │   ├── arena.py               # 竞技积分摘要、永久唯一流水与有期邀请
 │   │   │   │   ├── progression.py        # 关卡版本、尝试/快照、永久成长/资格/幂等凭据
 │   │   │   │   ├── cosmetic.py           # 有限主题目录、永久权益与装配版本
 │   │   │   │   ├── pk.py                 # 双人房间、成员、不可变提交和唯一占用
@@ -93,7 +99,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │       ├── avatar.py             # 仅接收清单有效编号的严格头像写入请求
 │   │   │       ├── forum.py              # 文字长度/作者隔离、UUID幂等及已读边界DTO
 │   │   │       ├── progression.py        # 正式尝试/终盘/外观严格DTO，不接收客户端奖励
-│   │   │       ├── pk.py                 # 单一匹配池、准备和终盘严格DTO
+│   │   │       ├── pk.py                 # 三模式/邀请/在线心跳及准备终盘严格DTO
 │   │   │       └── ranking.py            # 严格挑战请求 DTO 和脱敏成绩/榜单响应模型
 │   │   └── common/                      # 公共层：跨业务基础设施，不反向依赖业务
 │   │       ├── __init__.py               # 公共层包标识
@@ -122,7 +128,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V14__expand_akari_tutorial_and_boards.sql # 教学及第10～15关追加版本2，不改旧定义
 │   │   ├── V15__create_player_energy.sql # 账号体力状态与随尝试回收的扣返凭证
 │   │   ├── V16__align_akari_timed_rewards.sql # 追加照明15关按用时评分版本，保留旧奖励
-│   │   └── V17__index_growth_rankings.sql # 星数与等级/经验排行榜分页索引
+│   │   ├── V17__index_growth_rankings.sql # 星数与等级/经验排行榜分页索引
+│   │   ├── V18__publish_first_three_star_bonus.sql # 追加39个普通关首次三星双倍奖励版本
+│   │   └── V19__create_arena_scores_and_invitations.sql # 三模式房间字段、积分账户/流水及邀请
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -161,6 +169,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_pk_events.py             # 有界队列、单账号流与鉴权后DB释放
 │       ├── test_game_cleanup.py          # 历史墓碑/回收不删除永久权益
 │       ├── test_pk_probe.py              # 本地HTTP/SSE观测工具烟测
+│       ├── test_arena_growth.py          # 等级阈值、首次三星当局翻倍与历史奖励兼容
+│       ├── test_arena_pk.py              # 三模式/在线邀请/积分/并发踩雷/独立题池验收
 │       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
@@ -179,6 +189,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── sudoku-implementation-report.md     # 数独实现、真实MySQL/浏览器证据、旧失败及本地体验
 │   ├── akari-implementation-plan.md        # 已授权的照明入门及15关实施和验收方案
 │   ├── energy-implementation-plan.md       # 已授权的账号体力、原子扣返与首页面板调整方案
+│   ├── pk-arena-implementation-plan.md      # 已确认的三模式竞技大厅、在线邀请和积分实施方案
+│   ├── pk-arena-implementation-report.md    # 等级奖励/竞技产出、回归证据及MySQL5.7验收限制
 │   ├── energy-implementation-report.md     # 体力机制、测试证据及本地预览/发布边界
 │   ├── akari-implementation-report.md      # 照明关卡、逻辑递进、测试及发布条件
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
@@ -214,6 +226,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── notifications/  # 可见性轮询、站内消息与账号隔离
 │   │   │   │   └── controller.js  # 所属业务/游戏控制器与生命周期
 │   │   │   ├── pk/  # 竞速事件订阅与重连
+│   │   │   │   ├── presence.js  # 全站可见在线租约、跨标签合并及用户主动接受邀请
 │   │   │   │   └── events.js  # 共享事件或竞速SSE订阅
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
 │   │   │   │   ├── client.js  # 所属业务的同源接口访问
@@ -270,8 +283,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── forum.js  # 论坛列表页面入口
 │   │   │   ├── home.js  # 首页模式入口与闯关游戏目录共享装配
 │   │   │   ├── journey.js  # 当前选关页与扫雷装配
-│   │   │   ├── pk.js  # 竞速房间/匹配页面入口
-│   │   │   └── ranking.js  # 星数与等级分页榜，竞技积分未开放说明
+│   │   │   ├── pk.js  # 手绘双人大厅、在线邀请、三模式匹配与积分入口
+│   │   │   └── ranking.js  # 星数、等级及有符号竞技积分分页榜
 │   │   ├── shared/  # 无业务反向依赖的DOM/HTTP/事件/生命周期/时间/UUID
 │   │   │   ├── dom.js  # DOM语义名称查询
 │   │   │   ├── events.js  # 共享事件或竞速SSE订阅
@@ -296,6 +309,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   └── mine-practice.css  # 所属页面/组件样式，声明顺序保留
 │   │   ├── pages/  # 当前HTML页面入口与装配
 │   │   │   ├── modes.css  # 首页双模式入口与响应式卡片
+│   │   │   ├── arena.css  # 手绘竞技大厅、头像对位、邀请/匹配/计时及手机布局
 │   │   │   ├── journey.css  # 所属页面/组件样式，声明顺序保留
 │   │   │   ├── mine.css  # 所属页面/组件样式，声明顺序保留
 │   │   │   ├── akari.css  # 照明选关和深蓝暖金棋盘，手机区域内滚动
@@ -368,7 +382,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── ranking-akari.html  # 旧照明榜地址，现展示成长榜入口
 │   ├── ranking-mine.html  # 旧扫雷榜地址，现展示成长榜入口
 │   ├── ranking-sudoku.html  # 旧数独榜地址，现展示成长榜入口
-│   ├── ranking.html  # 星数/等级排行榜与待开放的竞技积分榜
+│   ├── ranking.html  # 星数、等级和竞技积分排行榜
 │   └── styles.css  # 旧URL兼容入口
 │
 ├── source/                               # 原始素材和将其转换为网页资源的处理脚本
@@ -398,6 +412,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
     │   └── *.log                         # 完整测试输出；不纳入版本管理
     └── frontend/                         # 前端浏览器验证脚本和验证产物
         ├── verify_login.py               # 早期登录验收材料；当前关卡回归使用 verify_ranking.py
+        ├── verify_arena.py               # 两个独立浏览器验证邀请、三模式对战、积分与手机大厅
+        ├── verify_arena_preview.py       # 固定隔离SQLite预览，保留账号并补齐字段和版本
         ├── verify_ranking.py             # 临时数据库与真实浏览器：独立关卡/结算、开发按钮及三个分榜
         ├── verify_http_start.py          # 非安全 HTTP 浏览器环境下真实登录、开局重试与重新开始
         ├── verify_akari_completion.py     # 照明通关及结果界面验证脚本

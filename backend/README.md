@@ -1,12 +1,12 @@
 # 登录后端运行与部署
 
-采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供独立关卡、通关记录、星数和等级排行榜以及文字论坛和站内消息。竞技积分榜展示未开放说明。
+采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供独立关卡、通关记录、星数和等级排行榜以及文字论坛和站内消息。竞技积分榜已接入有符号积分余额。
 
 新增正式成长与双人照明竞速使用 `/api/v1`，与旧成绩和本地练习分开。先在专用库执行 Flyway V1～V9，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`；全部默认 `false`。页面入口是 `/journey.html` 和 `/pk.html`。HTTP部署仍遵循原Cookie配置，正式HTTPS必须开启Secure。
 
 后续页面调整：三个游戏入口分别进入 `journey.html?game_id=mine|akari|sudoku` 的新版选关框架。按用户要求，原单关、照明十关目录与练习九关先从页面下线，等待重新设计；不删除数据库成果或改写已执行迁移。当前页面回归改用 `artifacts/frontend/verify_game_catalog.py`；下文原完整关卡浏览器命令属于历史验收，当前空目录不再运行该流程。
 
-首版十关照明发放一次性经验与最高星，三游戏正式初级资格为AND；扫雷由服务器逐格揭开，旧成绩和开发通关不能换资格。独立主题仅改变成长/竞速页的语义色和棋盘描边。房间/匹配各有容量保护，单进程调度器负责倒计时、平局/断线/超时，SSE鉴权后立即释放数据库连接，重启作废所有未完成房间与等待票。生产仍为一个worker、320MiB/1CPU、数据库池3/执行槽4。
+现账号5级（72经验）解锁竞技；原三游戏资格凭据保留但不再作为前置。扫雷由服务器逐格揭开，旧成绩和开发通关不能换资格。独立主题仅改变成长/竞速页的语义色和棋盘描边。房间/匹配各有容量保护，单进程调度器负责倒计时、平局/断线/超时，SSE鉴权后立即释放数据库连接，重启作废所有未完成房间与等待票。生产仍为一个worker、320MiB/1CPU、数据库池3/执行槽4。
 
 Nginx需要同步合并 `deploy/nginx-site.conf.example` 的精确 `/api/v1/me/events` 路由：关闭buffer/cache，读取超时75秒；普通API维持短超时。新v1写请求4KiB，论坛维持独立32KiB。Docker镜像已包含冻结题库与历史清理工具，正式应用启动不自动迁移。
 
@@ -129,7 +129,7 @@ cd /www/wwwroot/jobless-game
 
 ## 排行榜与挑战
 
-当前页面改为星数、等级和待开放积分三个榜单入口。星数按 `total_stars` 降序、同星并列；等级采用正式成长阈值计算，按 `xp` 降序、同经验并列。并列时按用户编号倒序稳定分页，仅有 `player_progression` 摘要的玩家入榜。索引由增量 V17 创建，适用于 MySQL 5.7；每页最多 50 条，名次跨页计算，不使用窗口函数。积分榜暂不发起数据请求，也不结算竞技积分。原用时榜 API 继续兼容旧客户端。
+当前页面改为星数、等级和竞技积分三个榜单入口。星数按 `total_stars` 降序、同星并列；等级采用正式成长阈值计算，按 `xp` 降序、同经验并列。并列时按用户编号倒序稳定分页，仅有 `player_progression` 摘要的玩家入榜。索引由增量 V17 创建，适用于 MySQL 5.7；每页最多 50 条，名次跨页计算，不使用窗口函数。积分榜读取arena_accounts，胜利+20、失败−10、允许负分，结果和每局每人唯一流水在同一事务提交。原用时榜 API 继续兼容旧客户端。
 
 排行榜与挑战 API：
 
@@ -140,7 +140,7 @@ cd /www/wwwroot/jobless-game
 | `POST /api/challenges/{run_id}/restart` | 校验 revision 和 request_id，仅重置指定关卡，其他关卡不受影响 |
 | `POST /api/challenges/{run_id}/complete` | 校验当前进度及 attempt_id，可按任意顺序保存单关，不生成总成绩 |
 | `GET /api/rankings/{category}?page=1&page_size=20` | 公开分页；category 为 mine/akari/sudoku；单页上限 50，total 返回 422 |
-| `GET /api/rankings/growth/{category}?page=1&page_size=20` | 当前公开成长榜；category 为 stars/level；需开启 progression；单页上限 50 |
+| `GET /api/rankings/growth/{category}?page=1&page_size=20` | 当前公开成长榜；category 为 stars/level/points；需开启 progression；单页上限 50 |
 | `GET /api/records/me?category=mine` | 默认扫雷，可切换照明/数独，返回本人最佳与最近三次，total 返回 422 |
 
 旧挑战接口沿用 `challenge_progress`（每人最多一行，存储三个独立尝试）、`completion_records`（每人每类最多四条）和 `leaderboard_entries`（每人每类一行）。停止创建和公开整轮成绩，既有总榜字段、数据及已执行迁移保留；成长榜索引另由 V17 增量迁移提供。写入按用户行锁串行化，在同一事务维护单项最佳、最新记录和摘要。查询先用索引读取有限页，再统计更快人数得到跨页并列名次，不使用窗口函数或持久化名次。
@@ -204,3 +204,31 @@ python -m backend.probe_login https://your-domain.example TestPlayer --concurren
 
 分别以并发 1、2、5、10 记录成功请求和全部请求的 p50/p95、吞吐、错误率与 429/503 数量。边界限流继续有效，不能把快速拒绝的延迟当成成功登录延迟。探测会产生有效会话，须在专用测试账号范围内清理。过载同时从另一个已登录浏览器检查 `/api/auth/me` 延迟，观察哈希流程数不超过一、连接数有界、无 OOM/持续换页，长时运行内存无持续增长，并验证分批清理与日志轮转。完成实测后再调整参数，不承诺固定在线人数。
 
+
+
+## 三模式竞技大厅与首次三星双倍（V18/V19）
+
+执行新增V18发布39个普通关奖励版本，旧尝试继续绑定旧版本。等级曲线来自progression-policy-v2.json，1～6级为0/18/36/54/72/90；普通关首次三星的当局新增经验额外奖励同等经验，独立first-three-double凭据永久防重，历史已三星不补发。完成快照包含base_awarded_xp和first_three_star_bonus，旧结果不改写。
+
+V19新增arena_accounts、arena_ledger、arena_invitations，扩展房主/source及成员隐藏扫雷board，并作废旧规则未结束房间及等待票。积分流水不关联可清理房间外键，历史清理不能删除该凭据。生产需备份、维护迁移并核对开关，不能用ORM自动建表代替Flyway。
+
+| 接口 | 行为 |
+| --- | --- |
+| GET /api/v1/me/arena/state?last_room=UUID | 一次权威快照返回等级、积分、房间、匹配票及邀请；只恢复本人有权房间 |
+| GET /api/v1/me/arena | 本人积分摘要；GET不初始化账户 |
+| POST /api/v1/me/presence | 可见页面在线租约；最多4096账号，每账号4会话，60秒失效；跨标签合并 |
+| GET /api/v1/arena/users?q=ID或完整用户名 | 精确搜索，最多10人，返回公开头像和可邀请状态；5级后可用 |
+| POST /api/v1/arena/invitations | {user_id,game_id,difficulty:normal}，UUID幂等创建，60秒有效 |
+| GET /api/v1/me/arena/invitations | 本人待处理邀请，最多20条 |
+| POST /api/v1/arena/invitations/{id}/accept | 被邀请者接受，复核双方在线/等级/占用，幂等入房 |
+| DELETE /api/v1/arena/invitations/{id} | 发送者取消或接收者拒绝；已接受需离开房间 |
+| PUT /api/v1/rooms/{id}/mode | 好友房主If-Match切换模式，清空双方准备；匹配房锁定模式 |
+| PUT /api/v1/rooms/{id}/reveals/{index} | 竞技扫雷权威揭格，空JSON；地雷不发往浏览器 |
+
+房间/匹配DTO允许game_id为mine/akari/sudoku，三个独立池，仍只接受normal规格。双方准备后3秒开局；相同模式使用同题，照明与数独从独立离线题池选择，扫雷共享隐藏雷区及0号安全起点，双方揭格进度独立。比赛不能暂停统一时钟，10分钟上限，1秒正确完成平局窗口。踩雷与退出即时判负按HTTP入口时间排序，不能让数据库排队倒置先后。
+
+竞技初始100积分，三游戏共用，好友和匹配均计分；胜+20负-10，平局/双方超时/作废为0。初始账户只在实际入房时写入；积分余额和流水唯一键均为服务端权威。搜索/邀请/房间操作按有界运行锁及固定用户锁顺序执行；待处理邀请全局32、每目标8、每发送者1，过期通知由唯一调度器处理，终态邀请由有界历史清理回收。
+
+本轮MySQL5.7/Flyway执行被Docker残留socket启动故障阻挡，不能宣称通过。已在独立临时MySQL9.5实例实际执行V1～V19 SQL并核对隐藏棋盘、负积分和唯一流水；该证据不替代5.7/Flyway及目标2核2GB容量验收。详情见实施报告。
+
+本机隔离预览：`python artifacts/frontend/verify_arena_preview.py --port 8006`，仅访问artifacts/frontend/sudoku-preview.sqlite3，保留账号、成长和原尝试，追加缺失版本与SQLite字段；不连接业务MySQL。双浏览器验收：`python artifacts/frontend/verify_arena.py`，仅使用新建临时库和测试账号，不修改预览账号等级。
