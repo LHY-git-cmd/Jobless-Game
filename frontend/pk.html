@@ -4,33 +4,37 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#102b3c"><title>竞技模式 · 无职游戏</title>
   <link rel="icon" href="./favicon.ico"><link rel="stylesheet" href="./styles/base.css"><link rel="stylesheet" href="./styles/pages/journey.css">
-  <link rel="stylesheet" href="./styles/components/navigation.css">
+  <link rel="stylesheet" href="./styles/pages/arena.css"><link rel="stylesheet" href="./styles/components/energy.css"><link rel="stylesheet" href="./styles/components/navigation.css">
 </head>
 <body>
   <div class="world-background" aria-hidden="true"></div>
-  <div class="page journey-page">
-    <header class="landing-header"><a class="brand" href="./index.html">◇ 无职游戏</a><div class="auth-controls" aria-label="账号"></div><nav class="site-nav" aria-label="主导航"><a href="./index.html">首页</a><a href="./pk.html" aria-current="page">竞技模式</a></nav></header>
-    <main>
-      <section class="journey-intro"><div><p class="eyebrow">两束光 / ONE CHALLENGE</p><h1>同一座灯塔，一起点亮。</h1><p>邀请朋友，或等待一位同行者。<br>同题照明，十分钟娱乐竞速。</p></div><aside class="journey-summary"><span>竞速约定</span><p>双方准备后倒计时5秒。<br>一秒内先后完成，记为平局。<br>对局不发放成长奖励。</p></aside></section>
-      <p id="pk-message" class="journey-status" role="status" tabindex="-1">正在确认竞速资格…</p><p id="pk-connection" role="status"></p>
-      <div class="journey-actions"><button type="button" id="pk-login">登录并继续</button><button type="button" id="pk-refresh">刷新状态</button></div>
-      <section id="pk-locked" class="journey-panel" aria-labelledby="pk-unlock-title" hidden><h2 id="pk-unlock-title">先完成三项正式挑战</h2><div id="pk-requirements" class="qualification-list"></div><a class="journey-link" href="./challenge.html">前往闯关模式 →</a></section>
-      <section id="pk-lobby" class="journey-bottom" aria-label="创建或加入竞速" hidden>
-        <div class="journey-panel"><p class="eyebrow">与朋友同行</p><h2>双人房间</h2><button type="button" id="pk-create" class="journey-primary">创建房间</button><form id="pk-join-form" class="pk-join"><label for="pk-code">朋友的房间码</label><div class="journey-actions"><input id="pk-code" name="code" maxlength="6" minlength="6" autocomplete="off" autocapitalize="characters" pattern="[A-Za-z2-9]{6}" required aria-describedby="pk-code-error"><button type="submit">加入房间</button></div><p id="pk-code-error" role="status"></p></form></div>
-        <div class="journey-panel"><p class="eyebrow">遇见同行者</p><h2>自动匹配</h2><p>照明普通池，按到达顺序配对。<br>等待最多60秒，可随时取消。</p><button type="button" id="pk-match" class="journey-primary">开始匹配</button></div>
+  <div id="landing" class="page">
+    <header class="landing-header">
+      <div class="player-profile" data-player-profile aria-label="账号与成长"></div>
+      <nav class="site-nav" aria-label="主导航"><a href="./index.html">首页</a><a href="./pk.html" aria-current="page">竞技模式</a></nav>
+      <div class="auth-controls" aria-label="账号"></div>
+    </header>
+    <main class="arena-content" aria-labelledby="arena-title">
+      <div class="arena-heading"><div><p class="eyebrow">同场较量 / ARENA</p><h1 id="arena-title">竞技模式</h1></div><div class="arena-time"><span id="arena-clock-label">等待开始</span><strong id="arena-clock">00:00</strong></div></div>
+      <div class="arena-player-meta"><span id="arena-own-id"></span><span>竞技积分 <strong id="arena-points">100</strong></span><a href="./ranking.html?category=points">积分排行 ↗</a></div>
+      <section class="arena-lobby" aria-label="双人竞技大厅">
+        <div class="arena-versus">
+          <div class="arena-player"><div id="arena-self-avatar" class="arena-avatar"></div><strong id="arena-self-name">请先登录</strong><span id="arena-self-status">未准备</span></div>
+          <span class="arena-vs" aria-hidden="true">VS</span>
+          <div class="arena-player"><button id="arena-invite-open" class="arena-avatar arena-add" type="button" aria-label="搜索玩家并邀请对战" title="搜索玩家并邀请对战"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 6v20M6 16h20"/></svg></button><div id="arena-opponent-avatar" class="arena-avatar" hidden></div><strong id="arena-opponent-name">邀请一位对手</strong><span id="arena-opponent-status">或开始自动匹配</span></div>
+        </div>
+        <div class="arena-controls"><button id="arena-action" class="journey-primary" type="button">开始匹配</button><div class="arena-mode"><label for="arena-mode">选择模式</label><select id="arena-mode"><option value="mine">扫雷 · 10×10 / 10雷</option><option value="akari" selected>照明 · 第10关难度</option><option value="sudoku">数独 · 简单</option></select></div></div>
+        <p id="arena-message" class="journey-status" role="status">正在确认竞技资格…</p>
+        <p id="arena-connection" class="arena-muted" role="status"></p>
+        <div class="arena-secondary"><button id="arena-refresh" type="button" aria-label="刷新竞技状态" title="刷新竞技状态"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 6.1A8 8 0 0 1 19.8 12M4.2 12A8 8 0 0 0 17.9 17.9"/></svg></button><button id="arena-leave" type="button" hidden>离开房间</button><button id="arena-cancel-invite" type="button" hidden>取消邀请</button><a class="journey-link" href="./index.html">返回首页 ↗</a></div>
       </section>
-      <section id="pk-waiting" class="journey-panel" aria-labelledby="pk-waiting-title" hidden><h2 id="pk-waiting-title">正在等待同行者</h2><p id="pk-ticket-status"></p><button type="button" id="pk-cancel">取消匹配</button></section>
-      <section id="pk-room" class="journey-panel" aria-labelledby="pk-room-title" hidden>
-        <div class="top-row"><div><p class="eyebrow">双人照明竞速</p><h2 id="pk-room-title">房间 <span id="pk-room-code"></span></h2></div><button type="button" id="pk-leave">离开房间</button></div>
-        <p id="pk-room-status" role="status"></p><div id="pk-members" class="pk-members"></div><p id="pk-countdown" class="pk-clock" aria-live="off"></p>
-        <button type="button" id="pk-ready" class="journey-primary">我准备好了</button>
-        <p>照明规则：灯光沿行列传播，墙格挡光；灯泡不可互照，数字墙格的相邻灯数须恰好符合，照亮全部白格后提交。</p>
-        <p>进行中主动退出判负；断线宽限30秒。双方离线或服务重启，对局作废。</p>
-        <div id="pk-board" class="formal-viewport" tabindex="0" aria-label="竞速棋盘，超宽时可滚动"></div>
-        <button type="button" id="pk-submit" class="journey-primary" hidden>提交解答</button><div id="pk-result" class="formal-result" hidden tabindex="-1"></div>
-      </section>
+      <section id="arena-game" class="journey-panel" hidden aria-label="竞技棋盘"><div class="section-heading"><h2 id="arena-game-title">对局进行中</h2><span>比赛上限10分钟</span></div><p id="arena-game-help" class="arena-muted"></p><div id="arena-board" class="formal-viewport" role="region" tabindex="0" aria-label="竞技棋盘，可在区域内滚动"></div><button id="arena-submit" class="journey-primary" type="button">提交解答</button><p id="arena-result" class="formal-result" role="status" hidden></p></section>
+      <section id="arena-invitations" class="journey-panel" hidden aria-labelledby="arena-invitations-title"><h2 id="arena-invitations-title">收到的对战邀请</h2><div id="arena-incoming-list"></div></section>
+      <p class="arena-rules">5级解锁 · 初始100积分 · 胜利+20 / 失败−10 · 平局不变<br>双方准备后3秒开局；10分钟内先正确完成获胜，1秒内均完成算平局。踩雷、对局中退出判负，断线宽限30秒。</p>
     </main>
-    <footer class="landing-footer"><a href="./index.html">返回游戏首页 ↗</a><span>光影之间，各有精彩。</span></footer>
+    <dialog id="arena-search-dialog" class="journey-rules" aria-labelledby="arena-search-title"><h2 id="arena-search-title">邀请玩家</h2><form id="arena-search-form"><label for="arena-search-query">用户ID或完整用户名</label><div class="arena-search-row"><input id="arena-search-query" required maxlength="64" autocomplete="off"><button type="submit">搜索</button></div></form><p id="arena-search-message" role="status">仅可邀请在线、空闲且已达5级的玩家。</p><div id="arena-search-results"></div><button id="arena-search-close" type="button">关闭</button></dialog>
+    <dialog id="arena-leave-dialog" class="journey-rules" aria-labelledby="arena-leave-title"><h2 id="arena-leave-title">确认退出对局？</h2><p id="arena-leave-description"></p><div class="journey-actions"><button id="arena-leave-cancel" type="button" autofocus>继续对局</button><button id="arena-leave-confirm" class="journey-primary" type="button">确认退出</button></div></dialog>
+    <footer class="landing-footer"><span>光影之间，各有精彩。</span></footer>
   </div>
   <script type="module" src="./src/pages/pk.js"></script>
 </body>

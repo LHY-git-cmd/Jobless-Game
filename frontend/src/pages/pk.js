@@ -1,273 +1,237 @@
-/** 双人竞速页面：REST写操作、SSE通知后GET快照、账号隔离及原终盘重试。 */
+/** 三模式竞技大厅：邀请、分池匹配、双方准备、权威棋盘及积分，所有写入通过HTTP。 */
 import { initAuth } from '../features/account/auth.js';
 import { Events } from '../shared/events.js';
-import { api, createResource } from '../features/progression/client.js';
+import { api as arenaApi } from '../features/progression/client.js';
 import { subscribeEvents } from '../features/pk/events.js';
 import { createFormalBoard } from '../games/formal-board.js';
-import { formatTime } from '../shared/time.js';
+import { createAvatarImage } from '../features/account/avatar.js';
 
-const $ = id => document.getElementById(id);
-const auth = initAuth();
-let uid, generation = 0, refreshVersion = 0, busy = false, subscription = null, refreshTimer = null;
-let features = {}, eligible = false, room = null, ticket = null, boardRoom = null, offset = 0;
-let memory = { requests: {}, drafts: {}, lastRoom: null }, storage = null;
-try { storage = localStorage; } catch { /* 存储禁用时仍允许本页对局，提示刷新可能丢草稿。 */ }
-const board = createFormalBoard({ host: $('pk-board'), onChange: draft => {
-  if (room) { memory.drafts[room.data.room_id] = { ...memory.drafts[room.data.room_id], draft }; save(); }
-} });
+const $=id=>document.getElementById(id);
+const names={mine:'扫雷',akari:'照明',sudoku:'数独'};
+const auth=initAuth();
+let uid,epoch=0,read=0,busy=false,eligible=false,enabled=false,features={},room=null,ticket=null,invitations=[],points=100;
+let subscription=null,refreshTimer=null,boardRoom=null,offset=0,dead=false,lastResult=null,searchVersion=0;
+let memory={requests:{},drafts:{},lastRoom:null},storage;
+try{storage=localStorage;}catch{/* 本页仍可运行，但刷新后草稿不能恢复。 */}
+/** 所有在途响应统一核对账号代数，换号后不能在工作回调内写入新账号内存。 */
+async function api(path,options){
+  const stamp=epoch,value=await arenaApi(path,options);
+  if(dead||stamp!==epoch)throw Object.assign(new Error('账号已切换。'),{stale:true});
+  return value;
+}
+const board=createFormalBoard({host:$('arena-board'),onChange:draft=>{
+  if(room){memory.drafts[room.room_id]={...(memory.drafts[room.room_id]||{}),draft};save();}
+},onReveal:index=>void reveal(index)});
 
-/** 每账号最多保留一局本地草稿和少量创建重试凭据。 */
-function save() {
-  if (!uid) return;
-  try { storage?.setItem(`jobless-pk-v1:${uid}`, JSON.stringify(memory)); }
-  catch { $('pk-message').textContent = '本地存储不可用，刷新后未提交布局可能丢失。'; }
-}
-/** 401立即广播身份失效，销毁订阅与棋盘。 */
-function showError(error) {
-  $('pk-message').textContent = error.message;
-  if (error.status === 401) document.dispatchEvent(new CustomEvent(Events.AUTH_EXPIRED));
-}
-/** 写请求期间按钮不可重复触发，等待和终态保持可读。 */
-function controls() {
-  $('pk-lobby').hidden = !uid || !eligible || Boolean(ticket?.data.status === 'waiting') || Boolean(room && ['waiting', 'countdown', 'playing'].includes(room.data.status));
-  for (const id of ['pk-create', 'pk-match', 'pk-ready', 'pk-leave', 'pk-cancel', 'pk-submit']) $(id).disabled = busy;
-  $('pk-match').disabled ||= !features.matchmaking;
-  $('pk-join-form').querySelector('button').disabled = busy;
-  const me = room?.data.members.find(member => member.is_me);
-  const pending = room && memory.drafts[room.data.room_id]?.pending;
-  board.setDisabled(busy || !room || room.data.status !== 'playing' || Boolean(me?.completed) || Boolean(pending));
-  $('pk-submit').hidden = !room || room.data.status !== 'playing';
-  $('pk-submit').disabled ||= Boolean(me?.completed);
-  $('pk-submit').textContent = me?.completed ? '解答已确认，等待结算' : pending ? '重试确认原解答' : '提交解答';
-}
-/** 三项缺失状态直接显示服务器表示，链接进入正式入口。 */
-function requirements(value) {
-  eligible = value.eligible; $('pk-locked').hidden = eligible;
-  $('pk-requirements').replaceChildren();
-  for (const item of value.requirements) {
-    const link = document.createElement('a'); link.href = `./journey.html?level=${encodeURIComponent(item.level_id)}`;
-    link.textContent = `${item.name}　${item.completed ? '已通过' : '去挑战 →'}`; $('pk-requirements').append(link);
-  }
-}
-/** 房间快照不覆盖正在填写的本地解答；地图首次下发时才绑定棋盘。 */
-function renderRoom(value) {
-  room = value; const data = value.data;
-  offset = Date.parse(data.server_now) - Date.now(); memory.lastRoom = data.room_id; save();
-  $('pk-room').hidden = false; $('pk-room-code').textContent = data.room_code;
-  const statuses = { waiting: '等待朋友加入，双方准备后开始。', countdown: '双方已准备，倒计时中…', playing: '对局进行中，请点亮全部白格后提交。', finished: '对局已结束。', cancelled: '本次对局已作废。', expired: '房间等待已超时。' };
-  $('pk-room-status').textContent = statuses[data.status] || data.status;
-  $('pk-members').replaceChildren();
-  for (const member of data.members) {
-    const element = document.createElement('div'); element.className = 'pk-member';
-    element.textContent = `${member.username}${member.is_me ? '（你）' : ''} · ${member.completed ? '有效解答已提交' : member.ready ? '已准备' : '未准备'} · ${member.online ? '在线' : '连接恢复中'}`;
-    $('pk-members').append(element);
-  }
-  const me = data.members.find(member => member.is_me);
-  $('pk-ready').hidden = data.status !== 'waiting'; $('pk-ready').textContent = me?.ready ? '取消准备' : '我准备好了';
-  $('pk-leave').textContent = data.status === 'playing' ? '退出对局（将判负）' : '离开房间';
-  if (data.puzzle && boardRoom !== data.room_id) {
-    boardRoom = data.room_id;
-    const saved = memory.drafts[data.room_id];
-    memory.drafts = { [data.room_id]: saved || {} }; save();
-    board.load('akari', data.puzzle, saved?.draft);
-  } else if (!data.puzzle) { boardRoom = null; board.clear(); }
-  $('pk-board').hidden = !data.puzzle;
-  $('pk-result').hidden = !data.result;
-  if (data.result) {
-    const result = data.result;
-    const mine = me?.user_id;
-    const reasons = { server_restart: '服务重启', both_offline: '双方离线', waiting_timeout: '等待超时', match_timeout: '比赛超时', player_left: '玩家主动离开', opponent_disconnected: '对手断线超时', empty_room: '房间已空' };
-    $('pk-result').textContent = `${result.outcome === 'draw' ? '本局平局' : result.outcome === 'win' ? result.winner_id === mine ? '你赢得了本局竞速' : '同行者先一步完成' : '对局作废'}${reasons[result.reason] ? ` · ${reasons[result.reason]}` : ''}。对局不发放成长奖励。`;
-  }
-  if (me?.completed && memory.drafts[data.room_id]?.pending) { memory.drafts[data.room_id].pending = null; save(); }
-  controls(); updateClock();
-}
-/** 刷新/重连只读本人当前资源，事件丢失也不丢最终结果。 */
-async function refreshState() {
-  if (!uid || !features.pk_rooms) return;
-  const stamp = generation, version = ++refreshVersion;
-  try {
-    const current = await api('me/rooms?status=active');
-    if (stamp !== generation || version !== refreshVersion) return;
-    if (current.data.items.length) {
-      const response = await api(current.data.items[0].links.self);
-      if (stamp !== generation || version !== refreshVersion) return;
-      ticket = null; $('pk-waiting').hidden = true; memory.requests = {}; save(); renderRoom(response); return;
-    }
-    if (features.matchmaking) {
-      try {
-        const currentTicket = await api('me/matchmaking-ticket');
-        if (stamp !== generation || version !== refreshVersion) return;
-        ticket = currentTicket;
-        if (currentTicket.data.status === 'waiting') {
-          room = null; boardRoom = null; board.clear(); $('pk-room').hidden = true;
-          $('pk-waiting').hidden = false; $('pk-ticket-status').textContent = '正在寻找同行者…';
-          memory.requests = {}; save(); controls(); return;
-        }
-      } catch (error) { if (error.status !== 404) throw error; }
-    }
-    if (stamp !== generation || version !== refreshVersion) return;
-    if (ticket) {
-      const previous = await api(ticket.data.links.self);
-      if (stamp !== generation || version !== refreshVersion) return;
-      ticket = previous;
-      $('pk-message').textContent = previous.data.status === 'expired' ? '暂时没有匹配到同行者，可再次尝试。' : '匹配已结束。';
-    }
-    ticket = null; $('pk-waiting').hidden = true;
-    if (memory.lastRoom) {
-      try {
-        const previous = await api(`rooms/${memory.lastRoom}`);
-        if (stamp !== generation || version !== refreshVersion) return;
-        renderRoom(previous);
-      } catch (error) { if (error.status !== 404) throw error; if (stamp !== generation || version !== refreshVersion) return; room = null; $('pk-room').hidden = true; }
-    }
-    controls();
-  } catch (error) { if (stamp === generation && version === refreshVersion) showError(error); }
-}
-/** 合并短时间内同一资源的多条通知，避免准备/开始通知形成GET突发。 */
-function scheduleRefresh() {
-  if (refreshTimer) return;
-  refreshTimer = setTimeout(() => { refreshTimer = null; void refreshState(); }, 80);
-}
-/** 原创建键跨刷新保留；负载不同使用新的请求身份。 */
-function intent(kind, data) {
-  const previous = memory.requests[kind];
-  if (!previous || JSON.stringify(previous.data) !== JSON.stringify(data)) {
-    memory.requests[kind] = { data, key: crypto.randomUUID() }; save();
-  }
+/** 草稿只保存本人棋盘与幂等请求，不包含对手布局或任何积分凭据。 */
+function save(){if(uid)try{storage?.setItem(`jobless-pk-v2:${uid}`,JSON.stringify(memory));}catch{$('arena-message').textContent='本地存储不可用，刷新后可能丢失未提交布局。';}}
+/** 每个创建意图复用UUID，响应丢失重试不重复入队、邀请或建房。 */
+function intent(kind,data){
+  const previous=memory.requests[kind];
+  if(!previous||JSON.stringify(previous.data)!==JSON.stringify(data)){memory.requests[kind]={data,key:crypto.randomUUID()};save();}
   return memory.requests[kind].key;
 }
-/** 房间、加入、排队统一通过HTTP创建，SSE不承载命令。 */
-async function create(kind, data) {
-  if (busy || !uid || !eligible) return;
-  const stamp = generation; busy = true; controls(); $('pk-message').textContent = '正在确认…';
-  try {
-    const value = await createResource(kind, data, intent(kind, data));
-    if (stamp !== generation) return;
-    delete memory.requests[kind]; save();
-    if (kind === 'matchmaking-tickets') {
-      // 幂等POST重放的是创建时快照；再GET当前票，避免已配对后被旧waiting响应覆盖。
-      const currentTicket = await api(value.data.links.self);
-      if (stamp !== generation) return;
-      ticket = currentTicket;
-      if (currentTicket.data.room_id) { const current = await api(currentTicket.data.links.room); if (stamp !== generation) return; renderRoom(current); }
-      else { room = null; $('pk-room').hidden = true; $('pk-waiting').hidden = false; $('pk-ticket-status').textContent = '正在寻找同行者…'; }
-    } else { const current = await api(value.data.links.self); if (stamp !== generation) return; renderRoom(current); }
-    if (stamp !== generation) return;
-    $('pk-message').textContent = '状态已确认。';
-  } catch (error) {
-    if (stamp !== generation) return;
-    showError(error);
-    if (kind === 'room-memberships') $('pk-code-error').textContent = error.message;
-    if (error.code === 'pk_occupied') await refreshState();
-  } finally { if (stamp === generation) { busy = false; controls(); } }
+/** 用户名仅用textContent渲染，图片由固定预设编号创建。 */
+function player(prefix,user){
+  const host=$(prefix+'-avatar'),id=String(user?.user_id??user?.id??'')+':'+String(user?.avatar_id||1);
+  if(host.dataset.identity!==id){host.replaceChildren(createAvatarImage(user?.avatar_id));host.dataset.identity=id;}
+  $(prefix+'-name').textContent=user?.username||'请先登录';
 }
-/** 条件更新准备，不把前端倒计时作为开始比赛的授权。 */
-async function ready() {
-  if (busy || !room || room.data.status !== 'waiting') return;
-  const stamp = generation, current = room;
-  const desired = !current.data.members.find(member => member.is_me)?.ready;
-  busy = true; controls();
-  try {
-    let value;
-    try {
-      value = await api(current.data.links.readiness, { method: 'PUT', body: { ready: desired }, headers: { 'If-Match': current.etag } });
-    } catch (error) {
-      if (error.status !== 412 || stamp !== generation) throw error;
-      // 两人几乎同时准备时，读取最新ETag，仅对仍在等待的同一房间重试原意图一次。
-      const latest = await api(current.data.links.self);
-      if (stamp !== generation) return;
-      value = latest.data.status === 'waiting' && latest.data.members.find(member => member.is_me)?.ready !== desired
-        ? await api(latest.data.links.readiness, { method: 'PUT', body: { ready: desired }, headers: { 'If-Match': latest.etag } }) : latest;
-    }
-    if (stamp === generation) renderRoom(value);
-  } catch (error) { if (stamp === generation) { showError(error); await refreshState(); } }
-  finally { if (stamp === generation) { busy = false; controls(); } }
+/** 时间只显示服务器锚点，客户端到零不自行开始或判定结果。 */
+function timing(){
+  const now=Date.now()+offset;
+  let label='等待开始',ms=0;
+  if(ticket?.status==='waiting'){label='匹配用时';ms=now-Date.parse(ticket.created_at);}
+  if(room?.status==='countdown'){label='即将开始';ms=Math.ceil(Math.max(0,Date.parse(room.starts_at)-now)/1000)*1000;}
+  if(room?.status==='playing'){label='对局用时';ms=now-Date.parse(room.starts_at);}
+  if(room?.result){label='本局用时';ms=room.result.duration_ms;}
+  const seconds=Math.floor(Math.max(0,ms)/1000);
+  $('arena-clock-label').textContent=label;$('arena-clock').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
 }
-/** 有效提交不可改写；网络失败保持原解答，明确422才允许继续修改。 */
-async function submit() {
-  if (busy || !room || room.data.status !== 'playing') return;
-  const stamp = generation, id = room.data.room_id, current = room;
-  const entry = memory.drafts[id] ||= { draft: board.snapshot() };
-  entry.pending ||= board.payload(); save(); busy = true; controls();
-  try {
-    await api(current.data.links.submission, { method: 'PUT', body: entry.pending });
-    if (stamp !== generation) return;
-    entry.pending = null; save(); $('pk-message').textContent = '解答已确认，正在等待竞速结果。'; await refreshState();
-  } catch (error) { if (stamp === generation) { if (error.status === 422) { entry.pending = null; save(); } showError(error); } }
-  finally { if (stamp === generation) { busy = false; controls(); } }
-}
-/** 取消和退出均发DELETE；已配对冲突会恢复房间，引导使用房间退出。 */
-async function remove(kind) {
-  if (busy || !uid) return;
-  const path = kind === 'ticket' ? ticket?.data.links.self : room?.data.links.membership;
-  if (!path) return;
-  const stamp = generation; busy = true; controls();
-  try {
-    await api(path, { method: 'DELETE' });
-    if (stamp !== generation) return;
-    if (kind === 'room') { memory.lastRoom = null; room = null; boardRoom = null; board.clear(); $('pk-room').hidden = true; }
-    else ticket = null;
-    save(); $('pk-message').textContent = kind === 'room' ? '已离开房间。' : '已取消匹配。'; await refreshState();
-  } catch (error) { if (stamp === generation) { showError(error); await refreshState(); } }
-  finally { if (stamp === generation) { busy = false; controls(); } }
-}
-/** 仅在本地平滑显示权威starts_at/ends_at，零点时仍等待服务端发题。 */
-function updateClock() {
-  const now = Date.now() + offset;
-  if (ticket?.data.status === 'waiting') {
-    const left = Math.max(0, Date.parse(ticket.data.expires_at)-Date.now());
-    $('pk-ticket-status').textContent = `正在寻找同行者… 剩余 ${Math.ceil(left/1000)} 秒${left ? '' : '，正在确认超时结果'}`;
+/** 大厅按钮由权威状态决定，配对成功仅进入准备，不自动开局。 */
+function render(){
+  const user=auth.currentUser;
+  player('arena-self',user);$('arena-own-id').textContent=user?`我的ID：${user.id}`:'登录后邀请或匹配';
+  $('arena-points').textContent=String(points);
+  const opponent=room?.members?.find(v=>!v.is_me),me=room?.members?.find(v=>v.is_me);
+  const outgoing=invitations.find(v=>v.sender_id===uid&&v.status==='pending');
+  $('arena-invite-open').hidden=Boolean(opponent);$('arena-opponent-avatar').hidden=!opponent;
+  if(opponent)player('arena-opponent',opponent);
+  else $('arena-opponent-name').textContent=outgoing?outgoing.target_name:'邀请一位对手';
+  $('arena-self-status').textContent=room?.status==='playing'?(me?.completed?'已完成':'对局中'):me?.ready?'已准备':'未准备';
+  $('arena-opponent-status').textContent=opponent?(opponent.completed?'已完成':opponent.ready?'已准备':'等待准备'):ticket?.status==='waiting'?'正在寻找对手':outgoing?'等待接受邀请':'或开始自动匹配';
+  const active=room&&['waiting','countdown','playing'].includes(room.status);
+  $('arena-invite-open').disabled=busy||!eligible||!enabled||Boolean(ticket||active||outgoing);
+  $('arena-leave').hidden=!room;
+  $('arena-leave').disabled=busy;
+  $('arena-cancel-invite').hidden=!outgoing;$('arena-cancel-invite').disabled=busy;
+  $('arena-mode').disabled=busy||!eligible||Boolean(ticket||outgoing||room&&(room.source==='match'||room.host_id!==uid||room.status!=='waiting'));
+  if(room)$('arena-mode').value=room.game_id;
+  const action=$('arena-action');action.disabled=busy||!enabled;
+  if(!uid){action.textContent='登录并继续';action.disabled=false;}
+  else if(!eligible){action.textContent='5级解锁竞技';action.disabled=true;}
+  else if(ticket?.status==='waiting')action.textContent='取消匹配';
+  else if(room?.status==='waiting'){action.textContent=me?.ready?'取消准备':'准备';action.disabled=busy||!opponent;}
+  else if(room?.status==='countdown'){action.textContent='即将开始…';action.disabled=true;}
+  else if(room?.status==='playing'){action.textContent=me?.completed?'等待对局结果':'对局进行中';action.disabled=true;}
+  else if(room?.result)action.textContent='返回大厅';
+  else {action.textContent=outgoing?'等待接受邀请':'开始匹配';action.disabled=busy||Boolean(outgoing);}
+  const playing=Boolean(room?.puzzle);
+  $('arena-game').hidden=!playing;
+  if(playing){
+    $('arena-game-title').textContent=`${names[room.game_id]} · ${room.status==='playing'?'对局进行中':'本局已结束'}`;
+    $('arena-game-help').textContent=room.game_id==='mine'?'双方同一雷区与安全起始格；踩雷立即判负。点按格子排雷，可切换标记。':room.game_id==='akari'?'照亮全部白格、满足数字且灯泡不互照后提交解答。':'填写空白数字，行、列与九宫内1～9不重复。完成后提交解答。';
+    if(boardRoom!==room.room_id){boardRoom=room.room_id;board.load(room.game_id,room.puzzle,memory.drafts[room.room_id]?.draft||{},room.mine_board);}
+    else if(room.game_id==='mine')board.setMine(room.mine_board);
+    board.setDisabled(busy||room.status!=='playing'||Boolean(me?.completed)||Boolean(memory.drafts[room.room_id]?.pending));
+    $('arena-submit').hidden=room.game_id==='mine'||room.status!=='playing'||Boolean(me?.completed);
+    $('arena-submit').disabled=busy;$('arena-submit').textContent=memory.drafts[room.room_id]?.pending?'重试提交解答':'提交解答';
+  }else if(boardRoom){board.clear();boardRoom=null;}
+  $('arena-result').hidden=!room?.result;
+  if(!room?.result)$('arena-result').textContent='';
+  if(room?.result){
+    const result=room.result,score=result.scores?.find(v=>v.user_id===uid);
+    const outcome=result.outcome==='draw'?'本局平局':result.outcome==='win'?(result.winner_id===uid?'你赢得了本局':'本局落败'):'对局作废';
+    $('arena-result').textContent=`${outcome}。${score?`积分 ${score.delta>=0?'+':''}${score.delta}，当前 ${score.points} 分。`:''}`;
+    if(score){points=score.points;$('arena-points').textContent=String(points);}
   }
-  if (!room) return;
-  const data = room.data;
-  $('pk-countdown').textContent = data.status === 'countdown' ? `距开始 ${Math.max(0, Math.ceil((Date.parse(data.starts_at)-now)/1000))} 秒` : data.status === 'playing' ? `剩余 ${formatTime(Math.max(0, Date.parse(data.ends_at)-now)/1000)}` : '';
+  const incoming=invitations.filter(v=>v.target_id===uid&&v.status==='pending');
+  $('arena-invitations').hidden=!incoming.length;
+  $('arena-incoming-list').replaceChildren(...incoming.map(item=>{
+    const row=document.createElement('div');row.className='arena-incoming';
+    const text=document.createElement('span');text.textContent=`${item.sender_name} 邀请你进行${names[item.game_id]}对战`;
+    const accept=document.createElement('button'),decline=document.createElement('button');accept.type=decline.type='button';accept.textContent='接受';decline.textContent='拒绝';accept.disabled=decline.disabled=busy;
+    accept.addEventListener('click',()=>void act(async()=>{const value=await api(`arena/invitations/${item.invitation_id}/accept`,{method:'POST',body:{}});adoptRoom(value);}));
+    decline.addEventListener('click',()=>void act(()=>api(`arena/invitations/${item.invitation_id}`,{method:'DELETE'})));
+    row.append(text,accept,decline);return row;
+  }));
+  timing();
 }
-/** 换号销毁订阅/旧请求/草稿内存，之后才恢复新账号正式资源。 */
-async function identityChanged() {
-  const next = auth.currentUser?.id ?? null;
-  if (uid === next) return;
-  uid = next; generation++; refreshVersion++; subscription?.close(); subscription = null;
-  if (refreshTimer) clearTimeout(refreshTimer); refreshTimer = null;
-  room = null; ticket = null; boardRoom = null; eligible = false; busy = false; board.clear();
-  memory = { requests: {}, drafts: {}, lastRoom: null }; document.documentElement.dataset.theme = 'default';
-  if (uid) {
-    try { const saved = JSON.parse(storage?.getItem(`jobless-pk-v1:${uid}`) || 'null'); if (saved?.requests && saved?.drafts) memory = saved; }
-    catch { $('pk-message').textContent = '本地草稿读取失败，正在恢复服务器资源。'; }
-  }
-  for (const id of ['pk-room', 'pk-waiting', 'pk-locked']) $(id).hidden = true;
-  $('pk-login').hidden = Boolean(uid); $('pk-connection').textContent = ''; controls();
-  const stamp = generation;
-  try {
-    features = (await api('features')).data;
-    if (stamp !== generation) return;
-    if (!features.pk_rooms || !features.progression) { $('pk-message').textContent = '双人竞速暂未开放，可先前往灯塔之旅。'; return; }
-    if (!uid) { $('pk-message').textContent = '登录后确认三项正式通关资格。'; return; }
-    const value = await api('me/pk-eligibility');
-    if (stamp !== generation) return;
-    requirements(value.data); controls(); $('pk-message').textContent = eligible ? '竞速资格已解锁。邀请朋友或开始匹配。' : '完成三项初级正式挑战后即可参与。';
-    if (features.cosmetics) {
-      try { const current = await api('me/appearance'); if (stamp === generation) document.documentElement.dataset.theme = current.data.theme_id; }
-      catch { /* 主题加载失败不阻止可用的正式对局。 */ }
+/** 采用新的房间快照；结束后仍留结果，刷新可读本人最近房间。 */
+function adoptRoom(value){
+  const data=value.data||value;room={...data,etag:value.etag||data.etag};ticket=null;
+  offset=Date.parse(data.server_now)-Date.now();if(!Number.isFinite(offset))offset=0;
+  memory.lastRoom=data.room_id;save();
+  if(room.status==='playing'&&lastResult!==room.room_id){lastResult=room.room_id;setTimeout(()=>$('arena-game').scrollIntoView({behavior:'instant',block:'start'}),0);}
+}
+/** SSE仅提示重读，不通过事件直接写胜负/积分；80毫秒内重复通知合并。 */
+function schedule(){if(refreshTimer||dead)return;refreshTimer=setTimeout(()=>{refreshTimer=null;void refresh();},80);}
+/** 并行有限读取状态，旧请求在换号或后续刷新后不能覆盖新数据。 */
+async function refresh(){
+  if(!uid||!enabled)return;
+  const stamp=epoch,version=++read;
+  try{
+    const snapshot=await api('me/arena/state'+(memory.lastRoom?'?last_room='+encodeURIComponent(memory.lastRoom):''));
+    if(stamp!==epoch||version!==read)return;
+    const data=snapshot.data;
+    points=data.account.points;eligible=data.eligibility.eligible;invitations=data.invitations;ticket=data.ticket;
+    const eligibility={data:data.eligibility};
+    if(ticket&&ticket.status!=='waiting')ticket=null;
+    if(data.room)adoptRoom({data:data.room,etag:data.room.etag});
+    else {room=null;memory.lastRoom=null;save();}
+    if(!eligible)$('arena-message').textContent=`达到5级后解锁竞技，当前${eligibility.data.level}级。`;
+    else if(room?.status==='waiting')$('arena-message').textContent=room.members.length===2?'对手已到位，双方准备后3秒开始。':'等待另一位玩家。';
+    else if(room?.status==='countdown')$('arena-message').textContent='双方已准备，倒计时3秒后开始。';
+    else if(ticket){offset=Date.parse(ticket.server_now)-Date.now();$('arena-message').textContent='正在匹配相同模式的玩家，最多等待60秒，可随时取消。';}
+    else if(!room)$('arena-message').textContent='选择模式，邀请玩家或开始自动匹配。';
+    render();
+  }catch(error){if(stamp===epoch)showError(error);}
+}
+/** 请求失败保留当前意图与棋盘，重复操作由业务幂等保护。 */
+async function act(work){
+  if(busy||!uid)return;const stamp=epoch;busy=true;render();
+  try{await work();if(stamp!==epoch)return;await refresh();}
+  catch(error){if(stamp===epoch){showError(error);if(error.status===409||error.status===412)await refresh();}}
+  finally{if(stamp===epoch){busy=false;render();}}
+}
+/** 身份失效交由共享登录处理，其他错误只显示有限可理解文字。 */
+function showError(error){if(error.stale)return;$('arena-message').textContent=error.message;if(error.status===401)document.dispatchEvent(new CustomEvent(Events.AUTH_EXPIRED));}
+/** 同一创建意图失败保持原UUID，成功后释放再生成下一次意图。 */
+async function create(kind,data){
+  const value=await api(kind,{method:'POST',body:data,headers:{'Idempotency-Key':intent(kind,data)}});
+  delete memory.requests[kind];save();return value;
+}
+/** 主按钮随状态匹配、取消、准备或离开结果页。 */
+async function action(){
+  if(!uid)return auth.requireLogin(()=>identityChanged());
+  if(!eligible)return;
+  if(room?.result){read++;room=null;ticket=null;memory.lastRoom=null;boardRoom=null;board.clear();save();render();return refresh();}
+  if(ticket)return act(async()=>{await api(ticket.links.self,{method:'DELETE'});ticket=null;});
+  if(room?.status==='waiting')return act(async()=>{
+    const latest=await api('rooms/'+room.room_id);const me=latest.data.members.find(v=>v.is_me);
+    const desired=!me.ready;
+    try{adoptRoom(await api(latest.data.links.readiness,{method:'PUT',body:{ready:desired},headers:{'If-Match':latest.etag}}));}
+    catch(error){
+      if(error.status!==412)throw error;
+      // 双方同时准备只重放本人原意图，不能因重读后状态变化反向切换准备。
+      const current=await api('rooms/'+latest.data.room_id);
+      if(current.data.status==='waiting'&&current.data.members.find(v=>v.is_me)?.ready!==desired)
+        adoptRoom(await api(current.data.links.readiness,{method:'PUT',body:{ready:desired},headers:{'If-Match':current.etag}}));
+      else adoptRoom(current);
     }
-    if (stamp !== generation) return;
-    subscription = subscribeEvents({ onResource: scheduleRefresh, onReconnect: scheduleRefresh,
-      onState: text => { if (stamp === generation) $('pk-connection').textContent = text; } });
-    await refreshState();
-  } catch (error) { if (stamp === generation) showError(error); }
+  });
+  return act(async()=>{const value=await create('matchmaking-tickets',{game_id:$('arena-mode').value,difficulty:'normal'});ticket=value.data;});
 }
-$('pk-login').addEventListener('click', () => void auth.requireLogin(identityChanged));
-$('pk-refresh').addEventListener('click', () => void (uid ? (async () => {
-  const stamp = generation;
-  try { const value = await api('me/pk-eligibility'); if (stamp !== generation) return; requirements(value.data); controls(); await refreshState(); } catch (error) { if (stamp === generation) showError(error); }
-})() : identityChanged()));
-$('pk-create').addEventListener('click', () => void create('rooms', { game_id: 'akari', difficulty: 'normal' }));
-$('pk-match').addEventListener('click', () => void create('matchmaking-tickets', { game_id: 'akari', difficulty: 'normal' }));
-$('pk-join-form').addEventListener('submit', event => { event.preventDefault(); $('pk-code-error').textContent = ''; void create('room-memberships', { room_code: $('pk-code').value.trim().toUpperCase() }); });
-$('pk-ready').addEventListener('click', () => void ready()); $('pk-submit').addEventListener('click', () => void submit());
-$('pk-leave').addEventListener('click', () => void remove('room')); $('pk-cancel').addEventListener('click', () => void remove('ticket'));
-document.addEventListener(Events.AUTH_CHANGED, () => void identityChanged());
-const timer = setInterval(updateClock, 250);
-window.addEventListener('pagehide', () => { generation++; subscription?.close(); clearInterval(timer); if (refreshTimer) clearTimeout(refreshTimer); board.destroy(); });
-window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
+/** 扫雷输入由服务端揭格，不能将未揭地雷传入浏览器。 */
+async function reveal(index){
+  if(!room||room.status!=='playing')return;
+  return act(async()=>adoptRoom(await api(`rooms/${room.room_id}/reveals/${index}`,{method:'PUT',body:{}})));
+}
+/** 合法解答冻结重试负载；422才解除冻结供玩家修正。 */
+async function submit(){
+  if(!room||room.status!=='playing')return;
+  const entry=memory.drafts[room.room_id]||={draft:board.snapshot()};entry.pending||=board.payload();save();
+  return act(async()=>{try{await api(room.links.submission,{method:'PUT',body:entry.pending});entry.pending=null;save();}
+    catch(error){if(error.status===422){entry.pending=null;save();}throw error;}});
+}
+/** 搜索仅发用户主动提交的完整姓名或ID，不逐字符查询。 */
+async function search(event){
+  event.preventDefault();const stamp=epoch,version=++searchVersion;
+  $('arena-search-message').textContent='正在查找…';$('arena-search-results').replaceChildren();
+  try{
+    const value=await api('arena/users?q='+encodeURIComponent($('arena-search-query').value.trim()));
+    if(stamp!==epoch||version!==searchVersion)return;
+    $('arena-search-message').textContent=value.data.items.length?'仅在线、空闲且已达5级的玩家可邀请。':'未找到玩家，请输入完整用户名或用户ID。';
+    for(const user of value.data.items){
+      const row=document.createElement('div');row.className='arena-search-result';const text=document.createElement('span');text.textContent=`${user.username} · ID ${user.user_id} · ${!user.online?'离线':!user.idle?'忙碌':!user.eligible?'未达5级':'可邀请'}`;
+      const button=document.createElement('button');button.type='button';button.textContent='邀请';button.disabled=!user.invitable;
+      button.addEventListener('click',()=>{void act(async()=>{await create('arena/invitations',{user_id:user.user_id,game_id:$('arena-mode').value,difficulty:'normal'});$('arena-search-dialog').close();});});
+      row.append(createAvatarImage(user.avatar_id),text,button);$('arena-search-results').append(row);
+    }
+  }catch(error){if(stamp===epoch)$('arena-search-message').textContent=error.message;}
+}
+/** 换号先清空旧房间和棋盘，再读取新账号等级、积分和待处理邀请。 */
+async function identityChanged(){
+  const next=auth.currentUser?.id??null;if(next===uid)return;
+  uid=next;epoch++;read++;subscription?.close();subscription=null;busy=false;room=ticket=null;invitations=[];points=100;eligible=false;
+  memory={requests:{},drafts:{},lastRoom:null};board.clear();boardRoom=null;lastResult=null;
+  $('arena-search-dialog').close();$('arena-leave-dialog').close();
+  if(uid)try{const saved=JSON.parse(storage?.getItem(`jobless-pk-v2:${uid}`)||'null');if(saved?.requests&&saved?.drafts)memory=saved;}catch{/* 不使用损坏草稿。 */}
+  const stamp=epoch;
+  try{
+    features=(await api('features')).data;if(stamp!==epoch)return;enabled=features.progression&&features.pk_rooms;
+    if(!uid){$('arena-message').textContent='登录后参与竞技，达到5级解锁。';render();return;}
+    if(!enabled){$('arena-message').textContent='竞技模式暂未开放。';render();return;}
+    await api('me/presence',{method:'POST',body:{visible:!document.hidden}});if(stamp!==epoch)return;
+    await refresh();
+    if(stamp!==epoch)return;
+    subscription=subscribeEvents({onResource:schedule,onReconnect:schedule,onState:message=>{if(stamp===epoch)$('arena-connection').textContent=message;}});
+  }catch(error){if(stamp===epoch)showError(error);}
+  render();
+}
+$('arena-action').addEventListener('click',()=>void action());
+$('arena-refresh').addEventListener('click',()=>void refresh());
+$('arena-invite-open').addEventListener('click',()=>{$('arena-search-results').replaceChildren();$('arena-search-dialog').showModal();$('arena-search-query').focus();});
+$('arena-search-form').addEventListener('submit',search);$('arena-search-close').addEventListener('click',()=>$('arena-search-dialog').close());
+$('arena-cancel-invite').addEventListener('click',()=>void act(async()=>{const item=invitations.find(v=>v.sender_id===uid);if(item)await api('arena/invitations/'+item.invitation_id,{method:'DELETE'});}));
+$('arena-mode').addEventListener('change',()=>{const desired=$('arena-mode').value;if(room)void act(async()=>{const value=await api('rooms/'+room.room_id);adoptRoom(await api(`rooms/${room.room_id}/mode`,{method:'PUT',body:{game_id:desired,difficulty:'normal'},headers:{'If-Match':value.etag}}));});});
+$('arena-submit').addEventListener('click',()=>void submit());
+$('arena-leave').addEventListener('click',()=>{$('arena-leave-description').textContent=room?.status==='playing'?'比赛已经开始，退出将判负并扣除10积分。':'准备阶段退出不扣积分。';$('arena-leave-dialog').showModal();});
+$('arena-leave-cancel').addEventListener('click',()=>$('arena-leave-dialog').close());
+$('arena-leave-confirm').addEventListener('click',()=>{void act(async()=>{await api(room.links.membership,{method:'DELETE'});room=null;memory.lastRoom=null;save();$('arena-leave-dialog').close();});});
+const timer=setInterval(timing,250);
+document.addEventListener(Events.AUTH_CHANGED,()=>void identityChanged());
+document.addEventListener(Events.USER_PROFILE_UPDATED,()=>render());
+window.addEventListener('pagehide',()=>{dead=true;epoch++;subscription?.close();clearInterval(timer);clearTimeout(refreshTimer);board.destroy();});
+window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 void auth.ready.then(identityChanged);

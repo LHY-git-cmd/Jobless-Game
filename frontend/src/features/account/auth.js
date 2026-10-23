@@ -8,12 +8,14 @@ import { createAvatarImage, updateAvatarImage } from "./avatar.js";
 import { initNotifications } from "../notifications/controller.js";
 import { initPlayerProfile } from './profile.js';
 import { initAvatarDialog } from './avatar-picker.js';
+import { initArenaPresence } from '../pk/presence.js';
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
 export function initAuth() {
   const host = document.querySelector(".auth-controls");
   if (!host) return null;
   initMusic();
+  const arenaPresence=initArenaPresence();
   host.innerHTML = `<button type="button" class="auth-open" aria-haspopup="dialog">登录</button>
     <button type="button" class="auth-user hidden" aria-haspopup="dialog" aria-controls="avatar-dialog" title="更换头像"></button>
     <button type="button" class="auth-settings hidden" aria-label="打开游戏设置" aria-haspopup="dialog" aria-controls="game-settings" title="游戏设置"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m9.5 3-.7 2.1-2 .9-2-.4-2 3.4 1.4 1.7v2.6L2.8 15l2 3.4 2-.4 2 .9.7 2.1h4l.7-2.1 2-.9 2 .4 2-3.4-1.4-1.7v-2.6L20.2 9l-2-3.4-2 .4-2-.9-.7-2.1Z"/><circle cx="11.5" cy="12" r="3"/></svg></button><button type="button" class="auth-logout hidden">退出登录</button>
@@ -87,6 +89,7 @@ export function initAuth() {
     if (previousId !== user?.id) { gameSettings.close(); avatarDialog.close(); }
     avatarDialog.setUser(user);
     profile?.setUser(user);
+    void arenaPresence.setUser(user);
     if (previousId !== user?.id) document.dispatchEvent(new CustomEvent(Events.AUTH_CHANGED, {
       detail: { user: user ? { ...user } : null },
     }));

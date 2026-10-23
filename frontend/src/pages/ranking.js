@@ -18,7 +18,7 @@ const ui = cacheIds({
 const boards = {
   stars: { title: '星数排行', column: '累计星数', rule: '按闯关累计星数从高到低排名，同星数并列。', empty: '榜单还没有记录。完成闯关，收集你的第一颗星星。' },
   level: { title: '等级排行', column: '等级 / 经验', rule: '按账号等级从高到低排名，同等级按累计经验排序，经验相同并列。', empty: '榜单还没有记录。完成闯关，获得经验并提升等级。' },
-  points: { title: '积分排行', column: '竞技积分', rule: '积分将通过竞技模式获得。竞技积分暂未开放，开放后按积分排名。' },
+  points: { title: '积分排行', column: '竞技积分', rule: '按竞技积分从高到低排名，同分并列。初始100分，胜利加20、失败减10，允许负分。',empty:'暂无竞技记录。达到5级后，前往竞技模式开始对战。' },
 };
 const requested = new URLSearchParams(location.search).get('category');
 const category = Object.hasOwn(boards, requested) ? requested : 'stars';
@@ -63,7 +63,7 @@ function renderRows(entries) {
     row.append(cell(String(entry.rank), "ranking-position"), player);
     const result = cell("", "ranking-time");
     const strong = document.createElement("strong");
-    strong.textContent = category === 'stars' ? `${entry.total_stars} 星` : `Lv.${entry.level}`;
+    strong.textContent = category === 'stars' ? `${entry.total_stars} 星` : category==='points'?`${entry.points} 分`:`Lv.${entry.level}`;
     result.append(strong);
     if (category === 'level') result.append(document.createElement('br'), `${entry.xp} 经验`);
     row.append(result);
@@ -86,7 +86,7 @@ async function load() {
     pages = Math.max(1, Math.ceil(data.total / 20));
     if (page > pages) { page = pages; return void load(); }
     renderRows(data.entries);
-    ui.rankingStatus.textContent = data.total ? `共 ${data.total} 位玩家 · 展示有闯关成长记录的玩家` : board.empty;
+    ui.rankingStatus.textContent = data.total ? `共 ${data.total} 位玩家 · ${category==='points'?'竞技积分榜':'展示有闯关成长记录的玩家'}` : board.empty;
     ui.rankingPage.textContent = `${page} / ${pages}`;
     ui.rankingPrev.disabled = page <= 1;
     ui.rankingNext.disabled = page >= pages;
@@ -112,10 +112,4 @@ document.addEventListener(Events.USER_PROFILE_UPDATED, event => {
     if (image.dataset.userId === String(user.id)) updateAvatarImage(image, user.avatar_id);
   }
 });
-if (category === 'points') {
-  // 积分未实现时明确展示状态，不请求不存在的积分接口或伪造零分排名。
-  document.querySelector('.ranking-table-wrap').classList.add('hidden');
-  document.querySelector('.ranking-pagination').classList.add('hidden');
-  ui.rankingTable.setAttribute('aria-busy', 'false');
-  ui.rankingStatus.textContent = '积分排行暂未开放。竞技积分结算功能上线后，将在这里展示排名。';
-} else void load();
+void load();

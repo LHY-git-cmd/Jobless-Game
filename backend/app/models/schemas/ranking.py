@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 Game = Literal["mine", "akari", "sudoku"]
 Category = Game
-GrowthCategory = Literal["stars", "level"]
+GrowthCategory = Literal["stars", "level", "points"]
 
 
 class StartRequest(BaseModel):
@@ -91,6 +91,7 @@ class GrowthRankingEntryResponse(BaseModel):
     total_stars: int
     level: int
     xp: int
+    points: int|None = None
 
 
 class GrowthRankingsResponse(BaseModel):

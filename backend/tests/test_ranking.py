@@ -233,7 +233,7 @@ class RankingAPITests(TestCase):
             self.assertEqual(self.client.get('/api/rankings/growth/stars').status_code, 404)
         self.config.progression_enabled = True
         self.assertEqual(self.client.get('/api/rankings/growth/stars').json()['entries'], [])
-        for path in ['/api/rankings/growth/points', '/api/rankings/growth/stars?page=0',
+        for path in ['/api/rankings/growth/unknown', '/api/rankings/growth/stars?page=0',
                      '/api/rankings/growth/level?page_size=51']:
             self.assertEqual(self.client.get(path).status_code, 422)
 

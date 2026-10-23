@@ -59,7 +59,7 @@ async def rankings(category: Category, page: int = Query(default=1, ge=1, le=100
     return await service.execute(service.rankings_transaction, category, page, page_size, db)
 
 
-@router.get('/rankings/growth/{category}', response_model=GrowthRankingsResponse)
+@router.get('/rankings/growth/{category}', response_model=GrowthRankingsResponse,response_model_exclude_none=True)
 async def growth_rankings(category: GrowthCategory, page: int = Query(default=1, ge=1, le=100000),
                           page_size: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
     """公开星数和等级榜；成长未开启时不访问尚未迁移的成长表。"""
