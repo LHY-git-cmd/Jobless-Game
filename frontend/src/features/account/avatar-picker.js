@@ -5,11 +5,13 @@ import { createAvatarImage, createAvatarSelection, loadAvatarCatalog, updateAvat
 export function initAvatarPicker(host, { dom = document, onSaved, onUnauthorized } = {}) {
   host.innerHTML = `<div class="settings-avatar-heading"><h3 id="avatar-title">个人头像</h3><span class="avatar-account-note">跟随账号保存</span></div>
     <div class="avatar-current"><div class="avatar-preview"></div><div><p class="avatar-caption">选一个喜欢的形象</p><button type="button" class="avatar-expand" aria-expanded="false" aria-controls="avatar-choices">更换头像</button></div></div>
+    <p class="avatar-player-id" hidden>玩家 ID：<span></span></p>
     <div id="avatar-choices" hidden><div class="avatar-grid" role="group" aria-label="预设头像"></div>
       <button type="button" class="avatar-retry" hidden>重新加载头像</button>
       <button type="button" class="avatar-save" disabled>保存头像</button></div>
     <p class="avatar-status" role="status" aria-live="polite"></p>`;
   const grid = host.querySelector(".avatar-grid"), status = host.querySelector(".avatar-status");
+  const playerId = host.querySelector(".avatar-player-id");
   const choices = host.querySelector("#avatar-choices"), expand = host.querySelector(".avatar-expand");
   const save = host.querySelector(".avatar-save"), retry = host.querySelector(".avatar-retry");
   const preview = createAvatarImage(1, { dom, size: 64 });
@@ -19,6 +21,9 @@ export function initAvatarPicker(host, { dom = document, onSaved, onUnauthorized
 
   /** 同步选中外框、预览和保存状态，保存成功前不改变账号入口。 */
   function render(state) {
+    // 编号由服务端提供，退出或换号后立即清理，头像列表收起时仍可查看。
+    playerId.hidden = !Number.isInteger(state.user?.player_id);
+    playerId.querySelector("span").textContent = state.user?.player_id ?? "";
     updateAvatarImage(preview, state.selected);
     for (const button of grid.querySelectorAll("button")) {
       button.disabled = state.busy;
@@ -72,7 +77,7 @@ export function initAvatarPicker(host, { dom = document, onSaved, onUnauthorized
     /** 退出和换号时立刻清理预览及保存状态；成功后的同账号更新保留展开状态和反馈。 */
     setUser(user) {
       const previous = model.state;
-      if (previous.user?.id === user?.id && previous.user?.avatar_id === user?.avatar_id) return;
+      if (previous.user?.id === user?.id && previous.user?.avatar_id === user?.avatar_id && previous.user?.player_id === user?.player_id) return;
       loadEpoch++; loading = false; retry.hidden = true;
       model.setUser(user);
       if (previous.user?.id !== user?.id) {

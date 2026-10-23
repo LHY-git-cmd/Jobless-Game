@@ -84,7 +84,7 @@ export function initAuth() {
   /** 用户名只写入 textContent，避免把用户输入作为 HTML 插入。 */
   function renderUser(value) {
     const previousId = user?.id;
-    user = value ? { id: value.id, username: value.username, avatar_id: value.avatar_id ?? 1 } : null;
+    user = value ? { id: value.id, player_id: value.player_id, username: value.username, avatar_id: value.avatar_id ?? 1 } : null;
     if (previousId !== user?.id) identityGeneration++;
     if (previousId !== user?.id) { gameSettings.close(); avatarDialog.close(); }
     avatarDialog.setUser(user);

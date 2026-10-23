@@ -59,8 +59,9 @@ class AvatarTests(TestCase):
         for value in (17, 25, 25):
             response = self.client.put("/api/auth/avatar", json={"avatar_id": value})
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json(), {"id": 1, "username": "玩家1", "avatar_id": value})
+            self.assertEqual(response.json(), {"id": 1, "player_id": 10000000, "username": "玩家1", "avatar_id": value})
         self.assertEqual(self.client.get("/api/auth/me").json()["avatar_id"], 25)
+        self.assertEqual(self.client.get("/api/auth/me").json()["player_id"], 10000000)
         with self.sessions() as db:
             self.assertEqual(db.get(User, 1).password_hash, "unchanged")
             self.assertEqual(db.get(User, 2).avatar_id, 1)

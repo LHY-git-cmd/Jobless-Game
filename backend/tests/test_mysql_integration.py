@@ -302,14 +302,33 @@ class MySQLIntegrationTests(TestCase):
                 connection.close()
 
     def test_avatar_defaults_and_persistence(self):
-        """真实 Flyway 新列的默认值与编号更新应在重新登录后保持。"""
+        """真实MySQL验证头像持久化，以及玩家ID递增、重登稳定和索引搜索。"""
+        from unittest.mock import patch
         name = self.new_name()
         first = self.client.post("/api/auth/login", json={"username": name, "password": "avatar-secret"})
+        player_id = first.json()["user"]["player_id"]
+        self.assertGreaterEqual(player_id, 10000000)
+        self.assertLessEqual(player_id, 99999999)
         self.assertEqual(first.json()["user"]["avatar_id"], 1)
-        self.assertEqual(self.client.put("/api/auth/avatar", json={"avatar_id": 17}).status_code, 200)
+        updated = self.client.put("/api/auth/avatar", json={"avatar_id": 17})
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.json()["player_id"], player_id)
         self.client.post("/api/auth/logout")
         again = self.client.post("/api/auth/login", json={"username": name, "password": "avatar-secret"})
         self.assertEqual(again.json()["user"]["avatar_id"], 17)
+        self.assertEqual(again.json()["user"]["player_id"], player_id)
+        self.assertEqual(self.client.get('/api/auth/me').json()['player_id'], player_id)
+        other = self.client.post('/api/auth/login', json={'username': self.new_name(), 'password': 'avatar-secret'}).json()['user']
+        self.assertEqual(other['player_id'], player_id + 1)
+        with self.sessions() as db:
+            uid = other['id']
+            db.add(progression.PlayerProgression(user_id=uid, xp=72, total_stars=0, revision=0))
+            db.commit()
+        with patch.object(get_settings(), 'progression_enabled', True), patch.object(get_settings(), 'pk_rooms_enabled', True):
+            found = self.client.get('/api/v1/arena/users', params={'q': str(player_id)})
+        self.assertEqual(found.status_code, 200, found.text)
+        self.assertEqual(found.json()['items'][0]['player_id'], player_id)
+        self.assertEqual(found.json()['items'][0]['user_id'], first.json()['user']['id'])
 
     def test_v5_real_innodb_concurrent_completions_award_once(self):
         """两个尝试并发同关结算，永久里程碑唯一键与用户锁共同防重。"""

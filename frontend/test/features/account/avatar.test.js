@@ -41,6 +41,14 @@ test("失败保留原头像和选择，可再次保存", async () => {
   assert.equal(picker.state.user.avatar_id, 25);
 });
 
+test("更换头像后保留服务器分配的玩家ID", async () => {
+  const picker = createAvatarSelection({ request: async () => ({ id: 1, player_id: 10000000, username: "甲", avatar_id: 2 }) });
+  picker.setUser({ id: 1, player_id: 10000000, username: "甲", avatar_id: 1 });
+  picker.select(2);
+  await picker.save();
+  assert.equal(picker.state.user.player_id, 10000000);
+});
+
 test("换号及退出时丢弃旧保存响应，错误账号响应也不接受", async () => {
   for (const nextUser of [null, { id: 2, username: "乙", avatar_id: 2 }]) {
     let finish, updates = 0;

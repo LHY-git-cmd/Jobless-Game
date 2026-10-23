@@ -46,6 +46,9 @@
 .avatar-preview { width: 64px; height: 64px; flex: 0 0 auto; border: 1px solid #f0d49a88; border-radius: 50%; }
 .avatar-preview .avatar-image { width: 100%; height: 100%; }
 .avatar-caption { margin: 0 0 6px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+/* 头像操作下方右侧展示玩家编号，可直接选中文字用于邀请。 */
+.avatar-player-id { margin: 10px 0 0; color: var(--paper); font-size: 14px; line-height: 1.5; text-align: right; }
+.avatar-player-id span { color: var(--gold); font-size: 16px; font-variant-numeric: tabular-nums; user-select: text; white-space: nowrap; }
 .avatar-expand, .avatar-retry { min-height: 44px; padding: 8px 12px; font-size: 13px; }
 .avatar-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-height: 260px; overflow-y: auto; padding: 5px; margin: 12px -5px 12px; scroll-padding: 5px; }
 .avatar-option { position: relative; width: 100%; min-width: 44px; min-height: 44px; aspect-ratio: 1; padding: 4px; border: 2px solid transparent; border-radius: 14px; background: #102b3c99; }

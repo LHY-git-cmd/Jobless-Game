@@ -70,7 +70,7 @@ export function createAvatarSelection({ request = authRequest, onSaved = () => {
         const result = await request("avatar", { method: "PUT", body: { avatar_id: choice } });
         if (current !== epoch) return;
         if (result?.id !== id || result.avatar_id !== choice || typeof result.username !== "string") throw new Error("头像服务返回异常，请重试。");
-        user = { id: result.id, username: result.username, avatar_id: result.avatar_id };
+        user = { id: result.id, player_id: result.player_id ?? user.player_id, username: result.username, avatar_id: result.avatar_id };
         busy = false; message = "头像已保存。"; publish(); onSaved({ ...user });
       } catch (error) {
         if (current !== epoch) return;

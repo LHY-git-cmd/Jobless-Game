@@ -89,9 +89,11 @@ class ArenaPKTests(TestCase):
         """在线且空闲可邀请；接受前不强拉对手入房，接受幂等。"""
         self.identity(2);self.assertEqual(self.post('me/presence',{'visible':True}).status_code,200)
         self.identity(1);self.post('me/presence',{'visible':True})
-        found=self.client.get('/api/v1/arena/users?q=p2');self.assertEqual(found.status_code,200,found.text)
+        found=self.client.get('/api/v1/arena/users?q=10000001');self.assertEqual(found.status_code,200,found.text)
+        self.assertEqual(len(found.json()['items']),1)
+        self.assertEqual(found.json()['items'][0]['player_id'],10000001)
         self.assertTrue(found.json()['items'][0]['invitable'])
-        invitation=self.post('arena/invitations',{'user_id':2,'game_id':'sudoku','difficulty':'normal'})
+        invitation=self.post('arena/invitations',{'user_id':found.json()['items'][0]['user_id'],'game_id':'sudoku','difficulty':'normal'})
         self.assertEqual(invitation.status_code,201,invitation.text)
         self.identity(2);self.assertEqual(self.client.get('/api/v1/me/rooms').json()['items'],[])
         pending=self.client.get('/api/v1/me/arena/invitations').json()['items'];self.assertEqual(len(pending),1)
@@ -99,6 +101,14 @@ class ArenaPKTests(TestCase):
         self.assertEqual(accepted.status_code,200,accepted.text)
         self.assertEqual(accepted.json()['game_id'],'sudoku')
         self.assertEqual(self.post('arena/invitations/'+invitation.json()['invitation_id']+'/accept',{}).json()['room_id'],accepted.json()['room_id'])
+
+    def test_player_search_uses_public_id_and_preserves_username_lookup(self):
+        """内部小编号不能当玩家ID搜索，完整用户名仍可查找，且排除本人。"""
+        self.identity(1)
+        for term in ('2', '10000000', '99999999', '010000001', '１００００００１'):
+            self.assertEqual(self.client.get('/api/v1/arena/users',params={'q':term}).json()['items'],[])
+        found=self.client.get('/api/v1/arena/users?q=p2').json()['items']
+        self.assertEqual(found[0]['player_id'],10000001)
     def test_low_level_blocked_search_and_score_not_created_by_get(self):
         """等级门槛由服务端检查，不用老资格绕过。"""
         with self.sessions() as db:db.get(PlayerProgression,1).xp=71;db.commit()

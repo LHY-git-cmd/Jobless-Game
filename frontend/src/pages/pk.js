@@ -191,9 +191,9 @@ async function search(event){
   try{
     const value=await api('arena/users?q='+encodeURIComponent($('arena-search-query').value.trim()));
     if(stamp!==epoch||version!==searchVersion)return;
-    $('arena-search-message').textContent=value.data.items.length?'仅在线、空闲且已达5级的玩家可邀请。':'未找到玩家，请输入完整用户名或用户ID。';
+    $('arena-search-message').textContent=value.data.items.length?'仅在线、空闲且已达5级的玩家可邀请。':'未找到玩家，请输入8位玩家ID或完整用户名。';
     for(const user of value.data.items){
-      const row=document.createElement('div');row.className='arena-search-result';const text=document.createElement('span');text.textContent=`${user.username} · ID ${user.user_id} · ${!user.online?'离线':!user.idle?'忙碌':!user.eligible?'未达5级':'可邀请'}`;
+      const row=document.createElement('div');row.className='arena-search-result';const text=document.createElement('span');text.textContent=`${user.username} · ID ${user.player_id} · ${!user.online?'离线':!user.idle?'忙碌':!user.eligible?'未达5级':'可邀请'}`;
       const button=document.createElement('button');button.type='button';button.textContent='邀请';button.disabled=!user.invitable;
       button.addEventListener('click',()=>{void act(async()=>{await create('arena/invitations',{user_id:user.user_id,game_id:$('arena-mode').value,difficulty:'normal'});$('arena-search-dialog').close();});});
       row.append(createAvatarImage(user.avatar_id),text,button);$('arena-search-results').append(row);

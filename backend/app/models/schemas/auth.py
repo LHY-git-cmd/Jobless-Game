@@ -12,9 +12,10 @@ class LoginRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """当前登录用户的公开显示名。"""
+    """当前登录用户的公开资料，玩家ID与内部账号主键分别提供。"""
 
     id: int
+    player_id: int = Field(ge=10000000, le=99999999)
     username: str
     avatar_id: int = 1
 

@@ -12,6 +12,10 @@ from ...common.database import Base
 if TYPE_CHECKING:
     from .auth_session import AuthSession
 
+# 主键1对应首个公开编号10000000；内部外键继续使用原主键。
+PLAYER_ID_OFFSET = 9_999_999
+MAX_PLAYER_ACCOUNT_ID = 90_000_000
+
 
 class User(Base):
     """保存首次显示名、唯一账号键和带参数的 Argon2id 摘要。"""
@@ -27,3 +31,8 @@ class User(Base):
     # 数据库只保存编号；SQLite 类型变体仅用于隔离测试，生产字段由 Flyway 管理。
     avatar_id: Mapped[int] = mapped_column(Integer().with_variant(TINYINT(unsigned=True), "mysql"), nullable=False, default=1, server_default="1")
     sessions: Mapped[list["AuthSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def player_id(self) -> int:
+        """由持久化唯一主键得到固定递增的公开ID，新旧账号使用同一规则。"""
+        return self.id + PLAYER_ID_OFFSET

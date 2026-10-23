@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlalchemy import or_,select
 from ..common.security import utc_now
 from ..models.entities import User
+from ..models.entities.user import PLAYER_ID_OFFSET
 from ..models.entities.arena import ArenaAccount,ArenaLedger,ArenaInvitation
 from ..models.entities.pk import PlayerPKOccupancy
 from ..repositories import progression_repository as repo
@@ -47,12 +48,14 @@ def presence(db,uid,visible,token):
 
 
 def search(db,uid,query,**_):
-    """精确ID或用户名查找最多10人，避免无限模糊搜索和泄露私有账号字段。"""
+    """精确八位玩家ID或用户名查找最多10人，转换后仍走主键索引。"""
     growth.require_pk(db,uid);growth.limiter.check((uid,'arena_search'),30)
     term=query.strip();conditions=[User.username_key==term.casefold()]
-    if term.isascii() and term.isdigit() and 0<int(term)<=4294967295:conditions.append(User.id==int(term))
+    # 仅八位ASCII数字可以定位公开编号；邀请流程仍使用查找结果中的内部主键。
+    if len(term)==8 and term.isascii() and term.isdigit() and int(term)>=10000000:
+        conditions.append(User.id==int(term)-PLAYER_ID_OFFSET)
     users=db.scalars(select(User).where(or_(*conditions),User.id!=uid).limit(10)).all()
-    return growth.Resource({'items':[{'user_id':u.id,'username':u.username,'avatar_id':u.avatar_id,
+    return growth.Resource({'items':[{'user_id':u.id,'player_id':u.player_id,'username':u.username,'avatar_id':u.avatar_id,
         'online':runtime.available(u.id),'idle':free(db,u.id),
         'eligible':growth.eligibility(db,u.id)['eligible'],
         'invitable':runtime.available(u.id) and free(db,u.id) and growth.eligibility(db,u.id)['eligible']} for u in users]})
