@@ -144,3 +144,26 @@ class EnergyTests(TestCase):
         self.client.cookies.set(self.settings.session_cookie_name,'2')
         self.assertEqual(self.energy()['current'],5)
         self.restart(first,status=404)
+
+    def test_lost_mine_restart_is_atomic_idempotent_and_preserves_failure(self):
+        """真实踩雷后可原子重开；零体力不改原局，同键重试只扣一次且不返失败体力。"""
+        old=self.start('mine-v2-easy-10')
+        self.assertIn(self.client.put(old['links']['self']+'/reveals/0',json={}).status_code,(200,201))
+        with self.sessions() as db:
+            row=db.get(GameAttempt,old['attempt_id'])
+            mine=row.board['mine_indices'][0]
+        failed=self.client.put(old['links']['self']+f'/reveals/{mine}',json={})
+        self.assertIn(failed.status_code,(200,201),failed.text)
+        self.assertEqual(failed.json()['status'],'lost')
+        with self.sessions() as db:
+            energy=db.get(PlayerEnergy,1);energy.current=0;energy.recovery_at=None;db.commit()
+        self.assertEqual(self.restart(old,status=409)['code'],'energy_insufficient')
+        self.assertEqual(self.client.get(old['links']['self']).json()['status'],'lost')
+        with self.sessions() as db:
+            energy=db.get(PlayerEnergy,1);energy.current=2;db.commit()
+        key=str(uuid4());fresh=self.restart(old,key)
+        self.assertNotEqual(fresh['attempt_id'],old['attempt_id'])
+        self.assertEqual(fresh['energy']['current'],1)
+        self.assertEqual(self.restart(old,key)['attempt_id'],fresh['attempt_id'])
+        self.assertEqual(self.energy()['current'],1)
+        self.assertEqual(self.client.get(old['links']['self']).json()['status'],'lost')

@@ -573,6 +573,35 @@ class MySQLIntegrationTests(TestCase):
             replay=service.dispatch(raw,db,'attempt_restart',rid=attempt['attempt_id'],data={},key=original_key).data
             self.assertEqual(replay,restarted)
 
+    def test_lost_mine_concurrent_restart_charges_once(self):
+        """真实InnoDB验证踩雷后同键并发重开只创建一局、扣一次体力并保留失败记录。"""
+        from backend.app.services import progression_service as service
+        from backend.app.common.game_catalog import LEVELS
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'mine-restart-mysql'})
+        token=self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            uid=auth_service.current_session(token,db)[1].id
+            attempt=service.dispatch(token,db,'attempt_create',data={'level_id':'mine-v2-easy-10',
+                'level_version':LEVELS['mine-v2-easy-10']['level_version'],'mode':'campaign'},key=str(uuid4())).data
+            service.dispatch(token,db,'reveal',rid=attempt['attempt_id'],index=0,received_at=utc_now())
+            mine=db.get(progression.GameAttempt,attempt['attempt_id']).board['mine_indices'][0]
+            lost=service.dispatch(token,db,'reveal',rid=attempt['attempt_id'],index=mine,received_at=utc_now()).data
+            self.assertEqual(lost['status'],'lost')
+        key=str(uuid4())
+        def restart(_):
+            """独立连接重放同一创建意图，由账号行锁与幂等记录串行扣费。"""
+            with self.sessions() as db:
+                return service.dispatch(token,db,'attempt_restart',rid=attempt['attempt_id'],data={},key=key).data
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first,second=list(pool.map(restart,range(2)))
+        self.assertEqual(first,second)
+        self.assertEqual(first['energy']['current'],3)
+        with self.sessions() as db:
+            rows=list(db.scalars(select(progression.GameAttempt).where(progression.GameAttempt.user_id==uid)))
+            self.assertEqual(len(rows),2)
+            self.assertEqual(db.get(progression.GameAttempt,attempt['attempt_id']).status,'lost')
+            self.assertEqual(db.get(progression.PlayerEnergy,uid).current,3)
+
     def test_v7_v8_cancel_pair_competition_has_one_outcome(self):
         """真实MySQL上竞争取消/配对：只能取消成功或配对成功，不能双重占用。"""
         from backend.app.services import pk_service as service
