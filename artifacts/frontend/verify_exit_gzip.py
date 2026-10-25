@@ -10,6 +10,7 @@ from pathlib import Path
 import secrets
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 import httpx
@@ -17,12 +18,14 @@ from verify_progress import browser
 
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / 'artifacts/frontend'
+sys.path.insert(0,str(ROOT))
 
 
 def main():
     """真实gzip代理重现弱ETag，同时保留后端对弱If-Match及过期版本的拒绝。"""
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--expect-failure',action='store_true')
+    parser.add_argument('--check-refunds',action='store_true',help='增加三游戏10点上限与通关返还的浏览器验收')
     args=parser.parse_args()
     name='jobless-exit-qa-'+secrets.token_hex(4)
     with tempfile.TemporaryDirectory(prefix='exit-gzip-') as temporary, (OUTPUT/'exit-gzip-docker.log').open('w',encoding='utf-8') as log:
@@ -104,7 +107,8 @@ http {{
         try:
             docker('network','create',name)
             docker('run','-d','--name',name+'-api','--network',name,'--memory','320m','--cpus','1','--read-only','--tmpfs','/tmp:size=32m,mode=1777',
-                '-v',str(folder)+':/qa:ro','-v',str(ROOT/'frontend')+':/app/frontend:ro','--entrypoint','python','jobless-game-api:server','/qa/bootstrap.py')
+                '-v',str(folder)+':/qa:ro','-v',str(ROOT/'frontend')+':/app/frontend:ro',
+                '-v',str(ROOT/'backend/app')+':/app/backend/app:ro','--entrypoint','python','jobless-game-api:server','/qa/bootstrap.py')
             docker('run','-d','--name',name+'-web','--network',name,'--memory','64m','--cpus','.25',
                 '-p',f'127.0.0.1:{port}:80','-v',str(folder/'nginx.conf')+':/etc/nginx/nginx.conf:ro',
                 '-v',str(ROOT/'frontend')+':/usr/share/nginx/html:ro','nginx:1.28-alpine')
@@ -123,6 +127,7 @@ http {{
                     assert 'no-cache' in response.headers.get('cache-control','') and '43200' not in response.headers.get('cache-control','')
                 login=client.post('/api/auth/login',json={'username':'gzipqa','password':'exit-gzip-test'})
                 assert login.status_code==200,(login.status_code,login.text)
+                capacity=client.get('/api/v1/me/energy').json()['capacity']
                 with (OUTPUT/'exit-gzip-chrome.log').open('w',encoding='utf-8') as chrome_log,browser(str(folder/'chrome'),chrome_log) as (cmd,ev):
                     def wait(expression):
                         """等待真实产品状态，失败只输出退出反馈。"""
@@ -163,7 +168,7 @@ http {{
                         wait("!document.querySelector('#sudoku-selector').hidden&&!document.querySelector('[data-exit-confirmation]').open")
                         result=client.get(path)
                         assert result.json()['status']=='abandoned'
-                        assert client.get('/api/v1/me/energy').json()['current']==4
+                        assert client.get('/api/v1/me/energy').json()['current']==capacity-1
                         assert ev("!localStorage.getItem('jobless-journey-v1:sudoku:1').includes("+json.dumps(path.rsplit('/',1)[-1])+")")
                         # 仅在本轮临时SQLite设置测试余额；正式账号和运行中的本机MySQL均不参与。
                         def balance(value):
@@ -197,7 +202,49 @@ http {{
                             assert not ev("!!document.querySelector('.energy-empty-notice')")
                             assert client.get(original).json()['status']=='active'
                             assert client.get('/api/v1/me/energy').json()['current']==0
-                        print(json.dumps({'checks_passed':10,'cache_regex_overridden':True,'gzip_response':True,'weak_IfMatch_rejected':True,'exit_status':'abandoned','energy_preserved':True,'draft_removed':True,'zero_energy_notice':'3 games, centered, no click interception, 2-second fade, original attempt preserved'},ensure_ascii=False))
+                        if args.check_refunds:
+                            from backend.content_check import akari_solutions
+                            from backend.sudoku_content import solutions
+                            assert capacity==10
+                            for game,level in [('mine','mine-v2-easy-15'),('sudoku','sudoku-v2-easy-03'),('akari','akari-v2-002')]:
+                                balance(10)
+                                cmd('Page.navigate',{'url':base+'/journey.html?game_id='+game})
+                                wait("document.querySelector('#journey-status')?.textContent==='账号资料已同步。'")
+                                time.sleep(.2)
+                                # 上一轮零体力检查保留了原局，先经正常退出再选择新的付费关卡。
+                                if ev(f"!document.querySelector('#{game}-play').hidden"):
+                                    click('#'+game+'-back');click('[data-exit-confirm]')
+                                    wait(f"!document.querySelector('#{game}-selector').hidden")
+                                click('[data-level="'+level+'"]');click('#'+game+'-enter-confirm')
+                                wait(f"!document.querySelector('#{game}-play').hidden&&!document.querySelector('#{game}-restart').disabled")
+                                wait("document.querySelector('.player-energy strong').textContent==='9 / 10'")
+                                progress=client.get(f'/api/v1/me/level-progress?game_id={game}&limit=50').json()['items']
+                                current_path=next(item['current_attempt'] for item in progress if item['level_id']==level)
+                                attempt=client.get(current_path).json();puzzle=attempt['puzzle']
+                                if game=='mine':
+                                    click('#mine-board [data-index="0"]');click('#mine-reveal')
+                                    wait("document.querySelector('#mine-board [data-index=\"0\"]').classList.contains('mine-open')&&!document.querySelector('#mine-restart').disabled")
+                                    # 仅本轮临时库预置合法已揭安全格，最后一格仍通过UI和真实接口完成。
+                                    code="import sqlite3,json,sys; db=sqlite3.connect('/tmp/exit-qa.sqlite'); row=db.execute('SELECT board FROM game_attempts WHERE attempt_id=?',(sys.argv[1],)).fetchone(); b=json.loads(row[0]); safe=sorted(set(range(b['rows']*b['cols']))-set(b['mine_indices'])); target=safe[-1]; b['revealed']=safe[:-1]; db.execute('UPDATE game_attempts SET board=? WHERE attempt_id=?',(json.dumps(b),sys.argv[1])); db.commit(); print(target); db.close()"
+                                    final=int(subprocess.check_output(['docker','exec',name+'-api','python','-c',code,attempt['attempt_id']],cwd=ROOT).decode().strip())
+                                    cmd('Page.reload');wait("document.querySelector('#mine-left')?.textContent==='1'&&!document.querySelector('#mine-restart').disabled")
+                                    click(f'#mine-board [data-index="{final}"]');click('#mine-reveal')
+                                elif game=='sudoku':
+                                    answer=solutions(puzzle['values'],puzzle['rows'])[0]
+                                    for index,value in enumerate(puzzle['values']):
+                                        if value:continue
+                                        click(f'#sudoku-board [data-index="{index}"]');click(f'#sudoku-keypad [data-digit="{answer[index]}"]')
+                                        wait("!document.querySelector('#sudoku-restart').disabled")
+                                else:
+                                    for index in akari_solutions(puzzle['map'])[0]:
+                                        click(f'#akari-board [data-index="{index}"]')
+                                        wait("!document.querySelector('#akari-restart').disabled")
+                                wait("document.querySelector('.player-energy strong').textContent==='10 / 10'")
+                                result=client.get(attempt['links']['completion'])
+                                assert result.status_code==200 and result.json()['energy']['current']==10
+                                assert client.get('/api/v1/me/energy').json()['current']==10
+                                (OUTPUT/f'energy-ten-refund-{game}.png').write_bytes(base64.b64decode(cmd('Page.captureScreenshot',{'format':'png'})['data']))
+                        print(json.dumps({'checks_passed':13 if args.check_refunds else 10,'cache_regex_overridden':True,'gzip_response':True,'weak_IfMatch_rejected':True,'exit_status':'abandoned','energy_preserved':True,'draft_removed':True,'zero_energy_notice':'3 games, centered, no click interception, 2-second fade, original attempt preserved','completion_refunds':'3 games: 10 to 9 to 10, persisted' if args.check_refunds else 'not requested'},ensure_ascii=False))
         finally:
             docker('logs','--tail','40',name+'-api',check=False)
             docker('rm','-f',name+'-web',name+'-api',check=False)

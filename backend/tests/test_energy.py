@@ -15,7 +15,10 @@ from backend.sudoku_content import solutions
 
 class EnergyTests(TestCase):
     """真实路由使用隔离数据库；自然恢复只操控后端测试时钟。"""
-    setUp=fixture.ProgressionAPI.setUp
+    def setUp(self):
+        """隔离数据库使用与生产相同的autoflush=False，防止测试自动写入掩盖余额丢失。"""
+        fixture.ProgressionAPI.setUp(self)
+        self.sessions.configure(autoflush=False)
     tearDown=fixture.ProgressionAPI.tearDown
 
     def energy(self):
@@ -35,10 +38,64 @@ class EnergyTests(TestCase):
     def finish(self,attempt):
         """按绑定题目真实判题，重复提交使用完全相同的终盘。"""
         if attempt['game_id']=='akari':payload={'bulbs':akari_solutions(attempt['puzzle']['map'])[0]}
-        else:payload={'values':solutions(attempt['puzzle']['values'],attempt['puzzle']['rows'])[0]}
+        elif attempt['game_id']=='sudoku':payload={'values':solutions(attempt['puzzle']['values'],attempt['puzzle']['rows'])[0]}
+        else:
+            # 隔离夹具只预置合法的已揭安全格；最后一个格子和奖励仍由真实接口确认。
+            path=attempt['links']['self']
+            self.assertIn(self.client.put(path+'/reveals/0',json={}).status_code,(200,201))
+            with self.sessions() as db:
+                row=db.get(GameAttempt,attempt['attempt_id']);board=dict(row.board)
+                safe=sorted(set(range(attempt['puzzle']['rows']*attempt['puzzle']['cols']))-set(board['mine_indices']))
+                target=safe[-1];board['revealed']=safe[:-1];row.board=board;db.commit()
+            self.assertIn(self.client.put(path+f'/reveals/{target}',json={}).status_code,(200,201))
+            payload={}
         response=self.client.put(attempt['links']['completion'],json=payload)
         self.assertIn(response.status_code,(200,201),response.text)
         return response.json()
+
+    def test_completion_refunds_persist_with_production_autoflush_disabled(self):
+        """复现生产autoflush=False：三游戏结算返回和独立连接读取均必须实际返还一次。"""
+        self.sessions.configure(autoflush=False)
+        for level in ('akari-v2-001','sudoku-v2-easy-01','mine-v2-easy-10'):
+            with self.subTest(level=level):
+                attempt=self.start(level)
+                spent=self.energy()['current']
+                result=self.finish(attempt)
+                self.assertEqual(result['energy']['current'],spent+1)
+                with self.sessions() as db:
+                    self.assertEqual(db.get(PlayerEnergy,1).current,spent+1)
+                    self.assertEqual(db.get(AttemptEnergy,attempt['attempt_id']).refunded,1)
+                self.assertEqual(self.energy()['current'],spent+1)
+                # 查询原结果或重放相同终盘不能再次返还。
+                self.assertEqual(self.client.get(attempt['links']['completion']).status_code,200)
+                self.assertEqual(self.energy()['current'],spent+1)
+
+    def test_energy_capacity_ten_preserves_existing_balance_and_recovery(self):
+        """新账号10点；旧余额及既有恢复节点保留，不因上限调整直接补满。"""
+        self.assertEqual(self.energy()['capacity'],10)
+        self.assertEqual(self.energy()['current'],10)
+        clock=utc_now();recovery=clock+timedelta(minutes=10)
+        with self.sessions() as db:
+            row=db.get(PlayerEnergy,1);row.current=3;row.recovery_at=recovery;db.commit()
+        with patch.object(energy_service,'utc_now',return_value=clock):
+            result=self.energy()
+            self.assertEqual(result['current'],3)
+            self.assertEqual(result['next_recovery_at'],energy_service.iso(recovery))
+        with patch.object(energy_service,'utc_now',return_value=recovery):
+            self.assertEqual(self.energy()['current'],4)
+        with patch.object(energy_service,'utc_now',return_value=clock+timedelta(days=1)):
+            self.assertEqual(self.energy()['current'],10)
+
+    def test_refund_flush_is_rolled_back_when_completion_snapshot_fails(self):
+        """返还flush后生成快照失败，余额、凭证及完成状态仍全部回滚，重试只返一次。"""
+        attempt=self.start()
+        with patch.object(energy_service,'snapshot',side_effect=RuntimeError('snapshot failure')):
+            with self.assertRaises(RuntimeError):self.finish(attempt)
+        with self.sessions() as db:
+            self.assertEqual(db.get(PlayerEnergy,1).current,9)
+            self.assertEqual(db.get(AttemptEnergy,attempt['attempt_id']).refunded,0)
+            self.assertEqual(db.get(GameAttempt,attempt['attempt_id']).status,'active')
+        self.assertEqual(self.finish(attempt)['energy']['current'],10)
 
     def restart(self,attempt,key=None,status=201):
         """原子重开使用独立幂等键，失败不能放弃旧棋盘。"""
@@ -48,25 +105,25 @@ class EnergyTests(TestCase):
         return response.json()
 
     def test_start_completion_repeat_and_free_tutorial(self):
-        """三游戏共用5点，重复开局和终盘不重复扣返，入门不变动余额。"""
-        self.assertEqual(self.energy()['current'],5)
+        """三游戏共用10点，重复开局和终盘不重复扣返，入门不变动余额。"""
+        self.assertEqual(self.energy()['current'],10)
         key=str(uuid4());first=self.start(key=key)
-        self.assertEqual(first['energy']['current'],4)
+        self.assertEqual(first['energy']['current'],9)
         self.assertEqual(self.start(key=key)['attempt_id'],first['attempt_id'])
-        self.assertEqual(self.energy()['current'],4)
-        self.assertEqual(self.client.get(first['links']['self']).json()['energy']['current'],4)
+        self.assertEqual(self.energy()['current'],9)
+        self.assertEqual(self.client.get(first['links']['self']).json()['energy']['current'],9)
         second=self.start('sudoku-v2-easy-01');third=self.start('mine-v2-easy-10')
-        self.assertEqual(self.energy()['current'],2)
-        tutorial=self.start('akari-v2-tutorial');self.assertEqual(tutorial['energy']['current'],2)
-        self.finish(tutorial);self.assertEqual(self.energy()['current'],2)
-        self.assertEqual(self.finish(first)['energy']['current'],3)
-        self.finish(first);self.assertEqual(self.energy()['current'],3)
-        self.finish(second);self.assertEqual(self.energy()['current'],4)
+        self.assertEqual(self.energy()['current'],7)
+        tutorial=self.start('akari-v2-tutorial');self.assertEqual(tutorial['energy']['current'],7)
+        self.finish(tutorial);self.assertEqual(self.energy()['current'],7)
+        self.assertEqual(self.finish(first)['energy']['current'],8)
+        self.finish(first);self.assertEqual(self.energy()['current'],8)
+        self.finish(second);self.assertEqual(self.energy()['current'],9)
         # 扫雷失败不返，接口恢复也不额外消耗。
         with self.sessions() as db:
             row=db.get(GameAttempt,third['attempt_id']);row.board={**row.board,'outcome':'lost'};db.commit()
         self.assertEqual(self.client.put(third['links']['completion'],json={}).status_code,422)
-        self.assertEqual(self.energy()['current'],4)
+        self.assertEqual(self.energy()['current'],9)
 
     def test_voluntary_exit_keeps_spent_energy_blocks_rewards_and_allows_new_attempt(self):
         """主动退出终止三游戏原局，不返体力、不发奖，历史成长不受影响。"""
@@ -93,38 +150,39 @@ class EnergyTests(TestCase):
                     self.assertEqual(next_attempt['energy']['current'],first['energy']['current']-1)
 
     def test_regeneration_boundaries_and_cap(self):
-        """1799秒不恢复，1800秒恢复；满体力清空周期，离线最多补到5点。"""
+        """1799秒不恢复，1800秒恢复；满体力清空周期，离线最多补到10点。"""
         start=utc_now()
         with patch.object(energy_service,'utc_now',return_value=start):
             attempt=self.start();second=self.start('akari-v2-002')
         with patch.object(energy_service,'utc_now',return_value=start+timedelta(seconds=1799)):
-            self.assertEqual(self.energy()['current'],3)
+            self.assertEqual(self.energy()['current'],8)
         with patch.object(energy_service,'utc_now',return_value=start+timedelta(seconds=1800)):
-            value=self.energy();self.assertEqual(value['current'],4)
+            value=self.energy();self.assertEqual(value['current'],9)
             self.assertEqual(value['next_recovery_at'],energy_service.iso(start+timedelta(seconds=3600)))
-            self.finish(attempt);full=self.energy();self.assertEqual(full['current'],5);self.assertIsNone(full['next_recovery_at'])
+            self.finish(attempt);full=self.energy();self.assertEqual(full['current'],10);self.assertIsNone(full['next_recovery_at'])
         with patch.object(energy_service,'utc_now',return_value=start+timedelta(seconds=1900)):
             self.start('akari-v2-003')
         with patch.object(energy_service,'utc_now',return_value=start+timedelta(seconds=3600)):
-            self.assertEqual(self.energy()['current'],4)
+            self.assertEqual(self.energy()['current'],9)
         with patch.object(energy_service,'utc_now',return_value=start+timedelta(days=20)):
-            self.assertEqual(self.energy()['current'],5)
+            self.assertEqual(self.energy()['current'],10)
 
     def test_zero_atomic_restart_idempotency_and_rollback(self):
         """零体力重开失败保留旧局；恢复后重开只扣一次，旧局消费不退。"""
         shared=str(uuid4());old=self.start(key=shared);second=self.restart(old,key=shared)
-        self.assertEqual(second['energy']['current'],3)
+        self.assertEqual(second['energy']['current'],8)
         self.assertEqual(self.client.get(old['links']['self']).json()['status'],'abandoned')
         key=str(uuid4());third=self.restart(second,key)
         self.assertEqual(self.restart(second,key)['attempt_id'],third['attempt_id'])
-        self.assertEqual(self.energy()['current'],2)
+        self.assertEqual(self.energy()['current'],7)
         self.assertEqual(self.restart(second,status=409)['code'],'restart_conflict')
-        self.assertEqual(self.energy()['current'],2)
+        self.assertEqual(self.energy()['current'],7)
         self.start('akari-v2-002');self.start('akari-v2-003')
+        for number in range(4,9):self.start(f'akari-v2-{number:03}')
         self.assertEqual(self.energy()['current'],0)
         failed=self.restart(third,status=409);self.assertEqual(failed['code'],'energy_insufficient')
         self.assertEqual(self.client.get(third['links']['self']).json()['status'],'active')
-        self.start('akari-v2-004',status=409)
+        self.start('akari-v2-009',status=409)
         self.assertEqual(self.start('mine-v2-tutorial')['energy']['current'],0)
         # 注入创建阶段故障，验证重开中的放弃及扣费一并回滚。
         with self.sessions() as db:
@@ -139,10 +197,10 @@ class EnergyTests(TestCase):
         first=self.start()
         with self.sessions() as db:
             db.execute(delete(AttemptEnergy).where(AttemptEnergy.attempt_id==first['attempt_id']));db.commit()
-        self.finish(first);self.assertEqual(self.energy()['current'],4)
+        self.finish(first);self.assertEqual(self.energy()['current'],9)
         self.assertEqual(self.client.post(first['links']['self']+'/restart',headers={'Idempotency-Key':str(uuid4())},json={'energy':5}).status_code,422)
         self.client.cookies.set(self.settings.session_cookie_name,'2')
-        self.assertEqual(self.energy()['current'],5)
+        self.assertEqual(self.energy()['current'],10)
         self.restart(first,status=404)
 
     def test_lost_mine_restart_is_atomic_idempotent_and_preserves_failure(self):

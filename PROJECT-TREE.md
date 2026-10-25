@@ -1,6 +1,6 @@
 # 项目目录树
 
-更新日期：2026-10-25。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
+更新日期：2026-10-26。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
 
 ```text
 crawler-portal/                            # 项目根目录：前端、登录后端、素材及文档
@@ -130,7 +130,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V16__align_akari_timed_rewards.sql # 追加照明15关按用时评分版本，保留旧奖励
 │   │   ├── V17__index_growth_rankings.sql # 星数与等级/经验排行榜分页索引
 │   │   ├── V18__publish_first_three_star_bonus.sql # 追加39个普通关首次三星双倍奖励版本
-│   │   └── V19__create_arena_scores_and_invitations.sql # 三模式房间字段、积分账户/流水及邀请
+│   │   ├── V19__create_arena_scores_and_invitations.sql # 三模式房间字段、积分账户/流水及邀请
+│   │   └── V20__increase_energy_default_to_ten.sql # 新体力记录默认10点，不修改已有余额或恢复节点
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -193,6 +194,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── pk-arena-implementation-plan.md      # 已确认的三模式竞技大厅、在线邀请和积分实施方案
 │   ├── pk-arena-implementation-report.md    # 等级奖励/竞技产出、回归证据及MySQL5.7验收限制
 │   ├── energy-implementation-report.md     # 体力机制、测试证据及本地预览/发布边界
+│   ├── energy-ten-refund-fix.md            # 10点上限、生产Session漏返根因、V20及三游戏持久返还验证
 │   ├── akari-implementation-report.md      # 照明关卡、逻辑递进、测试及发布条件
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
@@ -435,7 +437,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_mine_stars.py          # 三颗星/时间降星/汇聚/手机操作及换号取消专项浏览器验收
         ├── verify_mine_pause.py          # 规则/选关/真实标签切换/离页暂停与继续、活动时长星级验收
         ├── verify_mine_mobile_play.py    # 当前扫雷四视口/设置暂停/爆炸中重开/结算重试与下一关，临时库验收
-        ├── verify_exit_gzip.py           # 隔离Nginx压缩/缓存正则、退出412及三游戏零体力居中淡出，临时库验收
+        ├── verify_exit_gzip.py           # 隔离Nginx/Chrome退出与零体力验收；--check-refunds验证三游戏10→9→10
         ├── verify_sudoku.py              # 数独13关、教学、奖励/断网、窄屏及隔离本地预览
         ├── verify_sudoku_interactions.py # 数独键盘/冲突、真实离页、重开、换号及减少动画验收
         ├── verify_akari_levels.py        # 照明16关真实点击、教学、断网恢复、下一关与44px窄屏验收

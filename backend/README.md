@@ -2,6 +2,8 @@
 
 采用 FastAPI、SQLAlchemy/PyMySQL 和 Argon2id。数据库结构只由 Flyway 管理，应用启动不自动建表。游戏仍在浏览器中运行；提供独立关卡、通关记录、星数和等级排行榜以及文字论坛和站内消息。竞技积分榜已接入有符号积分余额。
 
+2026-10-26新增V20：体力上限及新记录初始值提高到10，旧余额与恢复节点保留，每30分钟恢复1点。修复生产Session关闭autoflush时，通关返还余额被后续快照读取覆盖的问题；返还余额和凭证在原事务中先flush再读取，异常仍整体回滚。上线需执行V20并同步更新API及前端体力显示。历史漏返不在迁移中自动补发，当前规则与验收见 [10点体力与返还修复](../docs/energy-ten-refund-fix.md)。
+
 新增正式成长与双人照明竞速使用 `/api/v1`，与旧成绩和本地练习分开。先在专用库执行 Flyway V1～V9，再按阶段配置 `PROGRESSION_ENABLED`、`COSMETICS_ENABLED`、`PK_ROOMS_ENABLED`、`MATCHMAKING_ENABLED`；全部默认 `false`。页面入口是 `/journey.html` 和 `/pk.html`。HTTP部署仍遵循原Cookie配置，正式HTTPS必须开启Secure。
 
 后续页面调整：三个游戏入口分别进入 `journey.html?game_id=mine|akari|sudoku` 的新版选关框架。按用户要求，原单关、照明十关目录与练习九关先从页面下线，等待重新设计；不删除数据库成果或改写已执行迁移。当前页面回归改用 `artifacts/frontend/verify_game_catalog.py`；下文原完整关卡浏览器命令属于历史验收，当前空目录不再运行该流程。

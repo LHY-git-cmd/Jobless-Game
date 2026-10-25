@@ -6,6 +6,19 @@ import { createEnergyModel } from '../../../src/features/account/energy.js';
 /** 体力快照只来自服务器，测试时钟只影响显示和恢复节点。 */
 function energy(current,revision,next=1800000){return {current,capacity:5,revision,recovery_seconds:1800,server_now:new Date(0).toISOString(),next_recovery_at:current===5?null:new Date(next).toISOString()};}
 
+test('接受10点上限及通关返还快照，同时兼容历史5点余额',async()=>{
+  const states=[];const model=createEnergyModel({request:async()=>energy(4,1),onChange:value=>states.push(value)});
+  model.setUser({id:1});await new Promise(done=>setImmediate(done));
+  const spent={...energy(9,2),capacity:10};
+  assert.equal(model.accept(1,spent),true);
+  assert.equal(model.accept(1,{...spent,current:10,revision:3,next_recovery_at:null}),true);
+  assert.equal(states.at(-1).energy.current,10);
+  assert.equal(states.at(-1).energy.capacity,10);
+  assert.equal(model.accept(1,{...spent,current:11,revision:4}),false);
+  assert.equal(model.accept(1,energy(5,1)),false);
+  model.destroy();
+});
+
 test('新快照立即更新，旧修订及旧账号不能覆盖余额',async()=>{
   const pending=[],states=[];const model=createEnergyModel({request:()=>new Promise(resolve=>pending.push(resolve)),onChange:value=>states.push(value),now:()=>0});
   model.setUser({id:1});assert.equal(model.accept(1,energy(4,2)),true);
