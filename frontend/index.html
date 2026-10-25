@@ -15,7 +15,8 @@
       href="./favicon.ico?v=20261018-island"
     />
     <link rel="stylesheet" href="./styles/base.css" />
-    <link rel="stylesheet" href="./styles/components/energy.css"><link rel="stylesheet" href="./styles/components/navigation.css" />
+    <link rel="stylesheet" href="./styles/components/energy.css" />
+    <link rel="stylesheet" href="./styles/components/navigation.css" />
     <link rel="stylesheet" href="./styles/pages/modes.css" />
   </head>
   <body>
@@ -23,7 +24,11 @@
     <main class="page">
       <section id="landing" aria-labelledby="landing-title">
         <header class="landing-header">
-          <div class="player-profile" data-player-profile aria-label="账号与成长"></div>
+          <div
+            class="player-profile"
+            data-player-profile
+            aria-label="账号与成长"
+          ></div>
           <nav class="site-nav" aria-label="主导航">
             <a href="./ranking.html">排行榜</a>
             <a href="./index.html" aria-current="page">无职游戏</a>
@@ -46,21 +51,68 @@
           </div>
         </div>
         <div class="level-select" id="level-select">
-          <div class="section-heading"><h2>选择模式</h2><span>独自解谜，或与朋友一较高下</span></div>
+          <div class="section-heading">
+            <h2>选择模式</h2>
+            <span>独自解谜，或与朋友一较高下</span>
+          </div>
           <div class="level-grid mode-grid">
-            <a id="challenge-entry" class="level-card mode-card" href="./challenge.html">
-              <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 39h10V29h10V19h12M13 9v14M13 9h14l-4 5 4 5H13"/></svg></span>
-              <span class="level-content"><span class="level-title">闯关模式</span><span class="level-description">扫雷、照明、数独，循序解开每一道谜题。</span><span class="level-meta">自由选关<span>收集星星，记录成长</span></span></span>
+            <a
+              id="challenge-entry"
+              class="level-card mode-card"
+              href="./challenge.html"
+            >
+              <span class="mode-art" aria-hidden="true"
+                ><svg
+                  viewBox="0 0 48 48"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M8 39h10V29h10V19h12M13 9v14M13 9h14l-4 5 4 5H13"
+                  /></svg
+              ></span>
+              <span class="level-content"
+                ><span class="level-title">闯关模式</span
+                ><span class="level-description"
+                  >扫雷、照明、数独，循序解开每一道谜题。</span
+                ><span class="level-meta"
+                  >自由选关<span>收集星星，记录成长</span></span
+                ></span
+              >
               <span class="level-arrow" aria-hidden="true">开始闯关 →</span>
             </a>
-            <a id="competitive-entry" class="level-card mode-card" href="./pk.html">
-              <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8h16v11a8 8 0 0 1-16 0V8ZM16 11H9v5a8 8 0 0 0 9 8M32 11h7v5a8 8 0 0 1-9 8M24 27v10M16 40h16M19 37h10"/></svg></span>
-              <span class="level-content"><span class="level-title">竞技模式</span><span class="level-description">邀请朋友或自动匹配，开启双人照明竞速。</span><span class="level-meta">双人对决<span>同题挑战，比拼速度</span></span></span>
+            <a
+              id="competitive-entry"
+              class="level-card mode-card"
+              href="./pk.html"
+            >
+              <span class="mode-art" aria-hidden="true"
+                ><svg
+                  viewBox="0 0 48 48"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M16 8h16v11a8 8 0 0 1-16 0V8ZM16 11H9v5a8 8 0 0 0 9 8M32 11h7v5a8 8 0 0 1-9 8M24 27v10M16 40h16M19 37h10"
+                  /></svg
+              ></span>
+              <span class="level-content"
+                ><span class="level-title">竞技模式</span
+                ><span class="level-description"
+                  >邀请朋友或自动匹配，开启双人照明竞速。</span
+                ><span class="level-meta"
+                  >双人对决<span>同题挑战，比拼速度</span></span
+                ></span
+              >
               <span class="level-arrow" aria-hidden="true">进入竞技 →</span>
             </a>
           </div>
         </div>
-        <footer class="landing-footer"><span>慢一点，答案就在思考之间。</span></footer>
+        <footer class="landing-footer">
+          <span>慢一点，答案就在思考之间。</span>
+        </footer>
       </section>
     </main>
     <script type="module" src="./src/pages/home.js"></script>
