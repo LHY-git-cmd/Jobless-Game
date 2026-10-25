@@ -1,6 +1,6 @@
 # 项目目录树
 
-更新日期：2026-10-23。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
+更新日期：2026-10-26。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
 
 ```text
 crawler-portal/                            # 项目根目录：前端、登录后端、素材及文档
@@ -130,7 +130,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V16__align_akari_timed_rewards.sql # 追加照明15关按用时评分版本，保留旧奖励
 │   │   ├── V17__index_growth_rankings.sql # 星数与等级/经验排行榜分页索引
 │   │   ├── V18__publish_first_three_star_bonus.sql # 追加39个普通关首次三星双倍奖励版本
-│   │   └── V19__create_arena_scores_and_invitations.sql # 三模式房间字段、积分账户/流水及邀请
+│   │   ├── V19__create_arena_scores_and_invitations.sql # 三模式房间字段、积分账户/流水及邀请
+│   │   └── V20__increase_energy_default_to_ten.sql # 新体力记录默认10点，不修改已有余额或恢复节点
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -185,6 +186,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── mine-multilevel-mvp-report.md       # MVP实际效果、测试统计、预览地址与边界说明
 │   ├── mine-difficulty-redesign-plan.md    # 已确认的扫雷五档、教学、矩形棋盘及账号奖励计划
 │   ├── mine-difficulty-redesign-report.md  # 扫雷重制效果、验收统计、本地预览及发布条件
+│   ├── mine-mobile-play-plan.md          # 已确认的手机棋盘适配、设置暂停、快速重开与通关弹窗计划及验收记录
 │   ├── sudoku-implementation-plan.md       # 已确认的数独五档13关、推理分级、参考图界面及计时成长计划
 │   ├── sudoku-implementation-report.md     # 数独实现、真实MySQL/浏览器证据、旧失败及本地体验
 │   ├── akari-implementation-plan.md        # 已授权的照明入门及15关实施和验收方案
@@ -192,6 +194,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── pk-arena-implementation-plan.md      # 已确认的三模式竞技大厅、在线邀请和积分实施方案
 │   ├── pk-arena-implementation-report.md    # 等级奖励/竞技产出、回归证据及MySQL5.7验收限制
 │   ├── energy-implementation-report.md     # 体力机制、测试证据及本地预览/发布边界
+│   ├── energy-ten-refund-fix.md            # 10点上限、生产Session漏返根因、V20及三游戏持久返还验证
 │   ├── akari-implementation-report.md      # 照明关卡、逻辑递进、测试及发布条件
 │   ├── login-implementation-plan.md       # 登录功能、数据库迁移及低资源部署计划
 │   ├── login-implementation-report.md     # 实际产出、测试统计与待完成环境验收
@@ -216,7 +219,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── energy.js  # 权威体力、恢复倒计时、账号及旧修订隔离
 │   │   │   │   └── validation.js  # 用户名和密码校验
 │   │   │   ├── audio/  # 背景/胜利音、偏好及设置窗口
-│   │   │   │   ├── dialog.js  # 音频设置窗口
+│   │   │   │   ├── dialog.js  # 音频设置窗口、开关事件及实际触发按钮焦点恢复
 │   │   │   │   ├── music.js  # 背景/胜利音生命周期
 │   │   │   │   └── settings.js  # 音量及音效偏好存储
 │   │   │   ├── forum/  # 正文、讨论、接口与展示
@@ -231,7 +234,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
 │   │   │   │   ├── client.js  # 所属业务的同源接口访问
 │   │   │   │   ├── attempt-energy.js  # 三游戏体力快照事件及原子重开幂等适配
-│   │   │   │   ├── attempt-exit.js  # 主动退出前核验ETag并条件终止本局
+│   │   │   │   ├── energy-notice.js  # 三游戏零体力提示：屏幕居中、不可点击、2秒淡出及换号清理
+│   │   │   │   ├── attempt-exit.js  # 主动退出前核验ETag/JSON修订，兼容gzip弱标签并条件终止本局
 │   │   │   │   └── journey-store.js  # 按账号、尝试与版本保存草稿
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
 │   │   │       ├── client.js  # 所属业务的同源接口访问
@@ -269,7 +273,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── sudoku-answer.js       # 历史验收答案隔离，正式页面不导入
 │   │   │   │   └── ui.js
 │   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
-│   │   │   │   ├── controller.js  # 所属业务/游戏控制器与生命周期
+│   │   │   │   ├── controller.js  # 紧凑手机棋盘、设置暂停、爆炸中重开及通关弹窗/下一关
+│   │   │   │   ├── presentation.js  # 未揭安全格、按难度/规格前进与小盘尺寸计算
 │   │   │   │   ├── levels.js
 │   │   │   │   ├── practice-controller.js
 │   │   │   │   ├── practice-page.js
@@ -332,6 +337,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   └── notifications.test.js  # 所属模块的行为回归测试
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
 │   │   │   │   ├── attempt-energy.test.js  # 原子重开失败不弃旧局、同键重试
+│   │   │   │   ├── energy-notice.test.js  # 零体力提示时长、点击穿透、重复显示及生命周期清理
 │   │   │   │   ├── attempt-exit.test.js  # 条件退出、丢响应重试和草稿隔离清理
 │   │   │   │   └── progression-client.test.js  # 所属模块的行为回归测试
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
@@ -347,6 +353,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── mine/  # 扫雷会话、控制器、星级汇聚及爆炸音效
 │   │   │   │   ├── mine-effects.test.js  # 所属模块的行为回归测试
 │   │   │   │   ├── mine-session.test.js  # 所属模块的行为回归测试
+│   │   │   │   ├── mine-presentation.test.js  # 安全格计数、下一关排序和手机尺寸边界
 │   │   │   │   └── mine-stars.test.js  # 所属模块的行为回归测试
 │   │   │   ├── sudoku/  # 数独规则与笔记
 │   │   │   │   ├── sudoku.test.js  # 所属模块的行为回归测试
@@ -429,6 +436,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_mine_redesign.py       # 五档扫雷真实浏览器/临时SQLite及隔离本地预览
         ├── verify_mine_stars.py          # 三颗星/时间降星/汇聚/手机操作及换号取消专项浏览器验收
         ├── verify_mine_pause.py          # 规则/选关/真实标签切换/离页暂停与继续、活动时长星级验收
+        ├── verify_mine_mobile_play.py    # 当前扫雷四视口/设置暂停/爆炸中重开/结算重试与下一关，临时库验收
+        ├── verify_exit_gzip.py           # 隔离Nginx/Chrome退出与零体力验收；--check-refunds验证三游戏10→9→10
         ├── verify_sudoku.py              # 数独13关、教学、奖励/断网、窄屏及隔离本地预览
         ├── verify_sudoku_interactions.py # 数独键盘/冲突、真实离页、重开、换号及减少动画验收
         ├── verify_akari_levels.py        # 照明16关真实点击、教学、断网恢复、下一关与44px窄屏验收

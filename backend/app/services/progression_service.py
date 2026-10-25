@@ -315,7 +315,8 @@ def restart_attempt(db,uid,rid,data,key,**_):
     previous,key=idempotent(db,uid,'attempt-restarts',key,payload)
     if previous:return previous
     old=owned_attempt(db,uid,rid)
-    if old.status not in ('active','completed','abandoned','expired'):
+    # 踩雷失败属于可重玩的终态，保留原失败记录，复用原子创建与体力扣费逻辑。
+    if old.status not in ('active','completed','abandoned','expired','lost'):
         fail(409,'attempt_terminal','当前尝试无法重新开始。')
     # 使用当前发布版本，旧成绩继续保留同一关卡身份。
     level=LEVELS.get(old.level_id)

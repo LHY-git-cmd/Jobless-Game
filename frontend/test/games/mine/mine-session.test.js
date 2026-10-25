@@ -111,12 +111,12 @@ test('销毁后迟到的响应不写回棋盘或存档',async()=>{
   assert.equal(model.state.attempt,null);
 });
 
-test('规则和隐藏分别暂停，嵌套暂停全部解除才继续，暂停不能揭格',async()=>{
+test('设置和隐藏分别暂停，嵌套暂停全部解除才继续，暂停不能揭格',async()=>{
   const f=fixture(),model=createMineSession({uid:1,...f});await model.load();await model.open();
   f.tick(10000);assert.equal(model.elapsed(),10000);
-  await model.setPaused('rules',true);const frozen=model.elapsed();f.tick(90000);
+  await model.setPaused('settings',true);const frozen=model.elapsed();f.tick(90000);
   assert.equal(model.elapsed(),frozen);model.choose(4);assert.equal(model.state.cell,null);
-  await model.setPaused('hidden',true);await model.setPaused('rules',false);
+  await model.setPaused('hidden',true);await model.setPaused('settings',false);
   f.tick(5000);assert.equal(model.elapsed(),frozen);
   await model.setPaused('hidden',false);f.tick(3000);assert.equal(model.elapsed(),frozen+3000);
   assert.equal(f.calls.filter(v=>v.path.endsWith('/clock')&&v.body.paused).length,1);
@@ -129,7 +129,7 @@ test('暂停请求失败后保留冻结和原请求编号，恢复网络可原�
     return f.request(path,options);
   }});
   await model.load();await model.open();f.tick(2000);
-  await assert.rejects(model.setPaused('rules',true),/离线/);f.tick(10000);
+  await assert.rejects(model.setPaused('settings',true),/离线/);f.tick(10000);
   assert.equal(model.elapsed(),2000);assert.equal(model.state.paused,true);
-  await model.setPaused('rules',false);assert.equal(model.state.paused,false);
+  await model.setPaused('settings',false);assert.equal(model.state.paused,false);
 });

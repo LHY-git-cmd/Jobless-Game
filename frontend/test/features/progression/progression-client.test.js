@@ -4,6 +4,18 @@ import assert from 'node:assert/strict';
 import { requestJson, HttpError } from '../../../src/shared/http.js';
 import { createJourneyStore } from '../../../src/features/progression/journey-store.js';
 import { subscribeEvents } from '../../../src/features/pk/events.js';
+import { webcrypto } from 'node:crypto';
+
+test('公网HTTP创建关卡幂等编号，失败后刷新仍复用同一个编号', t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+  Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { getRandomValues: webcrypto.getRandomValues.bind(webcrypto) } });
+  t.after(() => Object.defineProperty(globalThis, 'crypto', original));
+  const values = new Map();
+  const storage = { getItem: key => values.get(key), setItem: (key, value) => values.set(key, value) };
+  const first = createJourneyStore(storage, 1).startKey('mine-001');
+  assert.match(first, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.equal(createJourneyStore(storage, 1).startKey('mine-001'), first);
+});
 
 test('v1请求保留If-Match/Idempotency-Key并返回ETag/Location', async () => {
   let sent;

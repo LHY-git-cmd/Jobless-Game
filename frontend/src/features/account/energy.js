@@ -8,7 +8,7 @@ export function createEnergyModel({request=()=>requestJson('/api/v1/me/energy'),
   /** 发布当前账号状态，读取失败不会被伪装成0体力。 */
   function publish(status){if(!dead)onChange({userId:uid,status,energy:value});}
   /** 只接受有界整数、合法修订与可解析服务器时间。 */
-  function valid(data){return data&&Number.isInteger(data.current)&&data.current>=0&&data.current<=5&&data.capacity===5&&Number.isSafeInteger(data.revision)&&data.revision>=0&&Number.isFinite(Date.parse(data.server_now))&&(data.next_recovery_at===null||Number.isFinite(Date.parse(data.next_recovery_at)));}
+  function valid(data){return data&&Number.isInteger(data.capacity)&&data.capacity>0&&data.capacity<=10&&Number.isInteger(data.current)&&data.current>=0&&data.current<=data.capacity&&Number.isSafeInteger(data.revision)&&data.revision>=0&&Number.isFinite(Date.parse(data.server_now))&&(data.next_recovery_at===null||Number.isFinite(Date.parse(data.next_recovery_at)));}
   /** 同修订按服务器取样时间排序，防止历史完成快照带回旧倒计时。 */
   function accept(userId,data){
     if(dead||uid===null||uid!==userId||!valid(data))return false;
@@ -40,12 +40,12 @@ export function createEnergyModel({request=()=>requestJson('/api/v1/me/energy'),
 /** 直接绑定头像旁的体力，独立于星星汇聚动画更新。 */
 export function initEnergyDisplay(host){
   const display=document.createElement('div');display.className='player-energy';display.hidden=true;
-  display.innerHTML='<span class="player-energy-main"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-12h-7l1-8Z"/></svg><strong>— / 5</strong><span>体力</span></span><small></small>';
+  display.innerHTML='<span class="player-energy-main"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-12h-7l1-8Z"/></svg><strong>— / 10</strong><span>体力</span></span><small></small>';
   // 倒计时逐秒变化不应持续打断读屏，余额变化仍可通过区域标签读取。
   display.setAttribute('role','group');display.setAttribute('aria-label','账号体力');host.append(display);
   const model=createEnergyModel({onUnauthorized:()=>document.dispatchEvent(new CustomEvent(Events.AUTH_EXPIRED)),onChange:state=>{
     display.hidden=state.userId===null;
-    display.querySelector('strong').textContent=state.energy?`${state.energy.current} / 5`:'— / 5';
+    display.querySelector('strong').textContent=state.energy?`${state.energy.current} / ${state.energy.capacity}`:'— / 10';
     const seconds=model.remaining();
     display.querySelector('small').textContent=state.status==='error'?'体力暂不可用':!state.energy?'读取中…':seconds===null?'体力已满':seconds===0?'正在恢复…':`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')} 后恢复1点`;
   }});

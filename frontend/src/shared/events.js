@@ -9,6 +9,7 @@ export const Events = Object.freeze({
   SETTLEMENT_OPENED: 'settlement-opened',
   SETTLEMENT_CLOSED: 'settlement-closed',
   USER_PROFILE_UPDATED: 'user-profile-updated',
+  GAME_SETTINGS_CHANGED: 'game-settings-changed',
 });
 
 /** target 可注入页面文档或组件节点，保持原有事件作用范围。 */

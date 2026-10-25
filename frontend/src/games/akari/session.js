@@ -5,6 +5,7 @@ import { publishAttemptEnergy,restartAttempt } from '../../features/progression/
 import { createAkari, toggleBulb } from './rules.js';
 import { akariTutorialSteps } from './tutorial.js';
 import { abandonAttempt } from '../../features/progression/attempt-exit.js';
+import { createRequestId } from '../../shared/request-id.js';
 
 /** request、storage、now可注入；客户端不决定奖励或正式用时。 */
 export function createAkariSession({uid,storage,request=api,now=Date.now,onChange=()=>{},onReward=()=>{}}={}) {
@@ -52,7 +53,7 @@ export function createAkariSession({uid,storage,request=api,now=Date.now,onChang
   async function writeClock(paused){
     const attempt=state.attempt;if(!attempt||attempt.status!=='active')return;
     for(let retry=0;retry<3;retry++){
-      const command=pendingClock?.rid===attempt.attempt_id?pendingClock:{rid:attempt.attempt_id,paused,revision:state.attempt.timing.revision,command_id:crypto.randomUUID()};
+      const command=pendingClock?.rid===attempt.attempt_id?pendingClock:{rid:attempt.attempt_id,paused,revision:state.attempt.timing.revision,command_id:createRequestId()};
       pendingClock=command;
       try{
         const {rid,...body}=command;

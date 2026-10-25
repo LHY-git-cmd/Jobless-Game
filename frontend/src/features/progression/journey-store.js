@@ -1,4 +1,5 @@
 /** 本地中间盘只辅助恢复；正式进度以服务器为准，账号/尝试/版本严格隔离。 */
+import { createRequestId } from '../../shared/request-id.js';
 
 /** 存储不可用时保留本页内存并报告；写入失败不改变正式奖励。 */
 export function createJourneyStore(storage, uid, onError = () => {}) {
@@ -51,7 +52,7 @@ export function createJourneyStore(storage, uid, onError = () => {}) {
       persist();
     },
     /** 一个尚未确认的开始动作始终重用原UUID。 */
-    startKey(level) { if (!value.starts[level]) { value.starts[level] = crypto.randomUUID(); persist(); } return value.starts[level]; },
+    startKey(level) { if (!value.starts[level]) { value.starts[level] = createRequestId(); persist(); } return value.starts[level]; },
     /** 仅在开始已确认或确认放弃该请求后换新UUID。 */
     clearStart(level) { delete value.starts[level]; persist(); },
     /** 每账号最后所选关卡，仅作为导航提示。 */

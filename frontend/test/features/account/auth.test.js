@@ -3,6 +3,23 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { usernameUnits, validateUsername, validatePassword } from "../../../src/features/account/validation.js";
 import { authRequest, AuthError } from "../../../src/features/account/client.js";
+import { webcrypto } from 'node:crypto';
+import { initArenaPresence } from '../../../src/features/pk/presence.js';
+
+test('公网HTTP缺少randomUUID时仍可初始化账号在线能力', t => {
+  const replacements = {
+    crypto: { getRandomValues: webcrypto.getRandomValues.bind(webcrypto) },
+    document: { addEventListener() {} },
+    window: { addEventListener() {} },
+  };
+  for (const [key, value] of Object.entries(replacements)) {
+    const original = Object.getOwnPropertyDescriptor(globalThis, key);
+    Object.defineProperty(globalThis, key, { configurable: true, value });
+    t.after(() => original ? Object.defineProperty(globalThis, key, original) : delete globalThis[key]);
+  }
+  t.mock.method(globalThis, 'setInterval', () => 1);
+  assert.equal(typeof initArenaPresence().setUser, 'function');
+});
 
 test("用户名 Unicode 权重与后端一致，英文长度和非法字符覆盖边界", () => {
   for (const value of ["中文123456789", "一二三四五六七八", "abc123ABC123", "𠀀1234567890"]) assert.equal(validateUsername(value), "", value);

@@ -4,6 +4,7 @@ import { akariTutorialSteps } from './tutorial.js';
 import { inspectAkari, akariCell } from './rules.js';
 import { createScope } from '../../shared/lifecycle.js';
 import { energyHint } from '../../features/progression/attempt-energy.js';
+import { createEnergyNotice } from '../../features/progression/energy-notice.js';
 import { Events, emit } from '../../shared/events.js';
 import { createExitConfirmation } from '../exit-confirmation.js';
 import { availableMineStars, paintMineStars as paintStars, createStarCollection } from '../mine/stars.js';
@@ -26,6 +27,7 @@ export function availableAkariStars(level,attempt,elapsed,confirmed=null) {
 /** 账号生命周期由journey页面管理；本控制器只拥有照明区域。 */
 export function createAkariJourney({host,auth,onReward=()=>{}}) {
   const scope=createScope();
+  const energyNotice=createEnergyNotice();scope.add(()=>energyNotice.destroy());
   let model,identity,ready=Promise.resolve(),dead=false,selectionOnly=false,errorMessage='',boardKey='',pendingFocus=null,pendingLevel=null,resultShown=null;
   host.innerHTML=`
     <section id="akari-selector" aria-label="照明选关">
@@ -60,7 +62,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
   /** 请求错误只写回发起请求的会话，不污染新账号。 */
   async function run(work) {
     const expected=model;errorMessage='';
-    try{await work();}catch(error){if(dead||model!==expected)return;errorMessage=error.message;if(error.status===401)emit(Events.AUTH_EXPIRED);}
+    try{await work();}catch(error){if(dead||model!==expected)return;if(!energyNotice.handle(error))errorMessage=error.message;if(error.status===401)emit(Events.AUTH_EXPIRED);}
     if(!dead&&model===expected)render(model.state);
   }
   /** 手机开始后回到棋局顶部，避免选关收起后停在页面底部。 */
@@ -260,6 +262,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     /** 换号立刻清空旧账号的棋盘和结算文本，再异步读取新账号资料。 */
     async setUser(uid){
       if(identity===uid&&model)return;
+      energyNotice.clear();
       collection.cancel(false);identity=uid;model?.destroy();selectionOnly=false;boardKey='';pendingFocus=null;errorMessage='';resultShown=null;
       exitConfirmation.reset();
       $('akari-result').close();

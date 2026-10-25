@@ -72,7 +72,8 @@ class MySQLIntegrationTests(TestCase):
                     data = json.loads(result.stdout)
                     if any(item.get("state") == "Pending" for item in data.get("migrations", [])):
                         raise AssertionError("Flyway 重跑后仍有 Pending 迁移")
-        cls.sessions = sessionmaker(cls.engine, expire_on_commit=False)
+        # 与生产保持一致，不能让测试的自动flush掩盖待写余额被重新读取覆盖。
+        cls.sessions = sessionmaker(cls.engine, expire_on_commit=False, autoflush=False)
 
     @classmethod
     def tearDownClass(cls):
@@ -532,6 +533,11 @@ class MySQLIntegrationTests(TestCase):
         self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'energy-v15-test'})
         raw=self.client.cookies.get(get_settings().session_cookie_name)
         ids=[f'akari-v2-{n:03}' for n in range(1,11)]
+        # 保留既有“5点余额同时开10局”的并发边界，新上限不重置老账号余额。
+        with self.sessions() as db:
+            uid=auth_service.current_session(raw,db)[1].id
+            service.dispatch(raw,db,'energy_get')
+            row=db.get(progression.PlayerEnergy,uid);row.current=5;row.recovery_at=utc_now()+timedelta(minutes=30);db.commit()
         service.limiter.clear()
 
         def start(identity):
@@ -572,6 +578,72 @@ class MySQLIntegrationTests(TestCase):
         with self.sessions() as db:
             replay=service.dispatch(raw,db,'attempt_restart',rid=attempt['attempt_id'],data={},key=original_key).data
             self.assertEqual(replay,restarted)
+
+    def test_v20_ten_capacity_refunds_persist_for_all_games(self):
+        """真实MySQL5.7/Flyway及生产Session验证10点默认值、三游戏持久返还和重复提交防重。"""
+        from backend.app.services import progression_service as service
+        from backend.app.common.game_catalog import LEVELS
+        from backend.content_check import akari_solutions
+        from backend.sudoku_content import solutions
+        default=next(column['default'] for column in inspect(self.engine).get_columns('player_energy') if column['name']=='current')
+        self.assertEqual(str(default).strip("'"),'10')
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'energy-cap-ten-test'})
+        token=self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            self.assertFalse(db.autoflush)
+            uid=auth_service.current_session(token,db)[1].id
+            initial=service.dispatch(token,db,'energy_get').data
+            self.assertEqual((initial['current'],initial['capacity']),(10,10))
+        for level_id in ('akari-v2-001','sudoku-v2-easy-01','mine-v2-easy-10'):
+            service.limiter.clear()
+            with self.sessions() as db:
+                attempt=service.dispatch(token,db,'attempt_create',data={'level_id':level_id,
+                    'level_version':LEVELS[level_id]['level_version'],'mode':'campaign'},key=str(uuid4())).data
+                self.assertEqual(attempt['energy']['current'],9)
+                if attempt['game_id']=='akari':payload={'bulbs':akari_solutions(attempt['puzzle']['map'])[0]}
+                elif attempt['game_id']=='sudoku':payload={'values':solutions(attempt['puzzle']['values'],attempt['puzzle']['rows'])[0]}
+                else:
+                    service.dispatch(token,db,'reveal',rid=attempt['attempt_id'],index=0,received_at=utc_now())
+                    row=db.get(progression.GameAttempt,attempt['attempt_id']);board=dict(row.board)
+                    safe=sorted(set(range(100))-set(board['mine_indices']));target=safe[-1]
+                    board['revealed']=safe[:-1];row.board=board;db.commit()
+                    service.dispatch(token,db,'reveal',rid=attempt['attempt_id'],index=target,received_at=utc_now())
+                    payload={}
+                result=service.dispatch(token,db,'completion_put',rid=attempt['attempt_id'],data=payload,received_at=utc_now()).data
+                self.assertEqual(result['energy']['current'],10)
+                self.assertEqual(service.dispatch(token,db,'completion_put',rid=attempt['attempt_id'],data=payload,received_at=utc_now()).data,result)
+            with self.sessions() as db:
+                self.assertEqual(db.get(progression.PlayerEnergy,uid).current,10)
+                self.assertEqual(db.get(progression.AttemptEnergy,attempt['attempt_id']).refunded,1)
+
+    def test_lost_mine_concurrent_restart_charges_once(self):
+        """真实InnoDB验证踩雷后同键并发重开只创建一局、扣一次体力并保留失败记录。"""
+        from backend.app.services import progression_service as service
+        from backend.app.common.game_catalog import LEVELS
+        self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'mine-restart-mysql'})
+        token=self.client.cookies.get(get_settings().session_cookie_name)
+        with self.sessions() as db:
+            uid=auth_service.current_session(token,db)[1].id
+            attempt=service.dispatch(token,db,'attempt_create',data={'level_id':'mine-v2-easy-10',
+                'level_version':LEVELS['mine-v2-easy-10']['level_version'],'mode':'campaign'},key=str(uuid4())).data
+            service.dispatch(token,db,'reveal',rid=attempt['attempt_id'],index=0,received_at=utc_now())
+            mine=db.get(progression.GameAttempt,attempt['attempt_id']).board['mine_indices'][0]
+            lost=service.dispatch(token,db,'reveal',rid=attempt['attempt_id'],index=mine,received_at=utc_now()).data
+            self.assertEqual(lost['status'],'lost')
+        key=str(uuid4())
+        def restart(_):
+            """独立连接重放同一创建意图，由账号行锁与幂等记录串行扣费。"""
+            with self.sessions() as db:
+                return service.dispatch(token,db,'attempt_restart',rid=attempt['attempt_id'],data={},key=key).data
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first,second=list(pool.map(restart,range(2)))
+        self.assertEqual(first,second)
+        self.assertEqual(first['energy']['current'],8)
+        with self.sessions() as db:
+            rows=list(db.scalars(select(progression.GameAttempt).where(progression.GameAttempt.user_id==uid)))
+            self.assertEqual(len(rows),2)
+            self.assertEqual(db.get(progression.GameAttempt,attempt['attempt_id']).status,'lost')
+            self.assertEqual(db.get(progression.PlayerEnergy,uid).current,8)
 
     def test_v7_v8_cancel_pair_competition_has_one_outcome(self):
         """真实MySQL上竞争取消/配对：只能取消成功或配对成功，不能双重占用。"""

@@ -83,7 +83,7 @@ class PlayerEnergy(Base):
     """账号共用的有界体力余额；recovery_at为下一点恢复时刻，满体力时为空。"""
     __tablename__ = 'player_energy'
     user_id: Mapped[int] = mapped_column(UID, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
-    current: Mapped[int] = mapped_column(Integer, default=5)
+    current: Mapped[int] = mapped_column(Integer, default=10)
     recovery_at: Mapped[datetime | None] = mapped_column(DateTime)
     revision: Mapped[int] = mapped_column(Integer, default=0)
 

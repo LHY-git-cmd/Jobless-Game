@@ -6,7 +6,7 @@ from ..models.entities.progression import PlayerEnergy,AttemptEnergy
 from ..repositories import progression_repository as repo
 
 # 所有游戏共用同一上限与自然恢复周期；改变规则需另行发布策略。
-CAPACITY=5
+CAPACITY=10
 RECOVERY_SECONDS=1800
 
 
@@ -16,7 +16,7 @@ def iso(value):
 
 
 def balance(db,uid,now=None):
-    """惰性初始化及恢复，在账号锁内读取当前余额，完整时间间隔最多补到5点。"""
+    """惰性初始化及恢复，在账号锁内读取当前余额，完整时间间隔最多补到10点。"""
     now=now or utc_now()
     row=repo.get(db,PlayerEnergy,uid)
     if row is None:
@@ -65,3 +65,6 @@ def refund(db,uid,attempt):
     if receipt is None or receipt.refunded:return
     receipt.refunded=1;row.current=min(CAPACITY,row.current+1);row.revision+=1
     if row.current==CAPACITY:row.recovery_at=None
+    # 生产Session关闭autoflush；后续快照会populate_existing，必须先写入余额和返还凭证。
+    # 这里只flush，不提交；结算后续失败时仍与奖励、体力一起回滚。
+    db.flush()

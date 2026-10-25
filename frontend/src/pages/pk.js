@@ -5,6 +5,7 @@ import { api as arenaApi } from '../features/progression/client.js';
 import { subscribeEvents } from '../features/pk/events.js';
 import { createFormalBoard } from '../games/formal-board.js';
 import { createAvatarImage } from '../features/account/avatar.js';
+import { createRequestId } from '../shared/request-id.js';
 
 const $=id=>document.getElementById(id);
 const names={mine:'扫雷',akari:'照明',sudoku:'数独'};
@@ -28,7 +29,7 @@ function save(){if(uid)try{storage?.setItem(`jobless-pk-v2:${uid}`,JSON.stringif
 /** 每个创建意图复用UUID，响应丢失重试不重复入队、邀请或建房。 */
 function intent(kind,data){
   const previous=memory.requests[kind];
-  if(!previous||JSON.stringify(previous.data)!==JSON.stringify(data)){memory.requests[kind]={data,key:crypto.randomUUID()};save();}
+  if(!previous||JSON.stringify(previous.data)!==JSON.stringify(data)){memory.requests[kind]={data,key:createRequestId()};save();}
   return memory.requests[kind].key;
 }
 /** 用户名仅用textContent渲染，图片由固定预设编号创建。 */
