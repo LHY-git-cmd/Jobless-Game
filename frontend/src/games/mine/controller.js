@@ -41,8 +41,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       <div class="mine-stats"><div><span>还差排查格数</span><strong id="mine-left">0</strong></div><div><span>可得星数</span><span id="mine-available-stars" class="mine-rating mine-stat-stars" aria-live="polite"></span></div><div><span id="mine-clock-label">本局用时</span><strong id="mine-clock">00:00</strong></div></div>
       <div id="mine-tutorial" class="mine-tutorial" hidden><span id="mine-tutorial-count" class="eyebrow"></span><h3 id="mine-tutorial-title"></h3><p id="mine-tutorial-text"></p><button id="mine-understood" type="button" class="journey-primary" hidden>明白了，试试标记 →</button></div>
       <div id="mine-viewport" class="mine-viewport" tabindex="0" role="region" aria-label="扫雷棋盘，可上下左右滚动"><div id="mine-board" class="mine-board" role="group" aria-label="扫雷棋盘"></div></div>
-      <div class="mine-operation"><p id="mine-selection">先点选一个格子</p><div class="journey-actions"><button id="mine-flag" type="button">${FLAG}标记</button><button id="mine-reveal" class="journey-primary" type="button">排雷</button></div></div>
-      <p class="mine-help">点选格子，再选择标记或排雷。<span class="mine-keyboard-hint">方向键移动 · Enter 选中 · </span><span id="mine-scroll-hint">大棋盘内可滑动。</span></p>
+      <div class="mine-operation"><div class="journey-actions"><button id="mine-flag" type="button">${FLAG}标记</button><button id="mine-reveal" class="journey-primary" type="button">排雷</button></div></div>
     </section>
     <div class="mine-feedback"><p id="mine-message" role="status" aria-live="polite"></p><button id="mine-reload" type="button" hidden>重新加载</button><button id="mine-clock-retry" type="button" hidden>重试继续游戏</button></div>
     <dialog id="mine-enter-dialog" class="journey-rules" aria-labelledby="mine-enter-title" aria-describedby="mine-enter-description"><h2 id="mine-enter-title">是否闯关？</h2><p id="mine-enter-description"></p><div class="journey-actions"><button id="mine-enter-cancel" type="button" autofocus>暂不闯关</button><button id="mine-enter-confirm" class="journey-primary" type="button">确认闯关</button></div></dialog>
@@ -82,12 +81,11 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     const style=getComputedStyle(play);
     const overhead=host.querySelector('.mine-play-heading').offsetHeight+host.querySelector('.mine-stats').offsetHeight+
       ($('mine-tutorial').hidden?0:$('mine-tutorial').offsetHeight)+host.querySelector('.mine-operation').offsetHeight+
-      host.querySelector('.mine-help').offsetHeight+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom)+64;
+      parseFloat(style.paddingTop)+parseFloat(style.paddingBottom)+64;
     const height=(window.visualViewport?.height||window.innerHeight)-overhead;
     const cell=mineCellSize({rows,cols,width:viewport.clientWidth-12,height});
     $('mine-board').style.setProperty('--mine-cell',`${cell}px`);
     viewport.classList.toggle('mine-fit',rows<=10&&cols<=10);
-    $('mine-scroll-hint').hidden=rows<=10&&cols<=10;
   }
   /** 手机显式开局/重开后定位游戏顶部，避免选关面板收起后停在页面底部。 */
   async function runPlay(work){
@@ -239,14 +237,13 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       // 重开只在真实请求处理中短暂禁用，爆炸时间线不会阻挡踩雷后的快速重开。
       $('mine-restart').disabled=state.busy;
       $('mine-back').disabled=state.busy;
-      $('mine-selection').textContent=state.cell===null?'先点选一个格子':`已选第 ${Math.floor(state.cell/attempt.puzzle.cols)+1} 行，第 ${state.cell%attempt.puzzle.cols+1} 列`;
       renderBoard(state);renderTutorial(attempt);renderResult(state);fitBoard();
       if(animate){
         const game={status:'lost',explodedAt:board.revealed.find(v=>v.value===-1)?.index,level:{cols:attempt.puzzle.cols},cells:Array.from({length:attempt.puzzle.rows*attempt.puzzle.cols},(_,index)=>({mine:board.mines.includes(index)}))};
         sequence.start(explosionOrder(game));
       }
     }
-    $('mine-message').textContent=errorMessage||state.message||(playing&&state.attempt?.board.outcome==='lost'&&finished?'踩到地雷了，点击“重新开始”再试一次。':!state.enabled&&state.levels.length?'扫雷暂未开放，请稍后重试。':'');
+    $('mine-message').textContent=errorMessage||state.message||(!state.enabled&&state.levels.length?'扫雷暂未开放，请稍后重试。':'');
     $('mine-reload').hidden=!errorMessage||Boolean(state.attempt);$('mine-reload').disabled=state.busy;
     $('mine-clock-retry').hidden=!state.paused||state.clockBusy||selectionOnly||document.hidden||Boolean(document.querySelector('dialog[open]'));
     $('mine-clock-retry').disabled=state.busy;
