@@ -6,6 +6,14 @@ export async function abandonAttempt({attempt,request=api}) {
   const latest=await request(attempt.links.self);
   if(latest.data.status==='abandoned')return latest;
   if(latest.data.status!=='active')throw new Error('本局已结束，请刷新资料后再返回选关。');
-  if(!latest.etag)throw new Error('无法核验对局状态，请重试退出。');
-  return request(attempt.links.self,{method:'PATCH',body:{status:'abandoned'},headers:{'If-Match':latest.etag}});
+  let version=latest.etag;
+  // 本接口强版本约定为JSON中的整数revision；gzip代理可能只在响应头加上W/。
+  // 只有头部与JSON版本一致时才使用该明确修订号，不把任意弱ETag当作强校验器。
+  if(version?.startsWith('W/')){
+    const revision=latest.data.revision;
+    const expected=Number.isSafeInteger(revision)&&revision>=0?`"${revision}"`:null;
+    version=expected&&version===`W/${expected}`?expected:null;
+  }
+  if(!version)throw new Error('无法核验对局状态，请重试退出。');
+  return request(attempt.links.self,{method:'PATCH',body:{status:'abandoned'},headers:{'If-Match':version}});
 }

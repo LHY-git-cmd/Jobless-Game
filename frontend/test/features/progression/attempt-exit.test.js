@@ -17,6 +17,29 @@ test('主动退出先GET最新ETag，再PATCH终止原局，不创建新局',asy
   assert.deepEqual(calls,[{path:attempt.links.self},{path:attempt.links.self,method:'PATCH',body:{status:'abandoned'},headers:{'If-Match':'"7"'}}]);
 });
 
+test('压缩代理返回弱ETag时，以匹配的JSON修订号生成条件退出版本',async()=>{
+  for(const revision of [0,1,25]){
+    let sent;
+    const result=await abandonAttempt({attempt,request:async(path,options={})=>{
+      if(options.method==='PATCH'){sent=options;return {data:{...attempt,status:'abandoned'}};}
+      return {data:{...attempt,status:'active',revision},etag:`W/"${revision}"`};
+    }});
+    assert.equal(result.data.status,'abandoned');
+    assert.equal(sent.headers['If-Match'],`"${revision}"`);
+  }
+});
+
+test('弱ETag与修订号不一致或修订号无效时，拒绝退出而不绕过版本保护',async()=>{
+  for(const revision of [undefined,-1,'7',1.5,8]){
+    let patches=0;
+    await assert.rejects(abandonAttempt({attempt,request:async(path,options={})=>{
+      if(options.method==='PATCH')patches++;
+      return {data:{...attempt,status:'active',revision},etag:'W/"7"'};
+    }}),/核验/);
+    assert.equal(patches,0);
+  }
+});
+
 test('退出成功但丢响应时，重试核验已结束状态，不重复写入',async()=>{
   let status='active',patches=0;
   const request=async(path,options={})=>{
