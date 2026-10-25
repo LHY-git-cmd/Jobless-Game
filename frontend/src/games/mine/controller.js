@@ -13,7 +13,6 @@ const DIFFICULTIES=[['tutorial','入门','从零学会'],['easy','简单','轻�
 const FLAG='<img src="./assets/minesweeper/v2/flag.webp" width="24" height="24" alt="">';
 // 顶部操作图标统一线宽，文字保留为按钮名称，图形仅作辅助提示。
 const RESTART_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M19 12a7 7 0 0 0-12-5L4 10m1 2a7 7 0 0 0 12 5l3-3"/></svg>';
-const SETTINGS_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 3-.7 2.1-2 .9-2-.4-2 3.4 1.4 1.7v2.6L2.8 15l2 3.4 2-.4 2 .9.7 2.1h4l.7-2.1 2-.9 2 .4 2-3.4-1.4-1.7v-2.6L20.2 9l-2-3.4-2 .4-2-.9-.7-2.1Z"/><circle cx="11.5" cy="12" r="3"/></svg>';
 
 /** 秒数向下显示，星级仍按服务端毫秒判定。 */
 export function mineTime(ms){const seconds=Math.max(0,Math.floor(ms/1000));return `${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;}
@@ -37,7 +36,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
       <div class="mine-start-row"><p id="mine-reward-note">正在加载难度…</p></div>
     </div>
     <section id="mine-play" class="mine-play" aria-label="扫雷游戏" hidden>
-      <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><button id="mine-settings" type="button" aria-label="游戏设置，打开时暂停" title="游戏设置" aria-haspopup="dialog" aria-controls="game-settings">${SETTINGS_ICON}</button><button id="mine-restart" class="journey-primary" type="button">${RESTART_ICON}重新开始</button></div>
+      <div class="mine-play-heading"><button id="mine-back" type="button">← 返回选关</button><button id="mine-restart" class="journey-primary" type="button">${RESTART_ICON}重新开始</button></div>
       <div class="mine-stats"><div><span>还差排查格数</span><strong id="mine-left">0</strong></div><div><span>可得星数</span><span id="mine-available-stars" class="mine-rating mine-stat-stars" aria-live="polite"></span></div><div><span id="mine-clock-label">本局用时</span><strong id="mine-clock">00:00</strong></div></div>
       <div id="mine-tutorial" class="mine-tutorial" hidden><span id="mine-tutorial-count" class="eyebrow"></span><h3 id="mine-tutorial-title"></h3><p id="mine-tutorial-text"></p><button id="mine-understood" type="button" class="journey-primary" hidden>明白了，试试标记 →</button></div>
       <div id="mine-viewport" class="mine-viewport" tabindex="0" role="region" aria-label="扫雷棋盘，可上下左右滚动"><div id="mine-board" class="mine-board" role="group" aria-label="扫雷棋盘"></div></div>
@@ -281,8 +280,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     const selected=pendingLevel;if(!selected||model.state.busy)return;
     $('mine-enter-dialog').close();void auth.requireLogin(()=>openSelected(selected));
   });
-  // 棋盘顶部与账号栏共用同一个设置窗口，滚动到游戏时仍有可触达的暂停入口。
-  scope.listen($('mine-settings'),'click',()=>{$('mine-settings').focus({preventScroll:true});document.querySelector('.auth-settings')?.click();});
+  // 页面顶部设置窗口的开关仍控制当前扫雷暂停。
   scope.listen(document,Events.GAME_SETTINGS_CHANGED,event=>{if(model)void run(()=>model.setPaused('settings',event.detail.open));});
   scope.listen($('mine-back'),'click',()=>void exitConfirmation.ask());
   scope.listen($('mine-board'),'click',event=>{const cell=event.target.closest('[data-index]');if(cell)model.choose(Number(cell.dataset.index));});

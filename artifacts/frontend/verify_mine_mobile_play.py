@@ -127,7 +127,7 @@ def main():
                 click('#mine-restart-cancel')
                 assert attempt().attempt_id == check_row.attempt_id
                 checks.append('进行中的重开仍需确认，取消保留原局')
-                click('#mine-settings')
+                click('.auth-settings')
                 wait("document.querySelector('#game-settings').open")
                 paused(True)
                 frozen = ev("document.querySelector('#mine-clock').textContent")
@@ -138,13 +138,13 @@ def main():
                 cmd('Input.dispatchKeyEvent', {'type':'keyDown','key':'Escape','code':'Escape','windowsVirtualKeyCode':27})
                 wait("!document.querySelector('#game-settings').open")
                 paused(False)
-                assert ev("document.activeElement.id") == 'mine-settings'
+                assert ev("document.activeElement.classList.contains('auth-settings')")
                 click('.auth-settings')
                 paused(True)
                 click('.settings-close')
                 paused(False)
-                checks.append('面板及顶部设置均暂停服务端时钟，关闭/ESC后继续')
-                click('#mine-settings')
+                checks.append('顶部设置暂停服务端时钟，关闭/ESC后继续')
+                click('.auth-settings')
                 paused(True)
                 target_id=cmd('Target.getTargetInfo')['targetInfo']['targetId']
                 other_id=cmd('Target.createTarget',{'url':'about:blank'})['targetId']
