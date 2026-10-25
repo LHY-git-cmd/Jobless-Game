@@ -1,6 +1,7 @@
 /* 五档扫雷：沿用海岛深蓝/暖金，矩形棋盘在自身区域滚动。 */
 .mine-host { min-width: 0; border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb,var(--surface) 96%,transparent); box-shadow: 0 20px 60px #04162240; }
-.mine-selector,.mine-play { padding: clamp(20px,3.6vw,44px); }
+.mine-selector { padding: clamp(20px,3.6vw,44px); }
+.mine-play { padding: 14px 16px 12px; scroll-margin-top: 8px; }
 .mine-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
 .mine-intro h2 { font-size: clamp(23px,2.4vw,32px); margin: 8px 0 12px; letter-spacing: 1px; text-wrap: balance; }
 .mine-intro p:not(.eyebrow) { margin: 0; color: var(--muted); line-height: 1.7; }
@@ -29,28 +30,25 @@
 .mine-start-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 24px; border-top: 1px solid var(--line); padding-top: 24px; }
 .mine-start-row p { color: var(--muted); font-size: 13px; line-height: 1.9; margin: 0; max-width: 660px; }
 .mine-start-row button { flex: none; min-width: 160px; padding: 14px 24px; }
-.mine-play-heading { position: relative; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 12px; }
+.mine-play-heading { display: grid; grid-template-columns: minmax(0,1fr) 44px auto; align-items: center; gap: 8px; }
 .mine-play-heading > #mine-back { grid-column: 1; grid-row: 1; justify-self: start; }
-.mine-play-heading > #mine-restart { grid-column: 2; grid-row: 1; justify-self: end; }
+.mine-play-heading > #mine-restart { grid-column: 3; grid-row: 1; justify-self: end; }
+#mine-settings { width: 44px; min-height: 44px; padding: 0; }
+#mine-restart { font-weight: 600; }
 .mine-play-heading button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
 .mine-play-heading button svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.mine-sound-muted { display: none; }#mine-sound.is-muted .mine-sound-wave { display: none; }#mine-sound.is-muted .mine-sound-muted { display: block; }
-.mine-play-secondary { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
-.mine-game-brand { display: flex; align-items: center; justify-content: center; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); }
-.mine-game-brand img { display: block; width: 110px; height: auto; aspect-ratio: 1; object-fit: contain; flex: none; }
-.mine-play-secondary > .journey-actions { flex: none; gap: 8px; }
-.mine-play-secondary > .journey-actions button { padding: 9px 11px; font-size: 12px; transform: translateY(2px); }
-.mine-play-secondary > .journey-actions button svg { width: 16px; height: 16px; }
-.mine-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-block: 1px solid var(--line); margin-top: 24px; }
-.mine-stats > div { display: flex; flex-direction: column; gap: 8px; padding: 20px 8px; text-align: center; }
+.mine-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border-block: 1px solid var(--line); margin-top: 10px; }
+.mine-stats > div { display: flex; flex-direction: column; gap: 3px; padding: 8px 2px; text-align: center; }
 .mine-stats span { font-size: 13px; color: var(--muted); }
 .mine-stats strong { font: 500 28px/1.2 Georgia,serif; font-variant-numeric: tabular-nums; color: var(--gold); }
-.mine-stats .mine-stat-stars { align-self: center; min-height: 34px; color: var(--star-color); }
+.mine-stats .mine-stat-stars { align-self: center; min-height: 28px; color: var(--star-color); }
 .mine-stat-stars svg { width: 24px; height: 24px; }
-.mine-viewport { min-width: 0; max-width: 100%; max-height: min(65svh,660px); overflow: auto; overscroll-behavior: contain; padding: 12px 4px; margin: 16px 0; scrollbar-color: var(--gold) var(--surface); }
-.mine-board { display: grid; grid-template-columns: repeat(var(--mine-cols),44px); gap: 0; width: max-content; padding: 0; margin-inline: auto; border: 9px ridge #9b9b9b; border-radius: 0; background: #bfbfbf; }
+.mine-viewport { min-width: 0; max-width: 100%; max-height: min(65svh,660px); overflow: auto; overscroll-behavior: contain; padding: 0; margin: 10px 0 6px; scrollbar-color: var(--gold) var(--surface); }
+/* 常见小盘按实际可用宽高适配；大盘继续在视口中滚动，禁止压缩成难以点选的小格。 */
+.mine-viewport.mine-fit { max-height: none; }
+.mine-board { --mine-cell: 44px; display: grid; grid-template-columns: repeat(var(--mine-cols),var(--mine-cell)); gap: 0; width: max-content; padding: 0; margin-inline: auto; border: 6px ridge #9b9b9b; border-radius: 0; background: #bfbfbf; }
 /* 直接使用用户原图切片；数字1～3已在素材中，4～8以同灰底文字补齐。 */
-.mine-square { --mine-art: url('../../assets/minesweeper/v2/covered.webp'); width: 44px; height: 44px; min-width: 44px; padding: 0; border: 0; border-radius: 0; background: #bfbfbf var(--mine-art) center / 100% 100% no-repeat; font: 700 26px/1 Arial,sans-serif; color: #000080; display: grid; place-items: center; }
+.mine-square { --mine-art: url('../../assets/minesweeper/v2/covered.webp'); width: var(--mine-cell); height: var(--mine-cell); min-width: var(--mine-cell); min-height: var(--mine-cell); padding: 0; border: 0; border-radius: 0; background: #bfbfbf var(--mine-art) center / 100% 100% no-repeat; font: 700 calc(var(--mine-cell) * .59)/1 Arial,sans-serif; color: #000080; display: grid; place-items: center; }
 .mine-square:disabled { opacity: 1; cursor: default; }
 .mine-operation img { width: 24px; height: 24px; display: block; }
 .mine-square.mine-open { --mine-art: url('../../assets/minesweeper/v2/open.webp'); box-shadow: inset 0 0 0 1px #a5a5a5; }
@@ -69,14 +67,21 @@
 .mine-square.mine-visible { --mine-art: url('../../assets/minesweeper/v2/mine.webp'); }
 .mine-square.mine-exploded { --mine-art: url('../../assets/minesweeper/v2/exploded.webp'); }
 .mine-square.mine-blasting { animation: mine-blast 500ms ease-out both; }
-.mine-operation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.mine-operation p { color: var(--muted); font-size: 14px; }
+.mine-operation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
+.mine-operation p { color: var(--muted); font-size: 13px; margin: 4px 0; }
 .mine-operation button { display: inline-flex; align-items: center; gap: 8px; min-width: 100px; justify-content: center; }
-.mine-help { color: var(--muted); font-size: 12px; line-height: 1.8; margin-bottom: 0; }
+.mine-help { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 6px 0 0; }
 .mine-tutorial { border-left: 3px solid #7fddbd; padding: 16px 20px; background: color-mix(in srgb,#7fddbd 7%,var(--surface)); margin-top: 20px; }
 .mine-tutorial h3 { font-size: 18px; margin: 8px 0; }.mine-tutorial p:not(.eyebrow) { color: var(--muted); line-height: 1.8; margin: 8px 0; }
-.mine-result { margin-top: 24px; border: 1px solid var(--gold); border-radius: 12px; padding: 24px; background: color-mix(in srgb,var(--gold) 6%,var(--surface)); }
-.mine-result h3 { margin: 8px 0; font-size: 23px; }.mine-result p:last-of-type { color: var(--muted); line-height: 1.9; }
+.mine-result { margin: auto; border-color: var(--gold); }
+.mine-result h2 { margin: 8px 0; font-size: 23px; }.mine-result p:last-of-type { color: var(--muted); line-height: 1.9; }
+.mine-result .journey-actions { margin-top: 16px; }
+.mine-result .journey-actions button { flex: 1 1 150px; }
+/* 游戏状态下去掉选关页的额外标题/段落留白，不影响其他游戏或扫雷选关卡片。 */
+.mine-playing .journey-section { margin-block: 8px; }
+.mine-playing main > .journey-link { display: none; }
+.mine-playing #journey-login,.mine-playing #journey-status { display: none; }
+.mine-playing .landing-header { padding-block: 12px; }
 .mine-result-stars { margin-block: 14px; gap: 8px; }.mine-result-stars svg { width: 30px; height: 30px; }
 .mine-star-collection { position: fixed; inset: 0; z-index: 10020; pointer-events: none; color: var(--star-color); }
 .mine-flying-star { position: fixed; left: 0; top: 0; width: 24px; height: 24px; filter: drop-shadow(0 0 8px #66d9ba99); }
@@ -90,19 +95,17 @@
 @media(max-width:700px) {
   .mine-play { display: flex; flex-direction: column; }
   .mine-play-heading { order: 0; }.mine-stats { order: 1; }.mine-tutorial { order: 2; }
-  .mine-operation { order: 4; padding-block: 8px; }
-  .mine-operation p { margin: 4px 0; }.mine-viewport { order: 3; max-height: 55svh; }.mine-help { order: 5; }.mine-result { order: 6; }
+  .mine-operation { order: 4; padding-block: 2px; }
+  .mine-operation p { margin: 2px 0; }.mine-viewport { order: 3; max-height: 55svh; }.mine-help { order: 5; }
   .mine-keyboard-hint { display: none; }
   .mine-stat-stars { gap: 2px; }.mine-stat-stars svg { width: 18px; height: 18px; }
   .mine-intro { gap: 12px; margin-bottom: 24px; }.mine-intro img { width: 56px; height: 56px; }.mine-intro .eyebrow { font-size: 10px; letter-spacing: 1px; }
   .mine-difficulties { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }.mine-difficulties button { padding: 16px 10px; }.mine-difficulties strong { font-size: 18px; }.mine-difficulties span { font-size: 12px; }
   .mine-start-row { flex-direction: column; align-items: stretch; gap: 16px; }.mine-start-row button { width: 100%; }
-  .mine-play-heading { gap: 12px; }
-  .mine-play-secondary { display: grid; grid-template-columns: 1fr; }
-  .mine-game-brand { position: static; transform: none; justify-self: center; }
-  .mine-game-brand img { width: 70px; max-width: 100%; }
-  .mine-play-secondary > .journey-actions { justify-self: end; }
-  .mine-play-heading > button { padding-inline: 10px; }.mine-stats strong { font-size: 24px; }
+  .mine-play { padding: 8px; }
+  .mine-play-heading { gap: 6px; }
+  .mine-play-heading > button { padding-inline: 8px; font-size: 13px; }.mine-stats strong { font-size: 24px; }
+  .mine-stats span { font-size: 12px; }
   .mine-operation .journey-actions { width: 100%; }.mine-operation button { flex: 1; }.mine-tutorial { padding-inline: 12px; }
 }
 @media(prefers-reduced-motion:reduce) { .mine-square.mine-blasting,.mine-square.mine-selected::after { animation: none; }.mine-rating svg { transition: none; } }

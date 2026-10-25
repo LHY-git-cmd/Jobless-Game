@@ -217,7 +217,7 @@ export function createMineSession({uid,storage,request=api,onChange=()=>{},onRew
     });},
     /** 服务端时间校准只供显示，正式星级仍由后端计算。 */
     elapsed,
-    /** 规则、隐藏、选关各持有暂停原因，全部解除才发送继续；离页请求使用keepalive。 */
+    /** 设置、隐藏、选关各持有暂停原因，全部解除才发送继续；离页请求使用keepalive。 */
     async setPaused(reason,value,{immediate=false,sync=true}={}){
       if(dead)return;
       const before=pauseReasons.size>0,time=elapsed();

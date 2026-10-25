@@ -1,5 +1,6 @@
 /** 右上角独立游戏设置弹窗：音乐/音效开关和音量即时生效并自动保存。 */
 import { getAudioSettings } from "./settings.js";
+import { Events, emit } from '../../shared/events.js';
 
 /** 复用原生 dialog 的模态焦点隔离，所有带账号页共用同一设置入口。 */
 export function initGameSettings({ dom = document, settings = getAudioSettings() } = {}) {
@@ -27,11 +28,13 @@ export function initGameSettings({ dom = document, settings = getAudioSettings()
   const closeButton = dialog.querySelector(".settings-close");
   let returnFocus;
 
-  /** 关闭后回到独立设置按钮，不触发游戏导航或改变计时。 */
+  /** 关闭后恢复入口焦点；游戏是否暂停由各自监听设置状态决定。 */
   function close() {
     dialog.close();
-    returnFocus?.focus();
+    returnFocus?.focus({ preventScroll: true });
   }
+  // 原生close事件异步派发，先确认当前关闭状态，避免旧事件解除新弹窗的暂停。
+  dialog.addEventListener('close', () => { if (!dialog.open) emit(Events.GAME_SETTINGS_CHANGED, { open: false }, dom); });
   closeButton.addEventListener("click", close);
   dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
   // 原生 dialog 已阻止背景交互；显式循环 Tab 保持键盘操作顺序稳定。
@@ -59,7 +62,12 @@ export function initGameSettings({ dom = document, settings = getAudioSettings()
   });
   return {
     /** 设置按钮提供可访问名称与焦点来源。 */
-    open(trigger) { if (!dialog.open) { returnFocus = trigger; dialog.showModal(); closeButton.focus(); } },
+    open(trigger) {
+      if (dialog.open) return;
+      // 游戏面板可复用顶部设置入口；恢复实际触发按钮的焦点，关闭时不把玩家滚回页首。
+      returnFocus = dom.activeElement?.matches('[aria-controls="game-settings"]') ? dom.activeElement : trigger;
+      dialog.showModal();emit(Events.GAME_SETTINGS_CHANGED, { open: true }, dom);closeButton.focus();
+    },
     /** 换号或退出时关闭设置窗口，不残留失效的账号入口。 */
     close,
   };
