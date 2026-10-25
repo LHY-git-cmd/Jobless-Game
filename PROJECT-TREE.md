@@ -232,6 +232,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
 │   │   │   │   ├── client.js  # 所属业务的同源接口访问
 │   │   │   │   ├── attempt-energy.js  # 三游戏体力快照事件及原子重开幂等适配
+│   │   │   │   ├── energy-notice.js  # 三游戏零体力提示：屏幕居中、不可点击、2秒淡出及换号清理
 │   │   │   │   ├── attempt-exit.js  # 主动退出前核验ETag/JSON修订，兼容gzip弱标签并条件终止本局
 │   │   │   │   └── journey-store.js  # 按账号、尝试与版本保存草稿
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
@@ -334,6 +335,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   └── notifications.test.js  # 所属模块的行为回归测试
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
 │   │   │   │   ├── attempt-energy.test.js  # 原子重开失败不弃旧局、同键重试
+│   │   │   │   ├── energy-notice.test.js  # 零体力提示时长、点击穿透、重复显示及生命周期清理
 │   │   │   │   ├── attempt-exit.test.js  # 条件退出、丢响应重试和草稿隔离清理
 │   │   │   │   └── progression-client.test.js  # 所属模块的行为回归测试
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
@@ -433,7 +435,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_mine_stars.py          # 三颗星/时间降星/汇聚/手机操作及换号取消专项浏览器验收
         ├── verify_mine_pause.py          # 规则/选关/真实标签切换/离页暂停与继续、活动时长星级验收
         ├── verify_mine_mobile_play.py    # 当前扫雷四视口/设置暂停/爆炸中重开/结算重试与下一关，临时库验收
-        ├── verify_exit_gzip.py           # 隔离Nginx压缩/SQLite/Chrome复现退出412并验证版本保护及正常退出
+        ├── verify_exit_gzip.py           # 隔离Nginx压缩/缓存正则、退出412及三游戏零体力居中淡出，临时库验收
         ├── verify_sudoku.py              # 数独13关、教学、奖励/断网、窄屏及隔离本地预览
         ├── verify_sudoku_interactions.py # 数独键盘/冲突、真实离页、重开、换号及减少动画验收
         ├── verify_akari_levels.py        # 照明16关真实点击、教学、断网恢复、下一关与44px窄屏验收

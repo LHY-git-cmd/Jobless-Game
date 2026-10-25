@@ -3,6 +3,7 @@ import { createSudokuSession } from './session.js';
 import { sudokuConflicts } from './rules.js';
 import { createScope } from '../../shared/lifecycle.js';
 import { energyHint } from '../../features/progression/attempt-energy.js';
+import { createEnergyNotice } from '../../features/progression/energy-notice.js';
 import { Events,emit } from '../../shared/events.js';
 import { createExitConfirmation } from '../exit-confirmation.js';
 // 轻量复用已有星级和汇聚视图；不依赖扫雷会话或控制器。
@@ -22,6 +23,7 @@ export function sudokuTime(ms){const seconds=Math.floor(Math.max(0,ms)/1000);ret
 /** auth由页面共享；每次换号销毁旧会话、弹窗和奖励动画。 */
 export function createSudokuJourney({host,auth,onReward=()=>{}}){
   const scope=createScope();let model,identity,ready=Promise.resolve(),dead=false,selectionOnly=false,errorMessage='',boardKey='',pendingFocus=null,pendingLevel=null;
+  const energyNotice=createEnergyNotice();scope.add(()=>energyNotice.destroy());
   host.innerHTML=`
     <div id="sudoku-selector" class="sudoku-selector">
       <div class="sudoku-intro"><div><p class="eyebrow">SUDOKU / 数字之间，自有秩序</p><h2>一格一格，解开谜题。</h2><p>从第一个确定的数字，到属于你的完整答案。</p></div><div class="sudoku-emblem" aria-hidden="true"><span>1</span><span></span><span>3</span><span></span><span>5</span><span></span><span>7</span><span></span><span>9</span></div></div>
@@ -54,7 +56,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
   /** 捕捉当前会话错误，迟到的旧账号响应不影响新页面。 */
   async function run(work){
     const expected=model;errorMessage='';
-    try{await work();}catch(error){if(dead||model!==expected)return;errorMessage=error.message;if(error.status===401)emit(Events.AUTH_EXPIRED);}
+    try{await work();}catch(error){if(dead||model!==expected)return;if(!energyNotice.handle(error))errorMessage=error.message;if(error.status===401)emit(Events.AUTH_EXPIRED);}
     if(!dead&&model===expected)render(model.state);
   }
   /** 窄屏开始后定位顶部，不让收起选关导致用户停留在游戏下方。 */
@@ -221,6 +223,7 @@ export function createSudokuJourney({host,auth,onReward=()=>{}}){
     /** 换号先销毁旧局和动画，避免跨账号异步显示。 */
     async setUser(uid){
       if(identity===uid&&model)return;collection.cancel(false);identity=uid;model?.destroy();selectionOnly=false;boardKey='';pendingFocus=null;errorMessage='';
+      energyNotice.clear();
       exitConfirmation.reset();
       pendingLevel=null;$('sudoku-enter-dialog').close();$('sudoku-restart-dialog').close();
       // 身份变化即移除旧账号内容，不能只隐藏带旧答案/笔记的父容器。

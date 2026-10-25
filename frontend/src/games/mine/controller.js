@@ -8,6 +8,7 @@ import { createExplosionSequence, createExplosionSound, explosionOrder } from '.
 import { availableMineStars, paintMineStars, createStarCollection } from './stars.js';
 import { createExitConfirmation } from '../exit-confirmation.js';
 import { remainingSafeCells, nextMineLevel, mineCellSize } from './presentation.js';
+import { createEnergyNotice } from '../../features/progression/energy-notice.js';
 
 const DIFFICULTIES=[['tutorial','入门','从零学会'],['easy','简单','轻松起步'],['medium','中等','多想一步'],['hard','困难','步步推理'],['hell','地狱','极限挑战']];
 const FLAG='<img src="./assets/minesweeper/v2/flag.webp" width="24" height="24" alt="">';
@@ -20,6 +21,7 @@ export function mineTime(ms){const seconds=Math.max(0,Math.floor(ms/1000));retur
 /** auth由页面共享，控制器换号时销毁旧会话及所有动画。 */
 export function createMineJourney({host,auth,onReward=()=>{}}) {
   const scope=createScope(),settings=getAudioSettings();
+  const energyNotice=createEnergyNotice();scope.add(()=>energyNotice.destroy());
   let model,identity,selectionOnly=false,lastId=null,lastOutcome=null,animation=null,finished=true,dead=false,errorMessage='';
   let renderedBoard='',resultShown=null;
   const page=host.closest('.journey-page');
@@ -62,7 +64,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     errorMessage='';
     try{await work();}catch(error){
       if(dead||model!==expected)return;
-      errorMessage=error.message;
+      if(!energyNotice.handle(error))errorMessage=error.message;
       if(error.status===401)emit(Events.AUTH_EXPIRED);
     }
     if(!dead&&model===expected)render(model.state);
@@ -347,6 +349,7 @@ export function createMineJourney({host,auth,onReward=()=>{}}) {
     /** 换号先销毁旧请求和棋盘，再加载新账号自己的目录进度。 */
     async setUser(uid){
       if(identity===uid&&model)return;collection.cancel(false);identity=uid;model?.destroy();stopAnimation();selectionOnly=false;lastId=null;lastOutcome=null;errorMessage='';
+      energyNotice.clear();
       exitConfirmation.reset();
       pendingLevel=null;resultShown=null;$('mine-enter-dialog').close();$('mine-result').close();$('mine-restart-dialog').close();
       let storage;try{storage=window.localStorage;}catch{/* 存储禁用仍可依靠服务端续玩。 */}

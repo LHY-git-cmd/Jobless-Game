@@ -49,3 +49,14 @@ class StaticCacheTests(TestCase):
         for path in (*frontend.glob("*.html"), *frontend.joinpath("src").rglob("*.js")):
             with self.subTest(file=path.name):
                 self.assertNotRegex(path.read_text(encoding="utf-8"), r"\.(?:js|css)\?v=")
+
+    def test_module_prefixes_override_panel_js_css_cache_rules(self):
+        """宝塔的JS/CSS正则缓存不能覆盖模块和样式目录的更新验证策略。"""
+        for relative in ('backend/deploy/nginx-site.conf.example','backend/deploy/docker/nginx.conf'):
+            source=(ROOT/relative).read_text(encoding='utf-8')
+            for folder in ('src','styles'):
+                with self.subTest(template=relative,folder=folder):
+                    block=re.search(r'location \^~ /'+folder+r'/ \{([^}]+)\}',source)
+                    self.assertIsNotNone(block,'必须用^~优先于宝塔的js/css正则location')
+                    self.assertIn('expires off;',block.group(1))
+                    self.assertIn('add_header Cache-Control no-cache always;',block.group(1))
