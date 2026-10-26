@@ -179,6 +179,27 @@ class MySQLIntegrationTests(TestCase):
             self.assertIn('ix_arena_points',{i['name'] for i in inspect(self.engine).get_indexes('arena_accounts')})
         service.maintenance(self.sessions)
         with self.sessions() as db:self.assertEqual(db.get(arena.ArenaAccount,uids[0]).points,120)
+        # V21在真实InnoDB下保留双方席位，并发确认只能创建一局后继局。
+        self.assertIn('ix_pk_room_lobby_expiry',{i['name'] for i in inspect(self.engine).get_indexes('pk_rooms')})
+        with self.sessions() as db:
+            old_result=dict(db.get(pk.PKRoom,rid).result)
+            old_puzzle=dict(db.get(pk.PKRoom,rid).puzzle)
+            self.assertTrue(db.get(pk.PKRoom,rid).lobby_expires_at)
+        def rematch(token):
+            """各连接独立事务，产品幂等通过房间后继指针而非前端按钮锁保证。"""
+            with self.sessions() as db:
+                return service.dispatch(token,db,'room_continue',rid=rid,data={'ready':True}).data
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            continued=list(executor.map(rematch,tokens))
+        self.assertEqual(continued[0]['room_id'],continued[1]['room_id'])
+        next_id=continued[0]['room_id']
+        with self.sessions() as db:
+            next_room=db.get(pk.PKRoom,next_id)
+            self.assertEqual(next_room.status,'countdown')
+            self.assertNotEqual(next_room.puzzle['puzzle']['mine_indices'],old_puzzle['puzzle']['mine_indices'])
+            self.assertEqual(db.get(pk.PKRoom,rid).result,old_result)
+            self.assertEqual([db.get(pk.PlayerPKOccupancy,who).room_id for who in uids],[next_id,next_id])
+            self.assertEqual(len(list(db.scalars(select(arena.ArenaLedger).where(arena.ArenaLedger.room_id==rid)))),2)
         runtime.reset()
 
     def test_real_cookie_expiry_and_logout(self):

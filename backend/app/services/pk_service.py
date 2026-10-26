@@ -48,7 +48,10 @@ def touch(db, room):
 
 def active_rooms(db):
     """使用状态索引，仅取容量边界加一，不扫描历史房间。"""
-    return repo.rows(db, PKRoom, PKRoom.status.in_(ACTIVE), limit=5)
+    # 两个索引各取有界集合，结算后保留席位的房间也计入容量。
+    live = repo.rows(db, PKRoom, PKRoom.status.in_(ACTIVE), limit=5)
+    held = repo.rows(db, PKRoom, PKRoom.lobby_expires_at.is_not(None), limit=5)
+    return list({room.room_id:room for room in [*live,*held]}.values())
 
 
 def waiting_tickets(db):
@@ -84,6 +87,7 @@ def room_resource(db, room, uid, status=200):
     base = '/api/v1/rooms/' + room.room_id
     data = {'room_id': room.room_id, 'room_code': room.room_code, 'game_id': room.game_id, 'difficulty': room.difficulty,
             'host_id':room.host_id,'source':room.source,
+            'next_room_id':room.next_room_id, 'lobby_expires_at':progression.iso(room.lobby_expires_at) if room.lobby_expires_at else None,
             'status': room.status, 'revision': room.revision, 'reason': room.reason,
             'created_at': progression.iso(room.created_at), 'expires_at': progression.iso(room.expires_at),
             'starts_at': progression.iso(room.starts_at) if room.starts_at else None,
@@ -92,7 +96,7 @@ def room_resource(db, room, uid, status=200):
                          'is_me': member.user_id == uid, 'ready': member.ready, 'online': runtime.online(member.user_id),
                          'completed': member.user_id in submitted} for member in current_members],
             'links': {'self': base, 'result': base + '/result', 'readiness': base + '/members/me/readiness',
-                      'submission': base + '/submissions/me', 'membership': base + '/members/me'}}
+                      'submission': base + '/submissions/me', 'membership': base + '/members/me', 'continuation':base+'/continuation'}}
     if room.status in ('playing', 'finished'):
         data['puzzle'] = deepcopy(room.puzzle['puzzle'])
         if room.game_id=='mine':
@@ -100,6 +104,7 @@ def room_resource(db, room, uid, status=200):
             member=next((m for m in current_members if m.user_id==uid),None)
             data['mine_board']=arena_games.public_board(member.board or {},room.puzzle['puzzle']) if member else {}
         data['level_version'] = room.puzzle['level_version']
+        data['level_id'] = room.puzzle.get('level_id')
     if room.result:
         data['result'] = room.result
     headers = {'ETag': progression.etag(room.revision)}
@@ -117,7 +122,7 @@ def owned_room(db, uid, rid, require_present=False):
     return room, member
 
 
-def new_room(db, uids, now, game='akari',source='friend'):
+def new_room(db, uids, now, game='akari',source='friend',previous=None):
     """唯一业务锁内检查容量和随机房间码碰撞。"""
     if len(active_rooms(db)) >= get_settings().pk_room_limit:
         progression.fail(503, 'room_capacity', '当前房间已满，请稍后再试。', headers={'Retry-After': '5'})
@@ -128,7 +133,7 @@ def new_room(db, uids, now, game='akari',source='friend'):
     else:
         progression.fail(503, 'room_capacity', '暂时无法创建房间。', headers={'Retry-After': '3'})
     room = PKRoom(room_id=str(uuid4()), room_code=code, game_id=game, difficulty='normal', status='waiting', revision=0,
-                  host_id=uids[0],source=source,created_at=now, expires_at=now + timedelta(seconds=POLICY['room_wait_seconds']), puzzle=arena_games.make_puzzle(game))
+                  host_id=uids[0],source=source,created_at=now, expires_at=now + timedelta(seconds=POLICY['room_wait_seconds']), puzzle=arena_games.make_puzzle(game,previous))
     db.add(room)
     db.flush()
     for uid in sorted(uids):
@@ -226,13 +231,23 @@ def release_room(db, room):
 def finish(db, room, now, outcome, reason, winner=None):
     """对局结果不调用成长服务，不授星、经验或主题权益。"""
     if room.result:return
+    # 调度可能稍晚执行，超时局的有效比赛用时仍固定截止于服务器ends_at。
+    if reason=='match_timeout' and room.ends_at:
+        now=room.ends_at
     scores=arena.settle(db,room,members(db,room.room_id),winner,outcome,now)
     room.status = 'finished' if outcome in ('win', 'draw') else 'cancelled'
     room.reason, room.finished_at = reason, now
     room.result = {'room_id': room.room_id, 'outcome': outcome, 'winner_id': winner, 'reason': reason,
                    'finished_at': progression.iso(now), 'awarded_xp': 0, 'awarded_stars': 0}
     room.result={**room.result,'scores':scores,'duration_ms':max(0,int((now-room.starts_at).total_seconds()*1000)) if room.starts_at else 0}
-    release_room(db, room)
+    present = members(db,room.room_id,True)
+    if present and reason in ('valid_completion','mine_hit','match_timeout','player_left'):
+        # 结果积分已经冻结，成员短期保留席位供返回或确认再战。
+        room.lobby_expires_at = now + timedelta(seconds=POLICY['room_wait_seconds'])
+        for member in present:
+            member.ready = False
+    else:
+        release_room(db, room)
     touch(db, room)
 
 
@@ -255,6 +270,11 @@ def leave_room(db, uid, rid, received_at=None, **_):
     if member.left_at:
         return progression.Resource(None, 204)
     now = received_at or utc_now()
+    if room.next_room_id:
+        # 旧结算页退出时，同步释放已迁移到后继局的成员席位。
+        current = repo.get(db,PlayerPKOccupancy,uid)
+        if current and current.room_id == room.next_room_id:
+            leave_room(db,uid,room.next_room_id,received_at=now)
     member.left_at, member.ready = now, False
     row = repo.get(db, PlayerPKOccupancy, uid)
     if row and row.room_id == rid:
@@ -273,8 +293,39 @@ def leave_room(db, uid, rid, received_at=None, **_):
                 player.ready = False
             touch(db, room)
     else:
+        if not others:
+            room.lobby_expires_at = None
         touch(db, room)
     return progression.Resource(None, 204)
+
+
+def continue_room(db, uid, rid, data, **_):
+    """返回与再战共用唯一后继局；确认只作用于本人，重试不取消准备。"""
+    room, _ = owned_room(db,uid,rid,True)
+    progression.require_pk(db,uid)
+    if not room.result:
+        progression.fail(409,'result_pending','对局尚未结束。')
+    if room.next_room_id:
+        next_room, member = owned_room(db,uid,room.next_room_id,True)
+    else:
+        now = utc_now()
+        if not room.lobby_expires_at or room.lobby_expires_at <= now:
+            progression.fail(409,'continuation_expired','房间已结束或保留时间已到，请重新邀请或匹配。')
+        present = members(db,rid,True)
+        for player in present:
+            row = occupancy(db,player.user_id)
+            if row.room_id != rid or row.ticket_id:
+                progression.fail(409,'player_unavailable','玩家已经离开或进入其他房间。')
+        # 旧局先释放容量，新建失败时整笔事务回滚，不丢失原席位。
+        room.lobby_expires_at = None
+        db.flush()
+        next_room = new_room(db,[p.user_id for p in present],now,room.game_id,'friend',room.puzzle)
+        room.next_room_id = next_room.room_id
+        touch(db,room)
+        member = next(p for p in members(db,next_room.room_id,True) if p.user_id==uid)
+    if data['ready'] and next_room.status=='waiting' and not member.ready:
+        readiness(db,uid,next_room.room_id,{'ready':True},progression.etag(next_room.revision))
+    return room_resource(db,next_room,uid)
 
 
 def submit(db, uid, rid, data, received_at, **_):
@@ -485,7 +536,7 @@ def arena_state(db,uid,last_room=None,**_):
         'ticket':ticket,'invitations':arena.invitations(db,uid).data['items']})
 
 
-ACTIONS.update({'room_reveal':reveal_mine,'room_mode':change_mode,
+ACTIONS.update({'room_reveal':reveal_mine,'room_mode':change_mode,'room_continue':continue_room,
     'arena_state':arena_state,
     'arena_get':lambda db,uid,**kwargs:progression.Resource(arena.account(db,uid)),
     'arena_search':arena.search,'arena_invites':arena.invitations,'invite_create':arena.create_invitation,
@@ -531,6 +582,34 @@ def dispatch(token, db, action, **kwargs):
 
 def advance_room(db, room, now, restart):
     """唯一调度器处理倒计时、平局、超时和断线；GET不调用此函数。"""
+    if room.result:
+        if room.lobby_expires_at and (restart or room.lobby_expires_at<=now):
+            room.lobby_expires_at = None
+            release_room(db,room)
+            touch(db,room)
+        elif room.lobby_expires_at:
+            changed = False
+            for member in members(db,room.room_id,True):
+                if runtime.online(member.user_id):
+                    if member.disconnected_at:
+                        member.disconnected_at = None
+                        changed = True
+                elif member.disconnected_at is None:
+                    member.disconnected_at = now
+                    changed = True
+                elif member.disconnected_at + timedelta(seconds=POLICY['reconnect_seconds']) <= now:
+                    # 结果仍可读；退出的成员不再占用席位，也不能被对方拉入续局。
+                    member.left_at, member.ready = now, False
+                    row = repo.get(db,PlayerPKOccupancy,member.user_id)
+                    if row and row.room_id==room.room_id:
+                        row.room_id, row.revision = None, row.revision+1
+                    changed = True
+            if changed:
+                db.flush()
+                if not members(db,room.room_id,True):
+                    room.lobby_expires_at = None
+                touch(db,room)
+        return
     if restart:
         finish(db, room, now, 'cancelled', 'server_restart')
         return
@@ -552,7 +631,7 @@ def advance_room(db, room, now, restart):
     deadline = min(room.ends_at, submissions[0].received_at + timedelta(milliseconds=POLICY['draw_ms'])) if submissions else room.ends_at
     if now >= deadline and not runtime.has_pending(room.room_id, deadline):
         valid = [s for s in submissions if s.received_at <= deadline]
-        finish(db, room, now, 'draw' if len(valid) == 2 else 'win' if valid else 'cancelled',
+        finish(db, room, now, 'draw' if len(valid) != 1 else 'win',
                'valid_completion' if valid else 'match_timeout', valid[0].user_id if len(valid) == 1 else None)
         return
     present = members(db, room.room_id, True)
@@ -590,7 +669,7 @@ def maintenance(sessions, now=None, restart=False):
             freed_room = False
             for room in active_rooms(db):
                 advance_room(db, room, now, restart)
-                freed_room |= room.status not in ACTIVE
+                freed_room |= room.status not in ACTIVE and room.lobby_expires_at is None
             expired_any = False
             for ticket in waiting_tickets(db):
                 if restart or ticket.expires_at <= now:

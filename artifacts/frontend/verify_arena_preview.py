@@ -20,7 +20,8 @@ def main():
     assert database.is_relative_to((root/'artifacts/frontend').resolve())
     if database.exists():
         with sqlite3.connect(database) as connection:
-            for table,column,definition in [('pk_rooms','host_id','INTEGER'),('pk_rooms','source',"VARCHAR(16) NOT NULL DEFAULT 'friend'"),('pk_participants','board','JSON')]:
+            for table,column,definition in [('pk_rooms','host_id','INTEGER'),('pk_rooms','source',"VARCHAR(16) NOT NULL DEFAULT 'friend'"),('pk_participants','board','JSON'),
+                                            ('pk_rooms','lobby_expires_at','DATETIME'),('pk_rooms','next_room_id','VARCHAR(36)')]:
                 columns=[row[1] for row in connection.execute(f'PRAGMA table_info({table})')]
                 if columns and column not in columns:connection.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
     engine,sessions=environment(database)

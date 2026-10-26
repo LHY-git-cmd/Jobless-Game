@@ -100,6 +100,12 @@ async def result(room_id: str, request: Request, db=Depends(get_db)):
     return await run(request, db, 'room_result', rid=room_id)
 
 
+@router.post('/rooms/{room_id}/continuation')
+async def continuation(room_id:str,payload:ReadinessPut,request:Request,db=Depends(get_db)):
+    """返回保留成员的房间或确认本人再战，重复请求复用唯一后继局。"""
+    return await run(request,db,'room_continue',rid=room_id,data=payload.model_dump())
+
+
 @router.get('/me/rooms')
 async def my_rooms(request: Request, status: str = Query('active', pattern='^active$'), db=Depends(get_db)):
     """恢复当前唯一房间。"""

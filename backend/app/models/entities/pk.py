@@ -9,7 +9,8 @@ from ...common.database import Base
 class PKRoom(Base):
     """最多两名玩家，未开始前不对外返回puzzle。"""
     __tablename__ = 'pk_rooms'
-    __table_args__ = (Index('ix_pk_room_status_expiry', 'status', 'expires_at'), Index('ix_pk_room_retention', 'status', 'finished_at'))
+    __table_args__ = (Index('ix_pk_room_status_expiry', 'status', 'expires_at'), Index('ix_pk_room_retention', 'status', 'finished_at'),
+                      Index('ix_pk_room_lobby_expiry', 'lobby_expires_at'))
     room_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     room_code: Mapped[str] = mapped_column(String(8), unique=True)
     game_id: Mapped[str] = mapped_column(String(16))
@@ -26,6 +27,9 @@ class PKRoom(Base):
     reason: Mapped[str | None] = mapped_column(String(32))
     host_id: Mapped[int|None] = mapped_column(UID)
     source: Mapped[str] = mapped_column(String(16),default='friend',server_default='friend')
+    # 每一局结果不可变；短期保留席位和后继局链接独立存储。
+    lobby_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+    next_room_id: Mapped[str | None] = mapped_column(String(36))
 
 
 class PKParticipant(Base):
