@@ -32,11 +32,18 @@ test('下一关按难度和棋盘面积排序，不沿用历史追加迁移的�
   assert.deepEqual(levels.map(item => item.level_id),original);
 });
 
-test('小棋盘按可用宽高适配，大棋盘保持44px可滚动', () => {
+test('所有尺寸棋盘按可用宽高完整适配，不设置最小格子限制', () => {
   assert.equal(mineCellSize({rows:10,cols:10,width:308,height:380}),30);
   assert.equal(mineCellSize({rows:10,cols:10,width:400,height:290}),29);
   assert.equal(mineCellSize({rows:10,cols:10,width:900,height:800}),44);
   assert.equal(mineCellSize({rows:5,cols:5,width:300,height:300}),44);
-  assert.equal(mineCellSize({rows:12,cols:15,width:300,height:400}),44);
-  assert.equal(mineCellSize({rows:10,cols:10,width:200,height:180}),24);
+  assert.equal(mineCellSize({rows:12,cols:15,width:300,height:400}),20);
+  assert.equal(mineCellSize({rows:10,cols:10,width:200,height:180}),18);
+  for (const [rows,cols] of [[5,5],[10,10],[12,15],[15,20],[50,80],[500,800]]) {
+    for (const [width,height] of [[270,330],[800,120],[1200,760]]) {
+      const size=mineCellSize({rows,cols,width,height});
+      assert.ok(size>0&&size<=44);
+      assert.ok(size*cols<=width&&size*rows<=height,`${rows}×${cols}超出${width}×${height}`);
+    }
+  }
 });

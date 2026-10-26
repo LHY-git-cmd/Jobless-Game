@@ -1,4 +1,4 @@
-/* 五档扫雷：沿用海岛深蓝/暖金，矩形棋盘在自身区域滚动。 */
+/* 五档扫雷：沿用海岛深蓝/暖金，所有规格按可用宽高完整显示。 */
 .mine-host { min-width: 0; border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb,var(--surface) 96%,transparent); box-shadow: 0 20px 60px #04162240; }
 .mine-selector { padding: clamp(20px,3.6vw,44px); }
 .mine-play { padding: 14px 16px 12px; scroll-margin-top: 8px; }
@@ -42,9 +42,7 @@
 .mine-stats strong { font: 500 28px/1.2 Georgia,serif; font-variant-numeric: tabular-nums; color: var(--gold); }
 .mine-stats .mine-stat-stars { align-self: center; min-height: 28px; color: var(--star-color); }
 .mine-stat-stars svg { width: 24px; height: 24px; }
-.mine-viewport { min-width: 0; max-width: 100%; max-height: min(65svh,660px); overflow: auto; overscroll-behavior: contain; padding: 0; margin: 10px 0 6px; scrollbar-color: var(--gold) var(--surface); }
-/* 常见小盘按实际可用宽高适配；大盘继续在视口中滚动，禁止压缩成难以点选的小格。 */
-.mine-viewport.mine-fit { max-height: none; }
+.mine-viewport { min-width: 0; max-width: 100%; overflow: visible; padding: 0; margin: 10px 0 6px; touch-action: auto; }
 .mine-board { --mine-cell: 44px; display: grid; grid-template-columns: repeat(var(--mine-cols),var(--mine-cell)); gap: 0; width: max-content; padding: 0; margin-inline: auto; border: 6px ridge #9b9b9b; border-radius: 0; background: #bfbfbf; }
 /* 直接使用用户原图切片；数字1～3已在素材中，4～8以同灰底文字补齐。 */
 .mine-square { --mine-art: url('../../assets/minesweeper/v2/covered.webp'); width: var(--mine-cell); height: var(--mine-cell); min-width: var(--mine-cell); min-height: var(--mine-cell); padding: 0; border: 0; border-radius: 0; background: #bfbfbf var(--mine-art) center / 100% 100% no-repeat; font: 700 calc(var(--mine-cell) * .59)/1 Arial,sans-serif; color: #000080; display: grid; place-items: center; }
@@ -68,7 +66,8 @@
 .mine-square.mine-blasting { animation: mine-blast 500ms ease-out both; }
 .mine-operation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
 .mine-operation p { color: var(--muted); font-size: 13px; margin: 4px 0; }
-.mine-operation button { display: inline-flex; align-items: center; gap: 8px; min-width: 100px; justify-content: center; }
+.mine-operation .journey-actions { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); align-items: stretch; width: 100%; gap: 8px; }
+.mine-operation button { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding-inline: 4px; justify-content: center; white-space: nowrap; }
 .mine-help { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 6px 0 0; }
 .mine-tutorial { border-left: 3px solid #7fddbd; padding: 16px 20px; background: color-mix(in srgb,#7fddbd 7%,var(--surface)); margin-top: 20px; }
 .mine-tutorial h3 { font-size: 18px; margin: 8px 0; }.mine-tutorial p:not(.eyebrow) { color: var(--muted); line-height: 1.8; margin: 8px 0; }
@@ -95,7 +94,7 @@
   .mine-play { display: flex; flex-direction: column; }
   .mine-play-heading { order: 0; }.mine-stats { order: 1; }.mine-tutorial { order: 2; }
   .mine-operation { order: 4; padding-block: 2px; }
-  .mine-operation p { margin: 2px 0; }.mine-viewport { order: 3; max-height: 55svh; }.mine-help { order: 5; }
+  .mine-operation p { margin: 2px 0; }.mine-viewport { order: 3; }.mine-help { order: 5; }
   .mine-keyboard-hint { display: none; }
   .mine-stat-stars { gap: 2px; }.mine-stat-stars svg { width: 18px; height: 18px; }
   .mine-intro { gap: 12px; margin-bottom: 24px; }.mine-intro img { width: 56px; height: 56px; }.mine-intro .eyebrow { font-size: 10px; letter-spacing: 1px; }
@@ -108,3 +107,5 @@
   .mine-operation .journey-actions { width: 100%; }.mine-operation button { flex: 1; }.mine-tutorial { padding-inline: 12px; }
 }
 @media(prefers-reduced-motion:reduce) { .mine-square.mine-blasting,.mine-square.mine-selected::after { animation: none; }.mine-rating svg { transition: none; } }
+/* 窄屏为四个同排按钮保留文字空间，标记/取消标记均不换行。 */
+@media(max-width:700px) { .mine-operation button { font-size:12px; }.mine-operation img { display:none; } }

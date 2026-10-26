@@ -437,6 +437,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
         ├── verify_mine_stars.py          # 三颗星/时间降星/汇聚/手机操作及换号取消专项浏览器验收
         ├── verify_mine_pause.py          # 规则/选关/真实标签切换/离页暂停与继续、活动时长星级验收
         ├── verify_mine_mobile_play.py    # 当前扫雷四视口/设置暂停/爆炸中重开/结算重试与下一关，临时库验收
+        ├── verify_mine_actions.py        # 四个标记/排雷按钮状态同步、窄屏同排及通关后同关重新挑战验收
+        ├── verify_board_fit.py           # 扫雷/照明整盘适配、横竖屏、原生浏览器缩放及缩放后操作验收
         ├── verify_exit_gzip.py           # 隔离Nginx/Chrome退出与零体力验收；--check-refunds验证三游戏10→9→10
         ├── verify_sudoku.py              # 数独13关、教学、奖励/断网、窄屏及隔离本地预览
         ├── verify_sudoku_interactions.py # 数独键盘/冲突、真实离页、重开、换号及减少动画验收
