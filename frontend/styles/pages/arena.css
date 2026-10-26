@@ -33,6 +33,42 @@
 .arena-search-result img { width:44px; height:44px; border-radius:50%; }.arena-search-result>span { flex:1; min-width:80px; overflow-wrap:anywhere; }
 .arena-search-result button { margin-left:auto; }
 .formal-board.formal-mine .formal-cell { font-weight:700; }
+/* 独立游戏页保留闯关棋盘的原生样式和素材，只约束竞技面板外部布局。 */
+.arena-playing .arena-content { width:min(100%,900px); margin-top:8px; }
+.arena-playing .arena-heading { padding-block:8px 16px; }
+.arena-playing .arena-heading h1 { font-size:clamp(28px,4.5vw,48px); letter-spacing:2px; }
+.arena-game-meta { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:8px 12px; color:var(--muted); font-size:14px; }
+.arena-game-meta>strong { grid-column:1 / -1; overflow-wrap:anywhere; color:var(--paper); }
+.arena-game-meta button { min-height:44px; }
+.arena-playing #arena-refresh { width:44px; height:44px; padding:0; display:grid; place-items:center; }
+.arena-playing .landing-header { padding-block:8px; }
+.arena-playing .journey-status { margin-block:12px 0; }
+.arena-playing #arena-connection { margin:4px 0 12px; min-height:20px; font-size:12px; }
+.arena-playing .section-heading { margin-bottom:8px; }
+.arena-playing .section-heading h2 { font-size:19px; }
+.arena-playing #arena-game-help { margin:8px 0 12px; font-size:13px; line-height:1.6; }
+.arena-board-host { min-width:0; padding:12px; }
+.arena-board-host .sudoku-board { width:min(100%,500px); }
+.arena-board-host.sudoku-host { padding:clamp(10px,2vw,20px); }
+.arena-board-host .sudoku-input { max-width:500px; margin-top:14px; }
+.arena-board-host .sudoku-actions { gap:8px; margin-top:10px; }
+.arena-board-host .sudoku-actions button { font-size:14px; padding:12px 6px; min-height:44px; }
+.arena-board-host .sudoku-keypad { gap:4px; }
+.arena-board-host .sudoku-keypad button { min-height:44px; font-size:22px; }
+.arena-board-host .arena-board-viewport { min-width:0; touch-action:auto; }
+.arena-board-host .mine-viewport { padding:6px 0; }
+.arena-board-host .mine-operation { margin-top:8px; }
+.arena-board-host .mine-operation button { min-height:44px; }
+.arena-board-status { text-align:center; margin:12px 0 4px; color:var(--muted); font-size:13px; line-height:1.7; }
+.arena-submit-row { display:flex; justify-content:center; padding:16px 0; }
+.arena-result-dialog { width:min(520px,calc(100% - 32px)); padding:clamp(20px,5vw,36px); text-align:center; }
+.arena-result-dialog h2 { font-size:30px; color:var(--gold); }
+.arena-result-dialog p { line-height:1.9; }
+.arena-result-dialog .journey-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+.arena-result-dialog .journey-actions button { flex:1 1 140px; min-height:48px; }
+.arena-result-dialog #arena-result-message { color:var(--gold); font-size:14px; }
+.arena-result-leave { margin-top:18px; min-height:44px; color:var(--muted); background:transparent; }
+.arena-playing button:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
 @media(max-width:600px) {
   .arena-content { margin-top:8px; }.arena-heading { gap:12px; }.arena-heading h1 { font-size:clamp(30px,9vw,40px); letter-spacing:1px; }
   .arena-time { font-size:12px; }.arena-time strong { font-size:28px; }.arena-versus { padding-bottom:28px; gap:12px; }

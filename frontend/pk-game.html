@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b3c"><title>竞技对局 · 无职游戏</title>
+  <link rel="icon" href="./favicon.ico"><link rel="stylesheet" href="./styles/base.css"><link rel="stylesheet" href="./styles/pages/journey.css">
+  <link rel="stylesheet" href="./styles/pages/mine.css"><link rel="stylesheet" href="./styles/pages/akari.css"><link rel="stylesheet" href="./styles/pages/sudoku.css">
+  <link rel="stylesheet" href="./styles/pages/arena.css"><link rel="stylesheet" href="./styles/components/energy.css"><link rel="stylesheet" href="./styles/components/navigation.css">
+</head>
+<body class="arena-playing">
+  <div class="world-background" aria-hidden="true"></div>
+  <div id="landing" class="page">
+    <header class="landing-header">
+      <div class="player-profile" data-player-profile aria-label="账号与成长"></div>
+      <nav class="site-nav" aria-label="主导航"><a href="./index.html">首页</a><a href="./pk.html" aria-current="page">竞技模式</a></nav>
+      <div class="auth-controls" aria-label="账号"></div>
+    </header>
+    <main class="arena-content" aria-labelledby="arena-title">
+      <div class="arena-heading"><div><p class="eyebrow">同场较量 / ARENA</p><h1 id="arena-title">竞技对局</h1></div><div class="arena-time"><span id="arena-clock-label">对局剩余</span><strong id="arena-clock">10:00</strong></div></div>
+      <div class="arena-game-meta"><strong id="arena-matchup"></strong><span>竞技积分 <strong id="arena-points">100</strong></span><button id="arena-leave" type="button" hidden>退出对局</button><button id="arena-refresh" type="button" aria-label="刷新竞技状态" title="刷新竞技状态"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 6.1A8 8 0 0 1 19.8 12M4.2 12A8 8 0 0 0 17.9 17.9"/></svg></button></div>
+      <p id="arena-message" class="journey-status" role="status">正在恢复对局…</p><p id="arena-connection" class="arena-muted" role="status"></p>
+      <section id="arena-game" hidden aria-labelledby="arena-game-title"><div class="section-heading"><h2 id="arena-game-title">对局进行中</h2><span>双方同题</span></div><p id="arena-game-help" class="arena-muted"></p><div id="arena-board" class="arena-board-host"></div><div class="arena-submit-row"><button id="arena-submit" class="journey-primary" type="button">提交解答</button></div></section>
+    </main>
+    <dialog id="arena-result-dialog" class="journey-rules arena-result-dialog" aria-labelledby="arena-result-title" aria-describedby="arena-result-description">
+      <p class="eyebrow">本局结算 / RESULT</p><h2 id="arena-result-title">对局已结束</h2><p id="arena-result-description"></p><p id="arena-result-message" role="status"></p>
+      <div class="journey-actions"><button id="arena-return" type="button" autofocus>返回房间</button><button id="arena-rematch" class="journey-primary" type="button">再战</button></div><button id="arena-result-leave" class="arena-result-leave" type="button">离开房间</button>
+    </dialog>
+    <dialog id="arena-leave-dialog" class="journey-rules" aria-labelledby="arena-leave-title"><h2 id="arena-leave-title">确认离开房间？</h2><p id="arena-leave-description"></p><div class="journey-actions"><button id="arena-leave-cancel" type="button" autofocus>继续留在房间</button><button id="arena-leave-confirm" class="journey-primary" type="button">确认离开</button></div></dialog>
+    <footer class="landing-footer"><span>光影之间，各有精彩。</span></footer>
+  </div>
+  <script type="module" src="./src/pages/pk-game.js"></script>
+</body>
+</html>

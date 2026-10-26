@@ -11,7 +11,7 @@ import { initAvatarDialog } from './avatar-picker.js';
 import { initArenaPresence } from '../pk/presence.js';
 
 /** 创建共享控制器；页面只需提供右上角 .auth-controls 容器。 */
-export function initAuth() {
+export function initAuth({restoreSession=()=>authRequest('me')}={}) {
   const host = document.querySelector(".auth-controls");
   if (!host) return null;
   initMusic();
@@ -131,7 +131,8 @@ export function initAuth() {
     username.focus();
   }
 
-  const ready = authRequest("me").then((value) => renderUser(value)).catch((error) => {
+  // 竞技跨页可注入有界读取重试；默认账号入口仍使用原会话恢复请求。
+  const ready = restoreSession().then((value) => renderUser(value)).catch((error) => {
     if (error.status !== 401) headerStatus.textContent = "暂时无法恢复登录，可重试登录。";
   });
 
