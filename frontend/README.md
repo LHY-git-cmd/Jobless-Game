@@ -19,3 +19,5 @@
 运行 `npm test` 执行全部测试，包含HTML入口、相对资源、legacy隔离、共享依赖、CSS顺序及Docker打包契约。不要用跳过测试代替修复夹具；新增页面与样式须检查窄屏及静态缓存。
 
 完整过程见项目 `docs/frontend-structure-plan.md` 与 `docs/frontend-structure-report.md`。一次性迁移工具 `source/frontend/reorganize.py` 只适用于整改前结构，检测新目录后会拒绝重复运行。
+
+竞技大厅入口为 `pk.html`，双方准备并倒计时结束后跳转 `pk-game.html?room=UUID`。两个pages入口调用 `features/pk/page.js`，由服务器快照驱动跳转、结算和再战。`games/arena-board.js` 复用闯关棋盘样式/素材及规则，竞技只保存本人草稿，不调用闯关体力、经验和星级接口。数独笔记及最近100步撤回可在同浏览器刷新恢复。跨页503读取最多重试三次，SSE被拒后有退避重建；业务写请求仍由用户重试与服务器幂等保护。

@@ -1,6 +1,6 @@
 # 项目目录树
 
-更新日期：2026-10-26。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
+更新日期：2026-10-27。以下按当前实际目录整理，每个文件夹均标注用途；截图、日志、缓存和同类素材按类型合并列示。
 
 ```text
 crawler-portal/                            # 项目根目录：前端、登录后端、素材及文档
@@ -69,7 +69,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── energy_service.py         # 账号体力、30分钟恢复、普通扣返及免费教学
 │   │   │   ├── pk_service.py             # 三模式房间、HTTP先后排序、积分及分池FIFO事务
 │   │   │   ├── arena_service.py          # 账号积分、唯一结算、精确用户搜索及定向邀请
-│   │   │   ├── arena_games.py            # 三模式竞技题池与服务端隐藏扫雷揭格
+│   │   │   ├── arena_games.py            # 复用正式闯关配置、保解换题与服务端隐藏扫雷揭格
 │   │   │   ├── pk_runtime.py             # 有限SSE队列、接收窗口及单进程运行索引
 │   │   │   ├── pk_lifecycle.py           # 唯一调度任务、重启作废和有界状态转换
 │   │   │   └── ranking_service.py        # 独立关卡重开/通关、幂等与单项成绩保留事务
@@ -131,7 +131,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V17__index_growth_rankings.sql # 星数与等级/经验排行榜分页索引
 │   │   ├── V18__publish_first_three_star_bonus.sql # 追加39个普通关首次三星双倍奖励版本
 │   │   ├── V19__create_arena_scores_and_invitations.sql # 三模式房间字段、积分账户/流水及邀请
-│   │   └── V20__increase_energy_default_to_ten.sql # 新体力记录默认10点，不修改已有余额或恢复节点
+│   │   ├── V20__increase_energy_default_to_ten.sql # 新体力记录默认10点，不修改已有余额或恢复节点
+│   │   └── V21__retain_arena_seats_and_continuations.sql # 已结算局短期保留席位及唯一后继对局链接
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -172,6 +173,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_pk_probe.py              # 本地HTTP/SSE观测工具烟测
 │       ├── test_arena_growth.py          # 等级阈值、首次三星当局翻倍与历史奖励兼容
 │       ├── test_arena_pk.py              # 三模式/在线邀请/积分/并发踩雷/独立题池验收
+│       ├── test_arena_flow.py            # 配置同源、续局并发幂等、历史结果、断线回收及超时平局
 │       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
@@ -192,6 +194,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── akari-implementation-plan.md        # 已授权的照明入门及15关实施和验收方案
 │   ├── energy-implementation-plan.md       # 已授权的账号体力、原子扣返与首页面板调整方案
 │   ├── pk-arena-implementation-plan.md      # 已确认的三模式竞技大厅、在线邀请和积分实施方案
+│   ├── arena-flow-optimization-plan.md      # 已确认的棋盘复用、独立游戏页、结算弹窗与同对手续局方案
+│   ├── arena-flow-optimization-report.md    # 竞技流程改动、双浏览器验证、MySQL5.7/Flyway记录
 │   ├── pk-arena-implementation-report.md    # 等级奖励/竞技产出、回归证据及MySQL5.7验收限制
 │   ├── energy-implementation-report.md     # 体力机制、测试证据及本地预览/发布边界
 │   ├── energy-ten-refund-fix.md            # 10点上限、生产Session漏返根因、V20及三游戏持久返还验证
@@ -228,7 +232,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   └── view.js  # 论坛节点与正文安全展示
 │   │   │   ├── notifications/  # 可见性轮询、站内消息与账号隔离
 │   │   │   │   └── controller.js  # 所属业务/游戏控制器与生命周期
-│   │   │   ├── pk/  # 竞速事件订阅与重连
+│   │   │   ├── pk/  # 竞技跨页流程、草稿及事件订阅重连
+│   │   │   │   ├── flow.js  # 权威快照跳转、结果说明与有界503读取重试
+│   │   │   │   ├── page.js  # 大厅/游戏共用控制器，账号隔离、再战和结果恢复
 │   │   │   │   ├── presence.js  # 全站可见在线租约、跨标签合并及用户主动接受邀请
 │   │   │   │   └── events.js  # 共享事件或竞速SSE订阅
 │   │   │   ├── progression/  # 正式成长请求与账号草稿存储
@@ -257,6 +263,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── controller.js  # 五档选题、参考图棋盘、教学及星级动画
 │   │   │   │   └── session.js  # 正式尝试、账号草稿、连续撤回、暂停及终盘重试
 │   │   │   ├── catalog.js  # 三游戏元数据及稳定导航地址
+│   │   │   ├── arena-board-state.js  # 闯关输入规则、数独撤回与草稿、扫雷选格及权威揭格
+│   │   │   ├── arena-board.js  # 竞技棋盘复用闯关样式、素材、键盘与自适应尺寸
 │   │   │   └── formal-board.js  # 正式照明/数独/竞速棋盘
 │   │   ├── legacy/  # 已下线单关/九关练习，当前HTML不可导入
 │   │   │   ├── game/  # 旧三关会话、控制器、存档与幂等挑战
@@ -289,6 +297,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── home.js  # 首页模式入口与闯关游戏目录共享装配
 │   │   │   ├── journey.js  # 当前选关页与扫雷装配
 │   │   │   ├── pk.js  # 手绘双人大厅、在线邀请、三模式匹配与积分入口
+│   │   │   ├── pk-game.js  # 独立竞技游戏页，固定当前局并刷新恢复棋盘与结果
 │   │   │   └── ranking.js  # 星数、等级及有符号竞技积分分页榜
 │   │   ├── shared/  # 无业务反向依赖的DOM/HTTP/事件/生命周期/时间/UUID
 │   │   │   ├── dom.js  # DOM语义名称查询
@@ -340,12 +349,16 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── energy-notice.test.js  # 零体力提示时长、点击穿透、重复显示及生命周期清理
 │   │   │   │   ├── attempt-exit.test.js  # 条件退出、丢响应重试和草稿隔离清理
 │   │   │   │   └── progression-client.test.js  # 所属模块的行为回归测试
+│   │   │   ├── pk/  # 竞技页面流转与跨页通知恢复测试
+│   │   │   │   ├── arena-flow.test.js  # 开局跳转、超时结果及503恢复/换号取消
+│   │   │   │   └── events-reconnect.test.js  # 旧事件流冲突后的重建与关闭清理
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
 │   │   │       └── personal-records.test.js  # 所属模块的行为回归测试
 │   │   ├── fixtures/  # 冻结历史DOM及CSS顺序基线，仅测试，不发布
 │   │   │   ├── css-baseline.json  # 搬迁前CSS规则和顺序哈希
 │   │   │   └── legacy-game.html  # 无脚本的旧首页DOM测试夹具
 │   │   ├── games/  # 当前游戏规则与棋盘
+│   │   │   ├── arena-board-state.test.js  # 竞技选格、笔记、撤回、刷新恢复与输入冻结
 │   │   │   ├── akari/  # 照明规则
 │   │   │   │   ├── akari-instance.test.js  # 所属模块的行为回归测试
 │   │   │   │   ├── akari-session.test.js  # 账号续玩、全部约束、暂停及断网结算
@@ -386,6 +399,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── navigation.css  # 旧URL兼容入口
 │   ├── package.json  # Node内置测试命令，无构建依赖
 │   ├── pk.html  # 独立页面入口，URL保持不变
+│   ├── pk-game.html  # 开局跳转的独立竞技棋盘与胜负/超时结算弹窗
 │   ├── ranking-akari.html  # 旧照明榜地址，现展示成长榜入口
 │   ├── ranking-mine.html  # 旧扫雷榜地址，现展示成长榜入口
 │   ├── ranking-sudoku.html  # 旧数独榜地址，现展示成长榜入口
@@ -420,6 +434,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
     └── frontend/                         # 前端浏览器验证脚本和验证产物
         ├── verify_login.py               # 早期登录验收材料；当前关卡回归使用 verify_ranking.py
         ├── verify_arena.py               # 两个独立浏览器验证邀请、三模式对战、积分与手机大厅
+        ├── verify_arena_flow.py          # 双浏览器跨页、三棋盘交互、双方结算续局及320/375布局
         ├── verify_arena_preview.py       # 固定隔离SQLite预览，保留账号并补齐字段和版本
         ├── verify_ranking.py             # 临时数据库与真实浏览器：独立关卡/结算、开发按钮及三个分榜
         ├── verify_http_start.py          # 非安全 HTTP 浏览器环境下真实登录、开局重试与重新开始
