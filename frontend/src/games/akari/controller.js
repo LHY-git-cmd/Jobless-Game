@@ -39,11 +39,11 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
       <div class="akari-topbar"><button id="akari-back" type="button">返回选关</button><span>无职游戏</span><button id="akari-restart" type="button">重新开始</button></div>
       <div class="akari-heading"><img src="./assets/bulb.webp" alt="" width="72" height="72"><div><p id="akari-kicker" class="eyebrow">AKARI</p><h2 id="akari-title">照明</h2><p>让光，抵达每一个角落。</p></div></div>
       <div class="akari-toolbar"><span id="akari-focus" hidden></span><div class="akari-available"><span>可得星数</span><span id="akari-available-stars" class="mine-rating" aria-live="polite"></span></div><div class="akari-tools-right"><p id="akari-three-star" class="akari-three-star"></p><div class="akari-time-row"><span id="akari-clock-label">本关用时</span><strong id="akari-clock">00:00</strong><button id="akari-pause-toggle" type="button" aria-pressed="false" aria-label="暂停游戏" title="暂停游戏"><svg class="akari-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><svg class="akari-resume-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4 12 8-12 8Z"/></svg></button></div></div></div>
-      <p id="akari-policy-note" class="akari-guide" role="status" hidden>这局沿用开始时的奖励规则。重新开始后采用当前规则；首次三星仅将该局实际新增经验翻倍，历史已三星不补发。</p>
-      <div id="akari-guide" class="akari-guide" role="status" hidden><p id="akari-guide-count" class="eyebrow"></p><h3 id="akari-guide-title"></h3><p id="akari-guide-text"></p><p id="akari-guide-target" class="akari-guide-target" hidden></p></div>
-      <div id="akari-instructions" class="akari-instructions" hidden><p>点击白格放灯，再点一次撤灯。灯光沿横竖传播，遇黑墙或边界停止；黑墙不可放灯。</p><p>照亮全部白格、灯泡之间不互照、每个数字墙上下左右的灯数恰好符合，三个条件同时满足才通关；斜角不计。棋盘可在区域内滑动。</p><p>普通关按有效用时评星，点击暂停图标可暂停计时，继续后再计时。入门固定获得1星、2经验。</p></div>
-      <div class="akari-board-wrap"><div id="akari-viewport" class="akari-viewport" tabindex="0" role="region" aria-label="可滚动照明棋盘"><div id="akari-board" class="akari-board" role="group" aria-label="照明棋盘"></div></div><div id="akari-pause" class="akari-pause" hidden><strong>棋局已暂停</strong><p>准备好后，继续点亮。</p><button id="akari-resume" class="journey-primary" type="button">继续游戏</button></div></div>
+      <div class="akari-board-wrap"><div id="akari-viewport" class="akari-viewport" tabindex="0" role="region" aria-label="照明棋盘，已适应屏幕大小"><div id="akari-board" class="akari-board" role="group" aria-label="照明棋盘"></div></div><div id="akari-pause" class="akari-pause" hidden><strong>棋局已暂停</strong><p>准备好后，继续点亮。</p><button id="akari-resume" class="journey-primary" type="button">继续游戏</button></div></div>
       <p id="akari-status" class="akari-status" role="status"></p><p id="akari-conflicts" class="akari-conflicts" role="status" aria-live="polite"></p>
+      <div id="akari-guide" class="akari-guide" role="status" hidden><p id="akari-guide-count" class="eyebrow"></p><h3 id="akari-guide-title"></h3><p id="akari-guide-text"></p><p id="akari-guide-target" class="akari-guide-target" hidden></p></div>
+      <p id="akari-policy-note" class="akari-guide" role="status" hidden>这局沿用开始时的奖励规则。重新开始后采用当前规则；首次三星仅将该局实际新增经验翻倍，历史已三星不补发。</p>
+      <details id="akari-instructions" class="akari-instructions" hidden><summary>玩法说明</summary><p>点击白格放灯，再点一次撤灯。灯光沿横竖传播，遇黑墙或边界停止；黑墙不可放灯。</p><p>照亮全部白格、灯泡之间不互照、每个数字墙上下左右的灯数恰好符合，三个条件同时满足才通关；斜角不计。棋盘会随屏幕大小自动缩放。</p><p>普通关按有效用时评星，点击暂停图标可暂停计时，继续后再计时。入门固定获得1星、2经验。</p></details>
       <button id="akari-result-open" type="button" hidden>查看通关结果</button>
       <div id="akari-save-status" class="akari-save-status" role="status" hidden><p>棋盘已完成，正在保存成绩。网络中断时可以重试。</p><button id="akari-retry-settlement" class="journey-primary" type="button">重试保存成绩</button></div>
     </section>
@@ -52,6 +52,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     <dialog id="akari-enter-dialog" class="journey-rules" aria-labelledby="akari-enter-title" aria-describedby="akari-enter-description"><h2 id="akari-enter-title">是否闯关？</h2><p id="akari-enter-description"></p><div class="journey-actions"><button id="akari-enter-cancel" type="button" autofocus>暂不闯关</button><button id="akari-enter-confirm" class="journey-primary" type="button">确认闯关</button></div></dialog>
     <dialog id="akari-restart-dialog" class="journey-rules" aria-labelledby="akari-restart-title"><h2 id="akari-restart-title">重新开始本关？</h2><p>本关灯泡将清空，其他关卡的进度会保留。</p><p id="akari-restart-energy"></p><div class="journey-actions"><button id="akari-restart-cancel" type="button">继续当前局</button><button id="akari-restart-confirm" class="journey-primary" type="button">确认重开</button></div></dialog>`;
   const $=id=>host.querySelector('#'+id);
+  const page=host.closest('.journey-page');
   const exitConfirmation=createExitConfirmation({host,scope,getSession:()=>model,onExit:back,
     onError:error=>{errorMessage=error.message;if(error.status===401)emit(Events.AUTH_EXPIRED);if(model)render(model.state);}});
   const collection=createStarCollection({onComplete:reward=>{
@@ -69,6 +70,24 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
   async function play(work) {
     const expected=model;await run(work);
     if(!dead&&model===expected&&!errorMessage&&!selectionOnly&&model.state.attempt)$('akari-play').scrollIntoView({behavior:'instant',block:'start'});
+  }
+  /** 以实际行列、格线和面板开销计算正方形格子，完整呈现棋盘。 */
+  function fitBoard(){
+    const attempt=model?.state.attempt,play=$('akari-play');
+    if(!attempt||play.hidden)return;
+    const viewport=$('akari-viewport'),board=$('akari-board'),wrap=viewport.parentElement;
+    const {rows,cols}=attempt.puzzle,style=getComputedStyle(viewport);
+    // clientWidth包含内边距；另外扣除棋盘2px边框及每条1px格线。
+    const width=viewport.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)-2-(cols-1);
+    // 棋盘下方的教学、规则可随页面阅读，不挤占整盘展示的空间。
+    const overhead=wrap.getBoundingClientRect().top-play.getBoundingClientRect().top;
+    const chrome=wrap.offsetHeight-board.offsetHeight;
+    // 按缩放前高度适配，使浏览器原生缩放同时放大格子、数字与灯泡。
+    const visual=window.visualViewport;
+    const screenHeight=visual?Math.round(visual.height*visual.scale):window.innerHeight;
+    const height=screenHeight-overhead-chrome-18-(rows-1);
+    const size=Math.min(52,width/cols,Math.max(1,height)/rows);
+    board.style.setProperty('--akari-cell-size',`${size>=1?Math.floor(size):size}px`);
   }
   /** 选关只展示编号、尺寸及历史成绩，不展示内部难度参数。 */
   function renderSelection(state) {
@@ -145,6 +164,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     renderSelection(state);
     const playing=Boolean(state.attempt&&state.board&&!selectionOnly);
     $('akari-selector').hidden=playing;$('akari-play').hidden=!playing;
+    page?.classList.toggle('akari-playing',playing);
     $('akari-message').textContent=errorMessage||state.message;
     $('akari-reload').hidden=Boolean(state.levels.length)||state.busy;
     if(!playing){$('akari-result').close();$('akari-board').replaceChildren();boardKey='';return;}
@@ -189,6 +209,7 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     $('akari-next').textContent=level?.number===15?'已到最后一关':`下一关：第${(level?.number||0)+1}关 →`;
     if(!state.result){resultShown=null;$('akari-result').close();}
     else if(resultShown!==state.attempt.attempt_id){resultShown=state.attempt.attempt_id;$('akari-result').showModal();}
+    fitBoard();
   }
   /** 时钟更新不触发棋盘或选关重建。 */
   function timing(){
@@ -255,6 +276,17 @@ export function createAkariJourney({host,auth,onReward=()=>{}}) {
     if(number===15){back();return;}
     const next=model.state.levels.find(v=>v.number===number+1);if(next){collection.cancel();emit(Events.SETTLEMENT_CLOSED);void openSelected(next.level_id);}
   });
+  scope.listen(window,'resize',fitBoard);
+  if(window.visualViewport)scope.listen(window.visualViewport,'resize',fitBoard);
+  // 仅观察宽度并在下一帧适配，避免格子高度更新触发观察循环。
+  let fitFrame=null,lastWidth=0;
+  const observer=new ResizeObserver(entries=>{
+    const width=entries[0].contentRect.width;if(width===lastWidth)return;lastWidth=width;
+    if(fitFrame!==null)cancelAnimationFrame(fitFrame);
+    fitFrame=requestAnimationFrame(()=>{fitFrame=null;fitBoard();});
+  });
+  observer.observe(host);
+  scope.add(()=>{observer.disconnect();if(fitFrame!==null)cancelAnimationFrame(fitFrame);page?.classList.remove('akari-playing');});
   const timer=setInterval(timing,250);scope.add(()=>clearInterval(timer));
   scope.listen(document,'visibilitychange',()=>{if(document.hidden)collection.cancel();if(model)void run(()=>model.setPaused('hidden',document.hidden));});
   scope.listen(window,'pagehide',()=>{if(model)void model.setPaused('pagehide',true,{immediate:true}).catch(()=>{});});
