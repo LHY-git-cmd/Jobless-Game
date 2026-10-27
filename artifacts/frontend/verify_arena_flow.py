@@ -1,6 +1,7 @@
 """作用：两个独立Chrome和临时SQLite验收竞技跨页、三棋盘、结算与原对手续局。
 只创建本次临时账号和数据库，不访问业务数据；答案仅测试端离线读取，操作经真实页面。
 """
+import argparse
 import base64
 from contextlib import ExitStack
 from datetime import timedelta
@@ -8,6 +9,8 @@ import httpx
 import json
 from pathlib import Path
 import socket
+import secrets
+import subprocess
 import sys
 import tempfile
 import threading
@@ -30,11 +33,14 @@ from backend.content_check import sudoku_solutions,akari_solutions
 
 def main():
     """所有浏览器与服务进程均有有界等待，并在finally释放临时测试资源。"""
-    checks=[]
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--gzip',action='store_true',help='通过真实Nginx JSON压缩验证弱ETag与准备')
+    args=parser.parse_args()
+    checks=[];proxy_name=None
     with tempfile.TemporaryDirectory(prefix='arena-flow-browser-') as temporary:
         engine,sessions=environment(Path(temporary)/'qa.sqlite')
         settings=qa.get_settings();settings.pk_rooms_enabled=settings.matchmaking_enabled=True
-        listener=socket.socket();listener.bind(('127.0.0.1',0));base=f'http://127.0.0.1:{listener.getsockname()[1]}/'
+        listener=socket.socket();listener.bind(('0.0.0.0' if args.gzip else '127.0.0.1',0));api_port=listener.getsockname()[1];base=f'http://127.0.0.1:{api_port}/'
         server=qa.uvicorn.Server(qa.uvicorn.Config(qa.api.app,log_level='error',lifespan='off'))
         worker=threading.Thread(target=server.run,kwargs={'sockets':[listener]},daemon=True);worker.start()
         stopped=threading.Event()
@@ -48,6 +54,41 @@ def main():
                 if server.started:break
                 time.sleep(.05)
             assert server.started
+            if args.gzip:
+                # 真实代理只连接本轮临时API，开启JSON gzip改写响应ETag；不连接服务器。
+                config=Path(temporary)/'nginx.conf'
+                config.write_text('''# 作用：隔离竞技验收代理，复现宝塔JSON gzip产生弱ETag。
+events { worker_connections 128; }
+http {
+  access_log off;
+  gzip on;
+  gzip_types application/json;
+  gzip_min_length 1;
+  gzip_proxied any;
+  server {
+    listen 80;
+    location / {
+      proxy_pass http://host.docker.internal:API_PORT;
+      proxy_set_header Host $http_host;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_http_version 1.1;
+      proxy_buffering off;
+      proxy_read_timeout 75s;
+    }
+  }
+}
+'''.replace('API_PORT',str(api_port)),encoding='utf-8')
+                proxy_name='jobless-arena-ready-qa-'+secrets.token_hex(4)
+                with (ROOT/'artifacts/frontend/arena-ready-nginx.log').open('w') as proxy_log:
+                    subprocess.run(['docker','run','-d','--name',proxy_name,'--add-host','host.docker.internal:host-gateway',
+                        '-p','127.0.0.1::80','-v',str(config)+':/etc/nginx/nginx.conf:ro','nginx:1.28-alpine'],check=True,stdout=proxy_log,stderr=proxy_log,creationflags=subprocess.CREATE_NO_WINDOW)
+                port=subprocess.check_output(['docker','port',proxy_name,'80/tcp'],text=True).strip().rsplit(':',1)[1]
+                base='http://127.0.0.1:'+port+'/'
+                for _ in range(100):
+                    try:
+                        if httpx.get(base+'api/v1/features',timeout=2).status_code==200:break
+                    except httpx.HTTPError:pass
+                    time.sleep(.1)
             for name in ['flowone','flowtwo']:
                 with httpx.Client(base_url=base,headers={'Origin':base.rstrip('/')}) as client:
                     response=client.post('api/auth/login',json={'username':name,'password':'arena-flow-test'})
@@ -60,9 +101,10 @@ def main():
             with ExitStack() as stack:
                 logs=[stack.enter_context((ROOT/f'artifacts/frontend/arena-flow-chrome-{i}.log').open('w')) for i in (1,2)]
                 clients=[stack.enter_context(browser(str(Path(temporary)/f'chrome{i}'),logs[i-1])) for i in (1,2)]
-                def wait(ev,expression,seconds=18):
+                def wait(ev,expression,seconds=None):
                     """失败只附当前地址和页面提示，不输出Cookie或整个HTML。"""
-                    deadline=time.monotonic()+seconds
+                    # 压缩代理额外叠加页面恢复与有界读取重试，等待预算覆盖12秒请求超时。
+                    deadline=time.monotonic()+(seconds if seconds is not None else 45 if args.gzip else 18)
                     while time.monotonic()<deadline:
                         if ev(f'(()=>{{try{{return Boolean({expression})}}catch{{return false}}}})()'):return
                         time.sleep(.04)
@@ -120,7 +162,20 @@ def main():
                 e1("document.getElementById('arena-search-query').value='flowtwo';document.getElementById('arena-search-form').requestSubmit()")
                 click(e1,'.arena-search-result button');click(e2,'#arena-incoming-list button')
                 for _,ev in clients:wait(ev,"document.getElementById('arena-action')?.textContent==='准备'")
+                if args.gzip:
+                    # 以浏览器自己的Accept-Encoding读取真实代理，验证确实命中弱标签路径。
+                    c1('Runtime.evaluate',{'expression':"fetch('/api/v1/me/arena/state').then(r=>r.json()).then(v=>fetch(v.room.links.self)).then(r=>{window.qaRoomTag=r.headers.get('ETag')})",'awaitPromise':True})
+                    wait(e1,"typeof window.qaRoomTag==='string'&&window.qaRoomTag.startsWith('W/')")
+                    # 明确验证后端仍拒绝原样弱If-Match，修复只作用于核验后的前端条件写。
+                    c1('Runtime.evaluate',{'expression':"fetch('/api/v1/me/arena/state').then(r=>r.json()).then(v=>fetch(v.room.links.readiness,{method:'PUT',headers:{'Content-Type':'application/json','If-Match':window.qaRoomTag},body:JSON.stringify({ready:true})})).then(r=>{window.qaWeakReadyStatus=r.status})",'awaitPromise':True})
+                    assert e1('window.qaWeakReadyStatus')==412
                 click(e1,'#arena-action');assert e2("location.pathname.endsWith('/pk.html')")
+                if args.gzip:
+                    wait(e1,"document.getElementById('arena-action')?.textContent==='取消准备'")
+                    click(e1,'#arena-action')
+                    wait(e1,"document.getElementById('arena-action')?.textContent==='准备'")
+                    click(e1,'#arena-action')
+                    wait(e1,"document.getElementById('arena-action')?.textContent==='取消准备'")
                 click(e2,'#arena-action');assert e1("location.pathname.endsWith('/pk.html')")
                 for _,ev in clients:wait(ev,"location.pathname.endsWith('/pk-game.html')&&document.querySelectorAll('.mine-square').length===100")
                 rid,puzzle=playing();first_mines=puzzle['mine_indices'];mine=first_mines[0]
@@ -169,12 +224,15 @@ def main():
                 c1('Page.reload');wait(e1,"document.getElementById('arena-result-dialog')?.open")
                 c1('Emulation.setDeviceMetricsOverride',{'width':320,'height':800,'deviceScaleFactor':1,'mobile':False});shot(c1,'arena-flow-timeout-320.png')
                 leave_results();checks.append('server timeout + draw + result reload + mobile dialog')
-            print('PASS: '+str(len(checks))+' browser scenarios; 320/375 and desktop; no uncaught script exceptions.')
+            print('PASS: '+str(len(checks))+' browser scenarios; 320/375 and desktop; no uncaught script exceptions.'+(' Real Nginx gzip + weak ETag + ready/cancel + weak If-Match rejection.' if args.gzip else ''))
             for item in checks:print('PASS: '+item)
         finally:
             stopped.set()
             if scheduler.is_alive():scheduler.join(3)
             server.should_exit=True;worker.join(10);runtime.reset();engine.dispose()
+            if proxy_name:
+                # 仅删除本次随机命名验收容器，不触碰已有Nginx或数据库。
+                subprocess.run(['docker','rm','-f',proxy_name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=subprocess.CREATE_NO_WINDOW)
 
 
 if __name__=='__main__':main()

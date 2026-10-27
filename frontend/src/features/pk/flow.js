@@ -13,6 +13,34 @@ export async function readArenaSnapshot(request,{current=()=>true,wait=ms=>new P
   }
 }
 
+/** 房间接口以JSON整数revision作为强版本；只接受与头部完全一致的修订。 */
+export function roomWriteVersion(snapshot){
+  const revision=snapshot?.data?.revision;
+  const expected=Number.isSafeInteger(revision)&&revision>=0?`"${revision}"`:null;
+  // gzip代理可能只在ETag前加W/；不能将任意弱标签直接去前缀后用于条件写。
+  if(!expected||![expected,`W/${expected}`].includes(snapshot.etag))throw new Error('无法核验房间版本，请刷新后重试。');
+  return expected;
+}
+
+/** 准备切换先重读快照，真正412只有限重试本人原意图，不反向取消准备。 */
+export async function toggleArenaReadiness({roomId,request}){
+  const latest=await request('rooms/'+roomId);
+  const me=latest.data.members.find(member=>member.is_me);
+  if(!me)throw new Error('你已不在房间，请刷新后重试。');
+  const desired=!me.ready;
+  /** 每次条件写都核对该次新快照，而不是复用旧ETag。 */
+  const write=value=>request(value.data.links.readiness,{method:'PUT',body:{ready:desired},headers:{'If-Match':roomWriteVersion(value)}});
+  try{return await write(latest);}
+  catch(error){
+    if(error.status!==412)throw error;
+    const current=await request('rooms/'+roomId);
+    const own=current.data.members.find(member=>member.is_me);
+    if(!own)throw new Error('你已不在房间，请刷新后重试。');
+    if(current.data.status==='waiting'&&own.ready!==desired)return write(current);
+    return current;
+  }
+}
+
 /** 分开说明结果与原因，超时、踩雷和退出均可理解。 */
 export function arenaResult(result,uid) {
   const score=result.scores?.find(item=>item.user_id===uid);

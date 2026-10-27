@@ -233,7 +233,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── notifications/  # 可见性轮询、站内消息与账号隔离
 │   │   │   │   └── controller.js  # 所属业务/游戏控制器与生命周期
 │   │   │   ├── pk/  # 竞技跨页流程、草稿及事件订阅重连
-│   │   │   │   ├── flow.js  # 权威快照跳转、结果说明与有界503读取重试
+│   │   │   │   ├── flow.js  # 快照跳转/结果、503重试及房间修订核验与准备并发重试
 │   │   │   │   ├── page.js  # 大厅/游戏共用控制器，账号隔离、再战和结果恢复
 │   │   │   │   ├── presence.js  # 全站可见在线租约、跨标签合并及用户主动接受邀请
 │   │   │   │   └── events.js  # 共享事件或竞速SSE订阅
@@ -350,7 +350,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── attempt-exit.test.js  # 条件退出、丢响应重试和草稿隔离清理
 │   │   │   │   └── progression-client.test.js  # 所属模块的行为回归测试
 │   │   │   ├── pk/  # 竞技页面流转与跨页通知恢复测试
-│   │   │   │   ├── arena-flow.test.js  # 开局跳转、超时结果及503恢复/换号取消
+│   │   │   │   ├── arena-flow.test.js  # 跳转/超时、503恢复及弱ETag准备/取消与并发保护
 │   │   │   │   └── events-reconnect.test.js  # 旧事件流冲突后的重建与关闭清理
 │   │   │   └── ranking/  # 排行榜读取和个人通关记录
 │   │   │       └── personal-records.test.js  # 所属模块的行为回归测试
@@ -434,7 +434,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
     └── frontend/                         # 前端浏览器验证脚本和验证产物
         ├── verify_login.py               # 早期登录验收材料；当前关卡回归使用 verify_ranking.py
         ├── verify_arena.py               # 两个独立浏览器验证邀请、三模式对战、积分与手机大厅
-        ├── verify_arena_flow.py          # 双浏览器跨页、三棋盘交互、双方结算续局及320/375布局
+        ├── verify_arena_flow.py          # 双浏览器跨页/续局/手机布局，--gzip核验真实Nginx弱ETag准备
         ├── verify_arena_preview.py       # 固定隔离SQLite预览，保留账号并补齐字段和版本
         ├── verify_ranking.py             # 临时数据库与真实浏览器：独立关卡/结算、开发按钮及三个分榜
         ├── verify_http_start.py          # 非安全 HTTP 浏览器环境下真实登录、开局重试与重新开始

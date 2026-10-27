@@ -7,7 +7,7 @@ import { subscribeEvents } from './events.js';
 import { createArenaBoard } from '../../games/arena-board.js';
 import { createAvatarImage } from '../account/avatar.js';
 import { createRequestId } from '../../shared/request-id.js';
-import { arenaDestination, arenaResult, readArenaSnapshot } from './flow.js';
+import { arenaDestination, arenaResult, readArenaSnapshot, roomWriteVersion, toggleArenaReadiness } from './flow.js';
 
 /** gamePage固定本页职责；游戏页始终读取URL中的那一局，保证双方都看到旧局结果。 */
 export function initArenaPage({gamePage=false}={}) {
@@ -147,11 +147,7 @@ export function initArenaPage({gamePage=false}={}) {
     if(!uid)return auth.requireLogin(()=>identityChanged());if(!eligible)return;
     if(room?.result){navigate(`./pk-game.html?room=${encodeURIComponent(room.room_id)}`);return;}
     if(ticket)return act(async()=>{await api(ticket.links.self,{method:'DELETE'});ticket=null;});
-    if(room?.status==='waiting')return act(async()=>{
-      const latest=await api('rooms/'+room.room_id),desired=!latest.data.members.find(v=>v.is_me).ready;
-      try{adoptRoom(await api(latest.data.links.readiness,{method:'PUT',body:{ready:desired},headers:{'If-Match':latest.etag}}));}
-      catch(error){if(error.status!==412)throw error;const current=await api('rooms/'+latest.data.room_id);if(current.data.status==='waiting'&&current.data.members.find(v=>v.is_me)?.ready!==desired)adoptRoom(await api(current.data.links.readiness,{method:'PUT',body:{ready:desired},headers:{'If-Match':current.etag}}));else adoptRoom(current);}
-    });
+    if(room?.status==='waiting')return act(async()=>adoptRoom(await toggleArenaReadiness({roomId:room.room_id,request:api})));
     return act(async()=>{const value=await create('matchmaking-tickets',{game_id:$('arena-mode').value,difficulty:'normal'});ticket=value.data;});
   }
   /** 扫雷只发索引，服务端确认已揭格和胜负。 */
@@ -205,7 +201,7 @@ export function initArenaPage({gamePage=false}={}) {
   listen('arena-invite-open','click',()=>{$('arena-search-results').replaceChildren();$('arena-search-dialog').showModal();$('arena-search-query').focus();});
   listen('arena-search-form','submit',search);listen('arena-search-close','click',()=>$('arena-search-dialog').close());
   listen('arena-cancel-invite','click',()=>void act(async()=>{const item=invitations.find(v=>v.sender_id===uid);if(item)await api('arena/invitations/'+item.invitation_id,{method:'DELETE'});}));
-  listen('arena-mode','change',()=>{const desired=$('arena-mode').value;if(room)void act(async()=>{const value=await api('rooms/'+room.room_id);adoptRoom(await api(`rooms/${room.room_id}/mode`,{method:'PUT',body:{game_id:desired,difficulty:'normal'},headers:{'If-Match':value.etag}}));});});
+  listen('arena-mode','change',()=>{const desired=$('arena-mode').value;if(room)void act(async()=>{const value=await api('rooms/'+room.room_id);adoptRoom(await api(`rooms/${room.room_id}/mode`,{method:'PUT',body:{game_id:desired,difficulty:'normal'},headers:{'If-Match':roomWriteVersion(value)}}));});});
   listen('arena-submit','click',()=>void submit());listen('arena-rematch','click',()=>void continuation(true));listen('arena-return','click',()=>void continuation(false));
   listen('arena-result-dialog','cancel',event=>event.preventDefault());
   listen('arena-leave','click',()=>{$('arena-leave-description').textContent=room?.status==='playing'?'比赛已经开始，退出将判负并扣除10积分。':'离开房间后将释放你的席位。';$('arena-leave-dialog').showModal();});
