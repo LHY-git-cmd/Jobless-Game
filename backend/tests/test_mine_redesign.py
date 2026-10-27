@@ -69,7 +69,9 @@ class MineRedesign(TestCase):
                 row = db.get(GameAttempt, attempt['attempt_id'])
                 board = deepcopy(row.board)
                 # 故意把最后一格放雷，确定性验证首击重布雷且雷数不变。
-                board['mine_indices'][-1] = count-1
+                # 原随机雷区可能已含末格；先去除再补入，避免构造重复雷而误报首击安全失败。
+                original=[index for index in board['mine_indices'] if index!=count-1]
+                board['mine_indices']=[*original[:len(board['mine_indices'])-1],count-1]
                 row.board = board
                 db.commit()
             first = self.reveal(attempt, count-1)
