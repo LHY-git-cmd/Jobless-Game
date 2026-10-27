@@ -40,3 +40,12 @@ class ArenaInvitation(Base):
     created_at:Mapped[datetime]=mapped_column(DateTime)
     expires_at:Mapped[datetime]=mapped_column(DateTime)
     room_id:Mapped[str|None]=mapped_column(String(36))
+
+
+class ArenaPuzzleHistory(Base):
+    """每账号/每游戏一行，最多保存最近4个已开局原题，不依赖房间历史保留期。"""
+    __tablename__='arena_puzzle_history'
+    user_id:Mapped[int]=mapped_column(UID,ForeignKey('users.id',ondelete='CASCADE'),primary_key=True)
+    game_id:Mapped[str]=mapped_column(String(16),primary_key=True)
+    recent:Mapped[list]=mapped_column(JSON,default=list)
+    revision:Mapped[int]=mapped_column(Integer,default=0)

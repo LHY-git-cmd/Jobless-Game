@@ -21,7 +21,9 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── game-catalog-v1.json           # 十关照明、三题PK、历史初级扫雷/数独与建议参数v1
 │   │   ├── progression-policy-v2.json     # 0/18/36/54/72/90等级阈值与3秒竞技倒计时
 │   │   ├── campaign-rewards-v3.json       # 普通关首次三星当局新增经验双倍的追加冻结版本
-│   │   ├── arena-puzzles-v1.json          # 独立照明10×10及简单数独竞技题池
+│   │   ├── arena-puzzles-v1.json          # 旧独立竞技题池，保留历史审计
+│   │   ├── arena-puzzles-v2.json          # 照明/数独各20道独立原题、稳定ID及冻结配置
+│   │   ├── arena-audit-v2.json            # 40道竞技原题唯一解、生成来源与同档难度离线审计
 │   │   ├── mine-catalog-v2.json           # 教学与四档各三规格，共十三项扫雷、时限及逐星经验
 │   │   ├── sudoku-catalog-v2.json         # 数独五档十三题、尺寸、推理技巧、时限及逐星经验
 │   │   ├── akari-catalog-v2.json          # 照明入门及第1～15关的冻结地图和参数
@@ -32,6 +34,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   └── sudoku-audit-v2.json           # 开发机离线唯一解和逐步推理记录，不下发浏览器
 │   ├── sudoku_content.py                 # 有界离线构造、两解搜索及四档逻辑分级器
 │   ├── akari_content.py                  # 照明确定性逻辑、单层反证、唯一性及16关离线构建
+│   ├── arena_content.py                  # 离线构造/审核各20道竞技原题，拒绝覆盖冻结版本
 │   ├── content_check.py                  # 开发机唯一解、初级单候选与只生成新文件的题库工具
 │   ├── cleanup_game_history.py           # 有界历史清理，保留永久成长与资格
 │   ├── export_game_contract.py           # 从实际v1路由和DTO导出/核对契约草案
@@ -68,8 +71,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   ├── progression_service.py    # 矩形扫雷/教学/首击安全、冻结计时及幂等奖励/资格事务
 │   │   │   ├── energy_service.py         # 账号体力、30分钟恢复、普通扣返及免费教学
 │   │   │   ├── pk_service.py             # 三模式房间、HTTP先后排序、积分及分池FIFO事务
-│   │   │   ├── arena_service.py          # 账号积分、唯一结算、精确用户搜索及定向邀请
-│   │   │   ├── arena_games.py            # 复用正式闯关配置、保解换题与服务端隐藏扫雷揭格
+│   │   │   ├── arena_service.py          # 积分/邀请与双方近期4局原题读取及幂等开局记录
+│   │   │   ├── arena_games.py            # 20原题池过滤、稳定身份、展示变换及隐藏扫雷揭格
 │   │   │   ├── pk_runtime.py             # 有限SSE队列、接收窗口及单进程运行索引
 │   │   │   ├── pk_lifecycle.py           # 唯一调度任务、重启作废和有界状态转换
 │   │   │   └── ranking_service.py        # 独立关卡重开/通关、幂等与单项成绩保留事务
@@ -87,7 +90,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   │   │   ├── user.py               # 用户实体及从10000000起递增的固定八位玩家ID
 │   │   │   │   ├── auth_session.py       # 账号会话实体
 │   │   │   │   ├── forum.py              # 帖子、评论、两类点赞与站内通知五表实体
-│   │   │   │   ├── arena.py               # 竞技积分摘要、永久唯一流水与有期邀请
+│   │   │   │   ├── arena.py               # 积分/邀请及每账号每游戏有界近期原题记录
 │   │   │   │   ├── progression.py        # 关卡版本、尝试/快照、永久成长/资格/幂等凭据
 │   │   │   │   ├── cosmetic.py           # 有限主题目录、永久权益与装配版本
 │   │   │   │   ├── pk.py                 # 双人房间、成员、不可变提交和唯一占用
@@ -132,7 +135,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   │   ├── V18__publish_first_three_star_bonus.sql # 追加39个普通关首次三星双倍奖励版本
 │   │   ├── V19__create_arena_scores_and_invitations.sql # 三模式房间字段、积分账户/流水及邀请
 │   │   ├── V20__increase_energy_default_to_ten.sql # 新体力记录默认10点，不修改已有余额或恢复节点
-│   │   └── V21__retain_arena_seats_and_continuations.sql # 已结算局短期保留席位及唯一后继对局链接
+│   │   ├── V21__retain_arena_seats_and_continuations.sql # 已结算局短期保留席位及唯一后继对局链接
+│   │   └── V22__create_arena_puzzle_history.sql # 按账号/游戏持久化最近4局原题，换房换对手保留
 │   ├── deploy/                           # 与现有宝塔服务合并使用的部署模板
 │   │   ├── server/                       # Linux 宝塔复用方案与离线部署包生成
 │   │   │   ├── README.md                 # IP/HTTP 临时验收、迁移、网站配置和维护
@@ -174,6 +178,7 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │       ├── test_arena_growth.py          # 等级阈值、首次三星当局翻倍与历史奖励兼容
 │       ├── test_arena_pk.py              # 三模式/在线邀请/积分/并发踩雷/独立题池验收
 │       ├── test_arena_flow.py            # 配置同源、续局并发幂等、历史结果、断线回收及超时平局
+│       ├── test_arena_puzzle_pool.py     # 各20独立原题、同档唯一解、近期去重与开局回滚
 │       └── test_ranking.py               # 排名、保留集合、独立关卡、事务及挑战 API 回归
 │
 ├── docs/                                 # 实施计划、设计说明等项目文档
@@ -196,6 +201,8 @@ crawler-portal/                            # 项目根目录：前端、登录�
 │   ├── pk-arena-implementation-plan.md      # 已确认的三模式竞技大厅、在线邀请和积分实施方案
 │   ├── arena-flow-optimization-plan.md      # 已确认的棋盘复用、独立游戏页、结算弹窗与同对手续局方案
 │   ├── arena-flow-optimization-report.md    # 竞技流程改动、双浏览器验证、MySQL5.7/Flyway记录
+│   ├── arena-puzzle-pool-expansion-plan.md   # 已授权的各20独立题及双方各最近4局去重方案
+│   ├── arena-puzzle-pool-expansion-report.md # 独立性/同档难度、近期事务及MySQL5.7和双浏览器验证
 │   ├── pk-arena-implementation-report.md    # 等级奖励/竞技产出、回归证据及MySQL5.7验收限制
 │   ├── energy-implementation-report.md     # 体力机制、测试证据及本地预览/发布边界
 │   ├── energy-ten-refund-fix.md            # 10点上限、生产Session漏返根因、V20及三游戏持久返还验证

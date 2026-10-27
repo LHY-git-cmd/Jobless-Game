@@ -5,11 +5,44 @@ from sqlalchemy import or_,select
 from ..common.security import utc_now
 from ..models.entities import User
 from ..models.entities.user import PLAYER_ID_OFFSET
-from ..models.entities.arena import ArenaAccount,ArenaLedger,ArenaInvitation
+from ..models.entities.arena import ArenaAccount,ArenaLedger,ArenaInvitation,ArenaPuzzleHistory
 from ..models.entities.pk import PlayerPKOccupancy
 from ..repositories import progression_repository as repo
 from . import progression_service as growth
 from .pk_runtime import runtime
+
+RECENT_PUZZLES=4
+
+
+def recent_puzzle_ids(db,uids,game):
+    """按双方主键各读一行，取该游戏最近4局原题的并集，不扫描历史对局。"""
+    blocked=set()
+    if game not in ('akari','sudoku'):
+        return blocked
+    for uid in sorted(set(uids)):
+        row=repo.get(db,ArenaPuzzleHistory,(uid,game))
+        if row:
+            blocked.update(item['base_puzzle_id'] for item in row.recent[-RECENT_PUZZLES:])
+    return blocked
+
+
+def record_puzzle_start(db,room,uids):
+    """正式开局与双方近期记录同事务；房间标记及局ID使重复调度不重复追加。"""
+    identity=room.puzzle.get('base_puzzle_id')
+    if room.game_id not in ('akari','sudoku') or not identity or room.puzzle.get('history_recorded'):
+        return
+    for uid in sorted(set(uids)):
+        row=repo.get(db,ArenaPuzzleHistory,(uid,room.game_id))
+        if row is None:
+            row=ArenaPuzzleHistory(user_id=uid,game_id=room.game_id,recent=[],revision=0)
+            db.add(row)
+        if any(item['room_id']==room.room_id for item in row.recent):
+            continue
+        row.recent=[*row.recent,{'room_id':room.room_id,'base_puzzle_id':identity}][-RECENT_PUZZLES:]
+        row.revision+=1
+    # 生产autoflush=False，先把有界JSON历史写入当前事务，再允许后续当前读。
+    db.flush()
+    room.puzzle={**room.puzzle,'history_recorded':True}
 
 
 def account(db,uid,initialize=False):

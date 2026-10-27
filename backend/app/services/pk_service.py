@@ -105,6 +105,9 @@ def room_resource(db, room, uid, status=200):
             data['mine_board']=arena_games.public_board(member.board or {},room.puzzle['puzzle']) if member else {}
         data['level_version'] = room.puzzle['level_version']
         data['level_id'] = room.puzzle.get('level_id')
+        if room.puzzle.get('base_puzzle_id'):
+            data['base_puzzle_id']=room.puzzle['base_puzzle_id']
+            data['pool_version']=room.puzzle.get('pool_version')
     if room.result:
         data['result'] = room.result
     headers = {'ETag': progression.etag(room.revision)}
@@ -210,6 +213,10 @@ def readiness(db, uid, rid, data, match, **_):
     db.flush()
     present = members(db, rid, True)
     if len(present) == 2 and all(p.ready for p in present):
+        if room.game_id in ('akari','sudoku'):
+            # 对手可能在房间创建后才加入；最终冻结时才按双方持久历史过滤原题。
+            blocked=arena.recent_puzzle_ids(db,[player.user_id for player in present],room.game_id)
+            room.puzzle=arena_games.make_puzzle(room.game_id,excluded=blocked)
         room.status = 'countdown'
         room.starts_at = utc_now() + timedelta(seconds=POLICY['countdown_seconds'])
         room.ends_at = room.starts_at + timedelta(seconds=POLICY['match_seconds'])
@@ -618,6 +625,7 @@ def advance_room(db, room, now, restart):
         room.status = 'expired'
         return
     if room.status == 'countdown' and room.starts_at <= now:
+        arena.record_puzzle_start(db,room,[player.user_id for player in members(db,room.room_id,True)])
         room.status = 'playing'
         touch(db, room)
     if room.status != 'playing':

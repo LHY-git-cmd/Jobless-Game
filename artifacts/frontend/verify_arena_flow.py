@@ -36,7 +36,9 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--gzip',action='store_true',help='通过真实Nginx JSON压缩验证弱ETag与准备')
     parser.add_argument('--ready-only',action='store_true',help='只复验准备/取消、开局跳转和手机首屏布局')
+    parser.add_argument('--pool-rounds',type=int,default=0,help='仅验收每种游戏连续2～8局原题去重和近期记录')
     args=parser.parse_args()
+    if args.pool_rounds and not 2<=args.pool_rounds<=8:parser.error('--pool-rounds范围为2～8')
     checks=[];proxy_name=None
     with tempfile.TemporaryDirectory(prefix='arena-flow-browser-') as temporary:
         engine,sessions=environment(Path(temporary)/'qa.sqlite')
@@ -163,6 +165,36 @@ http {
                     click(ev,'.auth-open');ev(f"document.getElementById('auth-username').value='{['flowone','flowtwo'][i]}';document.getElementById('auth-password').value='arena-flow-test';document.querySelector('.auth-submit').click()")
                     wait(ev,"document.getElementById('arena-action')?.textContent==='开始匹配'&&!document.getElementById('arena-action').disabled")
                 (c1,e1),(c2,e2)=clients
+                if args.pool_rounds:
+                    from backend.app.models.entities.arena import ArenaPuzzleHistory
+                    for game in ('akari','sudoku'):
+                        previous=[];start(game)
+                        for round_index in range(args.pool_rounds):
+                            rid,puzzle=playing()
+                            with sessions() as db:
+                                row=db.get(PKRoom,rid);identity=row.puzzle['base_puzzle_id']
+                                assert identity not in previous[-4:],(game,'repeated original')
+                                previous.append(identity)
+                                for user in db.scalars(select(User)).all():
+                                    history=db.get(ArenaPuzzleHistory,(user.id,game))
+                                    assert [item['base_puzzle_id'] for item in history.recent]==previous[-4:]
+                            snapshots=[]
+                            for cmd,ev in clients:
+                                cmd('Runtime.evaluate',{'expression':"fetch('/api/v1/rooms/'+new URLSearchParams(location.search).get('room')).then(r=>r.json()).then(v=>{window.qaPoolRoom=v})",'awaitPromise':True})
+                                wait(ev,'Boolean(window.qaPoolRoom?.base_puzzle_id)')
+                                snapshots.append(ev('window.qaPoolRoom'))
+                            assert snapshots[0]['base_puzzle_id']==snapshots[1]['base_puzzle_id']==identity
+                            assert snapshots[0]['puzzle']==snapshots[1]['puzzle']==puzzle
+                            # 推进隔离测试局截止时间，经真实唯一调度器结算，不自报玩家胜者。
+                            with runtime.lock,sessions() as db:
+                                row=db.get(PKRoom,rid);row.ends_at=utc_now()-timedelta(seconds=1);row.starts_at=row.ends_at-timedelta(minutes=10);db.commit()
+                            for _,ev in clients:wait(ev,"document.getElementById('arena-result-dialog')?.open")
+                            if round_index+1<args.pool_rounds:
+                                for _,ev in clients:click(ev,'#arena-rematch')
+                                for _,ev in clients:wait(ev,"location.pathname.endsWith('/pk-game.html')&&new URLSearchParams(location.search).get('room')!=="+json.dumps(rid)+"&&document.querySelectorAll('#arena-board [data-index]').length>0")
+                        leave_results()
+                    print(f'PASS: two real browsers; {args.pool_rounds} rounds per game; same original and puzzle for both; last-four exclusion and bounded persistent histories; rematches freeze new originals.')
+                    return
                 # 先用定向邀请走扫雷开局，验证原大厅流程仍然可用。
                 e1("document.getElementById('arena-mode').value='mine'");click(e1,'#arena-invite-open')
                 e1("document.getElementById('arena-search-query').value='flowtwo';document.getElementById('arena-search-form').requestSubmit()")

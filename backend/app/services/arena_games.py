@@ -5,9 +5,13 @@ import json
 from pathlib import Path
 import secrets
 from .progression_service import mine_neighbors
-from ..common.game_catalog import LEVELS, SUDOKU_LEVELS
+from ..common.game_catalog import LEVELS
 
-POOLS=json.loads((Path(__file__).resolve().parents[2]/'content/arena-puzzles-v1.json').read_text(encoding='utf-8'))['pools']
+CONTENT=Path(__file__).resolve().parents[2]/'content'
+# 旧文件保留历史审计；正式选题只使用v2的20道独立原题。
+LEGACY_POOLS=json.loads((CONTENT/'arena-puzzles-v1.json').read_text(encoding='utf-8'))['pools']
+CATALOG=json.loads((CONTENT/'arena-puzzles-v2.json').read_text(encoding='utf-8'))
+POOLS=CATALOG['pools']
 
 
 def transformed_map(rows, turn):
@@ -20,15 +24,22 @@ def transformed_map(rows, turn):
     return [''.join(row) for row in grid]
 
 
-def make_puzzle(game, previous=None):
-    """冻结正式配置与版本；previous用于避免紧邻两局初始题面相同。"""
+def make_puzzle(game, previous=None, excluded=()):
+    """按稳定原题ID过滤近期历史，展示变换不会改变原题身份；线上不生成或求解。"""
     if game == 'mine':
         level = LEVELS['mine-v2-easy-10']
-    elif game == 'akari':
-        level = LEVELS['akari-v2-010']
+        value={'level_id':level['level_id'],'level_version':level['level_version'],'puzzle':deepcopy(level['puzzle'])}
     else:
-        level = secrets.choice([item for item in SUDOKU_LEVELS if item['difficulty']=='easy'])
-    puzzle = deepcopy(level['puzzle'])
+        blocked=set(excluded)
+        candidates=[item for item in POOLS[game] if item['base_puzzle_id'] not in blocked]
+        if not candidates:
+            raise ValueError('近期原题过滤后没有可用题目，拒绝用重复题绕过去重')
+        previous_id=(previous or {}).get('base_puzzle_id')
+        if len(candidates)>1 and previous_id:
+            candidates=[item for item in candidates if item['base_puzzle_id']!=previous_id]
+        value=deepcopy(secrets.choice(candidates))
+        value['pool_version']=CATALOG['version']
+    puzzle=value['puzzle']
     old = (previous or {}).get('puzzle', {})
     if game == 'mine':
         rows, cols, count = puzzle['rows'], puzzle['cols'], puzzle['mine_count']
@@ -45,20 +56,23 @@ def make_puzzle(game, previous=None):
             if puzzle['mine_indices'] == old.get('mine_indices'):
                 puzzle['mine_indices'] = [13,24,36,48,55,67,73,81,89,96]
     elif game == 'akari':
+        original_map=list(puzzle['map'])
         turn = secrets.randbelow(8)
         for step in range(8):
-            puzzle['map'] = transformed_map(level['puzzle']['map'], (turn+step)%8)
+            puzzle['map'] = transformed_map(original_map, (turn+step)%8)
             if puzzle['map'] != old.get('map'):
                 break
     else:
         # 数字双射不改变候选推理难度；循环移位兜底防止立即重题。
+        original_values=list(puzzle['values'])
         digits = secrets.SystemRandom().sample(range(1,10),9)
         for shift in range(9):
-            puzzle['values'] = [digits[(v-1+shift)%9] if v else 0 for v in level['puzzle']['values']]
+            puzzle['values'] = [digits[(v-1+shift)%9] if v else 0 for v in original_values]
             if puzzle['values'] != old.get('values'):
                 break
-    puzzle['checksum'] = sha256(json.dumps(puzzle,sort_keys=True).encode()).hexdigest()
-    return {'level_id':level['level_id'], 'level_version':level['level_version'], 'puzzle':puzzle}
+    puzzle.pop('checksum',None)
+    puzzle['checksum'] = sha256(json.dumps(puzzle,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    return value
 
 
 def reveal(board,puzzle,index):

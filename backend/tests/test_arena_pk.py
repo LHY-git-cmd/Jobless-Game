@@ -160,9 +160,9 @@ class ArenaPKTests(TestCase):
         with self.sessions() as db:row=db.get(PKRoom,rid);row.ends_at=utc_now()-timedelta(seconds=1);db.commit()
         pk.maintenance(self.sessions);self.assertEqual(self.client.get('/api/v1/me/arena').json()['points'],100)
 
-    def test_all_competitive_puzzles_are_unique_and_not_identical_campaigns(self):
-        """离线独立题池验证；线上不运行求解器。"""
-        from backend.app.services.arena_games import POOLS
+    def test_legacy_competitive_puzzles_remain_unique_and_not_identical_campaigns(self):
+        """旧v1题库保留审计，v2原题独立性和当前难度由专门题库测试覆盖。"""
+        from backend.app.services.arena_games import LEGACY_POOLS as POOLS
         from backend.app.common.game_catalog import published_levels
         for game,items in POOLS.items():
             originals=[item['puzzle'].get('map',item['puzzle'].get('values')) for item in published_levels() if item['game_id']==game]

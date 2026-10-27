@@ -244,3 +244,13 @@ V19新增arena_accounts、arena_ledger、arena_invitations，扩展房主/source
 正常结束后保留仍在场的成员，最多5分钟，继续计入4房容量；主动退出立即释放，断线30秒或保留到期后回收，服务重启释放保留席位但不覆盖已有结果。准备房间也沿用原到期规则。GET仍只读，状态推进由唯一调度任务负责。
 
 大厅为 `/pk.html`，倒计时结束后进入 `/pk-game.html?room=UUID`。独立游戏页固定读取该局，确保对手先返回时本人仍可查看结算。当前双浏览器验收入口为 `python artifacts/frontend/verify_arena_flow.py`，覆盖三棋盘、跨页恢复、再战与320/375像素布局；verify_arena.py保留旧页内布局的历史验证记录。
+
+## 竞技20道独立原题与近期去重（V22）
+
+照明和数独各20道独立原题，线上读取arena-puzzles-v2.json冻结版本，不调用离线生成器。照明保持10×10/第10关逻辑层级，数独保持简单9×9/25给定数；变换后的题目仍沿用base_puzzle_id。
+
+V22新增arena_puzzle_history，以(user_id,game_id)为主键，每行最多4条。双方最终准备完成时按各自最近4局并集过滤原题，正式进入playing时与房间状态同事务记录，重复维护不重复追加，取消倒计时不记历史。新对手、换房和重启不清空账号历史；已发布旧房间保持原快照。V22前题目不自动反推近期记录。
+
+上线须先停止API写入并备份，保留.env.api、flyway.toml和旧迁移，执行新增V22再重建新API镜像；题库位于镜像backend/content。此轮不是纯前端补丁，不修改闯关、扫雷与积分规则。详见 [扩充报告](../docs/arena-puzzle-pool-expansion-report.md)。
+
+离线审核运行python -m backend.arena_content；--generate仅创建不存在的新版本，拒绝覆盖冻结文件。双浏览器多局验证为python artifacts/frontend/verify_arena_flow.py --pool-rounds 6，仅使用本机临时账号与数据库。

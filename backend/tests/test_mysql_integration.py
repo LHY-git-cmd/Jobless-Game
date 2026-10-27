@@ -5,6 +5,7 @@
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from datetime import timedelta
 import json
 import os
@@ -201,6 +202,64 @@ class MySQLIntegrationTests(TestCase):
             self.assertEqual([db.get(pk.PlayerPKOccupancy,who).room_id for who in uids],[next_id,next_id])
             self.assertEqual(len(list(db.scalars(select(arena.ArenaLedger).where(arena.ArenaLedger.room_id==rid)))),2)
         runtime.reset()
+
+    def test_arena_v22_original_history_and_concurrent_start(self):
+        """真实V22、JSON主键读取与并发开局只追加一次，重启保留双方最近4局。"""
+        from backend.app.services import pk_service as service
+        from backend.app.services.arena_games import POOLS
+        from backend.app.services.pk_runtime import runtime
+        runtime.reset();tokens=[];uids=[]
+        try:
+            for _ in range(2):
+                response=self.client.post('/api/auth/login',json={'username':self.new_name(),'password':'arena-pool-test'})
+                self.assertEqual(response.status_code,200,response.text)
+                token=self.client.cookies.get(get_settings().session_cookie_name);tokens.append(token)
+                with self.sessions() as db:
+                    uid=auth_service.current_session(token,db)[1].id;uids.append(uid)
+                    db.add(progression.PlayerProgression(user_id=uid,xp=72,total_stars=0,revision=0));db.commit()
+            self.assertIn('arena_puzzle_history',inspect(self.engine).get_table_names())
+            ids=[item['base_puzzle_id'] for item in POOLS['sudoku']]
+            with self.sessions() as db:
+                for index,uid in enumerate(uids):
+                    db.add(arena.ArenaPuzzleHistory(user_id=uid,game_id='sudoku',revision=0,
+                        recent=[{'room_id':str(uuid4()),'base_puzzle_id':identity} for identity in ids[index*4:index*4+4]]))
+                db.commit()
+            with self.sessions() as db:
+                room=service.dispatch(tokens[0],db,'room_create',data={'game_id':'sudoku','difficulty':'normal'},key=str(uuid4())).data
+            rid=room['room_id']
+            with self.sessions() as db:
+                service.dispatch(tokens[1],db,'room_join',data={'room_code':room['room_code']},key=str(uuid4()))
+            def ready(token):
+                """独立连接读修订，竞争时仅重放本人准备意图。"""
+                for _ in range(2):
+                    with self.sessions() as db:value=service.dispatch(token,db,'room_get',rid=rid)
+                    try:
+                        with self.sessions() as db:
+                            return service.dispatch(token,db,'room_ready',rid=rid,data={'ready':True},match=value.headers['ETag'])
+                    except AppError as error:
+                        if error.status_code!=412:raise
+                raise AssertionError('隔离并发准备未能完成')
+            with ThreadPoolExecutor(max_workers=2) as executor:list(executor.map(ready,tokens))
+            with self.sessions() as db:
+                row=db.get(pk.PKRoom,rid)
+                self.assertNotIn(row.puzzle['base_puzzle_id'],ids[:8])
+                self.assertTrue(all(db.get(arena.ArenaPuzzleHistory,(uid,'sudoku')).revision==0 for uid in uids))
+                row.starts_at=utc_now()-timedelta(seconds=1);row.ends_at=utc_now()+timedelta(minutes=10);db.commit()
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                list(executor.map(lambda _:service.maintenance(self.sessions),range(2)))
+            with self.sessions() as db:
+                row=db.get(pk.PKRoom,rid);self.assertEqual(row.status,'playing')
+                for uid in uids:
+                    history=db.get(arena.ArenaPuzzleHistory,(uid,'sudoku'))
+                    self.assertEqual(len(history.recent),4);self.assertEqual(history.revision,1)
+                    self.assertEqual(history.recent[-1],{'room_id':rid,'base_puzzle_id':row.puzzle['base_puzzle_id']})
+                frozen=deepcopy(row.puzzle['puzzle'])
+            runtime.reset();service.maintenance(self.sessions,restart=True)
+            with self.sessions() as db:
+                self.assertEqual(db.get(pk.PKRoom,rid).puzzle['puzzle'],frozen)
+                self.assertTrue(all(db.get(arena.ArenaPuzzleHistory,(uid,'sudoku')).revision==1 for uid in uids))
+        finally:
+            service.maintenance(self.sessions,restart=True);runtime.reset()
 
     def test_real_cookie_expiry_and_logout(self):
         name = self.new_name()
