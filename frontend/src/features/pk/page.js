@@ -16,11 +16,12 @@ export function initArenaPage({gamePage=false}={}) {
   const requestedRoom=new URLSearchParams(location.search).get('room');
   let uid,epoch=0,read=0,busy=false,eligible=false,enabled=false,room=null,ticket=null,invitations=[],points=100;
   let subscription=null,refreshTimer=null,boardRoom=null,offset=0,dead=false,resultShown=null,searchVersion=0,navigating=false;
+  let submissionTimer=null,submissionAttempts=0,submissionNextAt=0;
   let memory={requests:{},drafts:{},lastRoom:null},storage;
   try{storage=localStorage;}catch{/* 受限存储仍允许本页对局，刷新恢复另行提示。 */}
   const board=$('arena-board')?createArenaBoard({host:$('arena-board'),onChange:draft=>{
-    if(room){memory.drafts[room.room_id]={...(memory.drafts[room.room_id]||{}),draft};save();}
-  },onReveal:index=>void reveal(index),onComplete:()=>void submit()}):null;
+    if(room){memory.drafts[room.room_id]={...(memory.drafts[room.room_id]||{}),draft,rejected:false};submissionAttempts=0;submissionNextAt=0;save();}
+  },onReveal:index=>void reveal(index),onComplete:()=>queueSubmission()}):null;
 
   /** 换号后在途响应不能写入新账号内存。 */
   async function api(path,options){
@@ -88,11 +89,10 @@ export function initArenaPage({gamePage=false}={}) {
       $('arena-title').textContent=`${names[room.game_id]}竞技`;document.title=`${names[room.game_id]}竞技 · 无职游戏`;
       $('arena-game-title').textContent=room.result?'本局已结束':me?.completed?'已完成，等待对局结果':'对局进行中';
       $('arena-game-help').textContent=room.game_id==='mine'?'双方同一雷区和安全起点。先选格，再点击标记或排雷；踩雷立即判负。':room.game_id==='akari'?'点按白格放灯或撤灯，照亮全部白格，满足数字且灯泡不互照。':'选格后用数字键盘填写；支持笔记、撤回和清除。行、列与九宫内1～9不重复。';
-      if(boardRoom!==room.room_id){boardRoom=room.room_id;board.load(room.game_id,room.puzzle,memory.drafts[room.room_id]?.draft||{},room.mine_board);}
+      if(boardRoom!==room.room_id){boardRoom=room.room_id;submissionAttempts=0;submissionNextAt=0;board.load(room.game_id,room.puzzle,memory.drafts[room.room_id]?.draft||{},room.mine_board);}
       else if(room.game_id==='mine')board.setMine(room.mine_board);
-      board.setDisabled(busy||room.status!=='playing'||Boolean(me?.completed)||Boolean(memory.drafts[room.room_id]?.pending));
-      $('arena-submit').hidden=room.game_id==='mine'||room.status!=='playing'||Boolean(me?.completed);
-      $('arena-submit').disabled=busy;$('arena-submit').textContent=memory.drafts[room.room_id]?.pending?'重试提交解答':'提交解答';
+      board.setDisabled(busy||room.status!=='playing'||Boolean(me?.completed)||Boolean(memory.drafts[room.room_id]?.pending)||Boolean(memory.drafts[room.room_id]?.accepted));
+      queueSubmission();
     }
     if(room?.result){
       const value=arenaResult(room.result,uid);$('arena-result-title').textContent=value.title;$('arena-result-description').textContent=value.description;
@@ -152,11 +152,30 @@ export function initArenaPage({gamePage=false}={}) {
   }
   /** 扫雷只发索引，服务端确认已揭格和胜负。 */
   async function reveal(index){if(room?.status!=='playing')return;return act(async()=>adoptRoom(await api(`rooms/${room.room_id}/reveals/${index}`,{method:'PUT',body:{}})));}
+  /** 合法完成或恢复的终盘自动排队；最多5次退避尝试，不按SSE通知重复提交。 */
+  function queueSubmission(){
+    const entry=memory.drafts[room?.room_id];
+    if(!gamePage||dead||navigating||busy||submissionTimer!==null||room?.status!=='playing'||room.game_id==='mine'||room.members.find(m=>m.is_me)?.completed||entry?.accepted||entry?.rejected||submissionAttempts>=5)return;
+    if(!entry?.pending&&!board?.isComplete())return;
+    const stamp=epoch,rid=room.room_id;
+    submissionTimer=setTimeout(()=>{submissionTimer=null;if(!dead&&!navigating&&stamp===epoch&&room?.room_id===rid&&room.status==='playing')void submit();},Math.max(0,submissionNextAt-Date.now()));
+  }
   /** 首次提交冻结终盘，422才解锁修正，其余错误允许原负载重试。 */
   async function submit(){
-    if(busy||room?.status!=='playing'||room.members.find(m=>m.is_me)?.completed)return;
+    if(busy||room?.status!=='playing'||room.members.find(m=>m.is_me)?.completed||submissionAttempts>=5)return;
     const entry=memory.drafts[room.room_id]||={draft:board.snapshot()};entry.pending||=board.payload();save();
-    return act(async()=>{try{await api(room.links.submission,{method:'PUT',body:entry.pending});entry.pending=null;save();}catch(error){if(error.status===422){entry.pending=null;save();}throw error;}});
+    submissionAttempts++;
+    return act(async()=>{
+      try{await api(room.links.submission,{method:'PUT',body:entry.pending});entry.pending=null;entry.accepted=true;save();}
+      catch(error){
+        if(error.stale)throw error;
+        if(error.status===422){entry.pending=null;entry.rejected=true;save();}
+        else if(error.status===401||error.status===403||error.status===404||error.status===409)submissionAttempts=5;
+        else submissionNextAt=Date.now()+Math.min(8000,1000*2**(submissionAttempts-1));
+        if(submissionAttempts>=5&&!entry.rejected)error.message='解答已保留，连接恢复后可点击刷新状态重试。';
+        throw error;
+      }
+    });
   }
   /** 返回不准备，再战只确认本人；对手未确认时回到房间显示等待。 */
   async function continuation(ready){
@@ -180,12 +199,13 @@ export function initArenaPage({gamePage=false}={}) {
   async function identityChanged(){
     const next=auth.currentUser?.id??null;if(next===uid)return;uid=next;epoch++;read++;subscription?.close();subscription=null;busy=false;room=ticket=null;invitations=[];points=100;eligible=false;
     memory={requests:{},drafts:{},lastRoom:null};board?.clear();boardRoom=null;resultShown=null;
+    clearTimeout(submissionTimer);submissionTimer=null;submissionAttempts=0;submissionNextAt=0;
     for(const id of ['arena-search-dialog','arena-leave-dialog','arena-result-dialog'])$(id)?.close();
     if(uid)try{const saved=JSON.parse(storage?.getItem(`jobless-pk-v2:${uid}`)||'null');if(saved?.requests&&saved?.drafts)memory=saved;}catch{/* 损坏草稿不恢复。 */}
     const stamp=epoch;
     try{
       const features=(await api('features')).data;if(stamp!==epoch)return;enabled=features.progression&&features.pk_rooms;
-      if(!uid){message('登录后参与竞技，达到5级解锁。');render();return;}
+      if(!uid){if(gamePage){navigate('./pk.html');return;}message('登录后参与竞技，达到5级解锁。');render();return;}
       if(!enabled){message('竞技模式暂未开放。');render();return;}
       // 首次恢复先确认在线租约，确保大厅可操作时已能被查找邀请。
       // 租约更新本身幂等且不写业务数据，可在503时有限重试；对局写操作仍不自动重放。
@@ -197,12 +217,12 @@ export function initArenaPage({gamePage=false}={}) {
   }
   /** 页面各自只绑定实际存在的控件。 */
   function listen(id,event,callback){$(id)?.addEventListener(event,callback);}
-  listen('arena-action','click',()=>void action());listen('arena-refresh','click',()=>void refresh());
+  listen('arena-action','click',()=>void action());listen('arena-refresh','click',()=>{submissionAttempts=0;submissionNextAt=0;void refresh();});
   listen('arena-invite-open','click',()=>{$('arena-search-results').replaceChildren();$('arena-search-dialog').showModal();$('arena-search-query').focus();});
   listen('arena-search-form','submit',search);listen('arena-search-close','click',()=>$('arena-search-dialog').close());
   listen('arena-cancel-invite','click',()=>void act(async()=>{const item=invitations.find(v=>v.sender_id===uid);if(item)await api('arena/invitations/'+item.invitation_id,{method:'DELETE'});}));
   listen('arena-mode','change',()=>{const desired=$('arena-mode').value;if(room)void act(async()=>{const value=await api('rooms/'+room.room_id);adoptRoom(await api(`rooms/${room.room_id}/mode`,{method:'PUT',body:{game_id:desired,difficulty:'normal'},headers:{'If-Match':roomWriteVersion(value)}}));});});
-  listen('arena-submit','click',()=>void submit());listen('arena-rematch','click',()=>void continuation(true));listen('arena-return','click',()=>void continuation(false));
+  listen('arena-rematch','click',()=>void continuation(true));listen('arena-return','click',()=>void continuation(false));
   listen('arena-result-dialog','cancel',event=>event.preventDefault());
   listen('arena-leave','click',()=>{$('arena-leave-description').textContent=room?.status==='playing'?'比赛已经开始，退出将判负并扣除10积分。':'离开房间后将释放你的席位。';$('arena-leave-dialog').showModal();});
   listen('arena-result-leave','click',()=>{$('arena-leave-description').textContent='离开房间后将释放你的席位，当前结算不会改变。';$('arena-leave-dialog').showModal();});
@@ -210,7 +230,7 @@ export function initArenaPage({gamePage=false}={}) {
   listen('arena-leave-confirm','click',()=>void act(async()=>{if(room)await api(room.links.membership,{method:'DELETE'});room=null;memory.lastRoom=null;save();$('arena-leave-dialog').close();if(gamePage)navigate('./pk.html');}));
   const timer=setInterval(timing,250);
   document.addEventListener(Events.AUTH_CHANGED,()=>void identityChanged());document.addEventListener(Events.USER_PROFILE_UPDATED,()=>render());
-  window.addEventListener('pagehide',()=>{dead=true;epoch++;subscription?.close();clearInterval(timer);clearTimeout(refreshTimer);board?.destroy();});
+  window.addEventListener('pagehide',()=>{dead=true;epoch++;subscription?.close();clearInterval(timer);clearTimeout(refreshTimer);clearTimeout(submissionTimer);board?.destroy();});
   window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
   void auth.ready.then(identityChanged);
 }

@@ -2,22 +2,40 @@
 import { createArenaBoardState } from './arena-board-state.js';
 import { inspectAkari, akariCell } from './akari/rules.js';
 import { sudokuConflicts } from './sudoku/rules.js';
-import { mineCellSize } from './mine/presentation.js';
+
+/** 棋盘外框与格间距计入宽高预算；高度不足时缩小格子，整盘保持正方格。 */
+export function arenaBoardSize({rows,cols,width,height,gap=0,border=0,maxCell=52}){
+  const available=Math.min(maxCell,(width-border-gap*(cols-1))/cols,(height-border-gap*(rows-1))/rows);
+  const cell=available>=1?Math.floor(available):Math.max(0.1,available);
+  return {cell,width:cell*cols+gap*(cols-1)+border,height:cell*rows+gap*(rows-1)+border};
+}
 
 /** 调用者只提供当前局快照及输入回调，棋盘不创建尝试或发放奖励。 */
 export function createArenaBoard({host,onChange=()=>{},onReveal=()=>{},onComplete=()=>{}}) {
-  let model=null,key=null;
+  let model=null,key=null,fitFrame=null;
   /** 文案、键盘名和样式类由静态结构提供，玩家输入仅写入textContent。 */
   function button(text,action,primary=false){const node=document.createElement('button');node.type='button';node.textContent=text;node.dataset.action=action;if(primary)node.className='journey-primary';node.disabled=model.disabled;return node;}
   /** 整盘随视口可用宽高缩放，沿用闯关尺寸计算，不产生页面横向滚动。 */
   function fit(){
     if(!model||!host.isConnected)return;
-    const {rows,cols}=model.puzzle,width=Math.max(1,host.clientWidth-32);
-    const screen=window.visualViewport;
-    const height=Math.max(100,(screen?screen.height*screen.scale:window.innerHeight)-host.getBoundingClientRect().top-130);
-    if(model.game==='mine')host.querySelector('.mine-board')?.style.setProperty('--mine-cell',`${mineCellSize({rows,cols,width:width-12,height})}px`);
-    if(model.game==='akari')host.style.setProperty('--akari-cell-size',`${Math.max(1,Math.floor(Math.min(52,(width-cols-1)/cols,(height-24-rows)/rows)))}px`);
+    const viewport=host.querySelector('.arena-board-viewport'),board=viewport?.firstElementChild;
+    if(!board||!host.getClientRects().length)return;
+    const {rows,cols}=model.puzzle,screen=window.visualViewport;
+    const viewportStyle=getComputedStyle(viewport),boardStyle=getComputedStyle(board);
+    const px=value=>Number.parseFloat(value)||0;
+    const width=viewport.clientWidth-px(viewportStyle.paddingLeft)-px(viewportStyle.paddingRight);
+    const rect=host.getBoundingClientRect(),boardRect=board.getBoundingClientRect();
+    // 实测操作按钮、提示、内边距占用，取代固定130px；缩放时保持原生浏览器放大。
+    const bottom=screen?screen.height*screen.scale:window.innerHeight;
+    const height=bottom-rect.top-(rect.height-boardRect.height)-16;
+    const size=arenaBoardSize({rows,cols,width,height,gap:px(boardStyle.columnGap),
+      border:px(boardStyle.borderLeftWidth)+px(boardStyle.borderRightWidth),maxCell:model.game==='mine'?44:model.game==='sudoku'?60:52});
+    if(model.game==='mine')board.style.setProperty('--mine-cell',`${size.cell}px`);
+    else if(model.game==='akari')board.style.setProperty('--akari-cell-size',`${size.cell}px`);
+    else {board.style.width=`${size.width}px`;board.style.setProperty('--arena-sudoku-cell',`${size.cell}px`);}
   }
+  /** 首次字体/布局落定、浏览器工具栏或横竖屏变化后合并重算，不要求玩家手动缩放。 */
+  function scheduleFit(){if(fitFrame===null)fitFrame=requestAnimationFrame(()=>{fitFrame=null;fit();});}
   /** 共享闯关棋盘类，重绘只发生在输入/服务器状态改变，时钟不重绘格子。 */
   function render(){
     if(!model){host.replaceChildren();key=null;return;}
@@ -86,8 +104,8 @@ export function createArenaBoard({host,onChange=()=>{},onReveal=()=>{},onComplet
     }
     host.append(controls);
     const status=document.createElement('p');status.className='arena-board-status';status.setAttribute('role','status');
-    status.textContent=game==='akari'?`已照亮：${inspection.lit.size} / ${inspection.whiteCount} 格；已放灯：${model.akari.bulbs.size} 盏${inspection.conflictingBulbs.size?' · 灯泡不能互相照射':inspection.wrongClues.size?' · 请检查数字周围灯数':''}`:game==='mine'?`还差排查 ${Math.max(0,puzzle.rows*puzzle.cols-puzzle.mine_count-model.mine.revealed.filter(v=>v.value>=0).length)} 格 · 先选格，再标记或排雷`:'方向键选格 · 数字键填写 · Delete 清除';
-    host.append(status);fit();
+    status.textContent=game==='akari'?`已照亮：${inspection.lit.size} / ${inspection.whiteCount} 格；已放灯：${model.akari.bulbs.size} 盏${inspection.conflictingBulbs.size?' · 灯泡不能互相照射':inspection.wrongClues.size?' · 请检查数字周围灯数':''}`:game==='mine'?`还差排查 ${Math.max(0,puzzle.rows*puzzle.cols-puzzle.mine_count-model.mine.revealed.filter(v=>v.value>=0).length)} 格 · 先选格，再标记或排雷`:'数字键填写 · 方向键选格';
+    host.append(status);fit();scheduleFit();
     if(focused!==null)host.querySelector(`[data-index="${focused}"]`)?.focus({preventScroll:true});
   }
   /** 事件委托保留重绘后的控件绑定。 */
@@ -113,7 +131,9 @@ export function createArenaBoard({host,onChange=()=>{},onReveal=()=>{},onComplet
       if(target&&!target.disabled){event.preventDefault();if(model.game!=='akari')model.choose(next);host.querySelector(`[data-index="${next}"]`)?.focus({preventScroll:true});return;}next+=step;
     }
   }
-  host.addEventListener('click',click);host.addEventListener('keydown',keydown);window.addEventListener('resize',fit);window.visualViewport?.addEventListener('resize',fit);
+  const resize=typeof ResizeObserver==='function'?new ResizeObserver(scheduleFit):null;resize?.observe(host);if(host.closest('main'))resize?.observe(host.closest('main'));
+  document.fonts?.ready.then(scheduleFit);
+  host.addEventListener('click',click);host.addEventListener('keydown',keydown);window.addEventListener('resize',scheduleFit);window.visualViewport?.addEventListener('resize',scheduleFit);
   return {
     /** 加载新局后清空本地撤回栈，草稿只来自同一房间。 */
     load(game,puzzle,saved={},authority=null){key=null;model=createArenaBoardState(game,puzzle,saved,authority,{onChange:draft=>{onChange(draft);render();},onReveal,onComplete});render();},
@@ -125,9 +145,11 @@ export function createArenaBoard({host,onChange=()=>{},onReveal=()=>{},onComplet
     payload(){return model?.payload()||{};},
     /** 草稿支持刷新恢复笔记和选格。 */
     snapshot(){return model?.snapshot()||{};},
+    /** 完成草稿或待提交恢复时，由页面自动提交，不显示手动提交按钮。 */
+    isComplete(){return model?.isComplete()||false;},
     /** 换号时清空全部棋盘状态。 */
     clear(){model=null;render();},
     /** 卸载解绑本页面监听，避免跨页重复响应。 */
-    destroy(){model=null;host.removeEventListener('click',click);host.removeEventListener('keydown',keydown);window.removeEventListener('resize',fit);window.visualViewport?.removeEventListener('resize',fit);render();},
+    destroy(){model=null;resize?.disconnect();if(fitFrame!==null)cancelAnimationFrame(fitFrame);host.removeEventListener('click',click);host.removeEventListener('keydown',keydown);window.removeEventListener('resize',scheduleFit);window.visualViewport?.removeEventListener('resize',scheduleFit);render();},
   };
 }

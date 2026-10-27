@@ -1,6 +1,6 @@
 /** 竞技输入状态：复用闯关照明与数独规则，扫雷揭格只经服务器。 */
 import { createAkari, toggleBulb, inspectAkari } from './akari/rules.js';
-import { createSudoku, setSudokuValue, toggleSudokuNote, normalizeSudokuNotes } from './sudoku/rules.js';
+import { createSudoku, setSudokuValue, toggleSudokuNote, normalizeSudokuNotes, sudokuConflicts } from './sudoku/rules.js';
 
 /** 草稿仅包含本人输入；onComplete是提交提示，实际胜负由服务器确认。 */
 export function createArenaBoardState(game,puzzle,saved={},authority=null,{onChange=()=>{},onReveal=()=>{},onComplete=()=>{}}={}) {
@@ -32,6 +32,8 @@ export function createArenaBoardState(game,puzzle,saved={},authority=null,{onCha
   function snapshot(){return game==='sudoku'?{...gridSnapshot(),history:structuredClone(history)}:game==='akari'?{bulbs:[...state.akari.bulbs]}:{flags:[...state.flags],selected:state.selected};}
   /** 撤回条目只保存单次编辑前状态，避免历史递归嵌套。 */
   function gridSnapshot(){return {values:[...state.grid.values],notes:[...state.grid.notes],notesMode:state.grid.notesMode,selected:state.grid.selected};}
+  /** 草稿恢复也检查完整终盘，仅作为自动提交提示，最终结果仍由服务器验证。 */
+  function isComplete(){return game==='akari'?inspectAkari(state.akari).complete:game==='sudoku'?state.grid.values.every(value=>value>0)&&sudokuConflicts(state.grid).size===0:false;}
   /** 回调保存草稿，合法终盘才提示提交，笔记不触发完成。 */
   function changed(check=false){onChange(snapshot());if(check&&((game==='akari'&&inspectAkari(state.akari).complete)||(game==='sudoku'&&state.grid.complete)))onComplete();}
   /** 按格选择或开关灯泡，扫雷点格不会直接揭开。 */
@@ -60,7 +62,7 @@ export function createArenaBoardState(game,puzzle,saved={},authority=null,{onCha
   function mark(){const i=state.selected;if(disabled||game!=='mine'||i===null||state.mine.outcome!=='active'||state.mine.revealed.some(c=>c.index===i))return;state.flags=state.flags.includes(i)?state.flags.filter(v=>v!==i):[...state.flags,i];changed();}
   /** 只发索引，不在本地推断隐藏地雷或判胜。 */
   function reveal(){const i=state.selected;if(disabled||game!=='mine'||i===null||state.mine.outcome!=='active'||state.flags.includes(i)||state.mine.revealed.some(c=>c.index===i))return;onReveal(i);}
-  return Object.assign(state,{choose,digit,toggleNotes,undo,mark,reveal,snapshot,
+  return Object.assign(state,{choose,digit,toggleNotes,undo,mark,reveal,snapshot,isComplete,
     /** 冻结在途提交，避免重试时答案变化。 */
     setDisabled(value){disabled=value;state.disabled=value;},
     /** 显示及控制器读取相同的输入锁。 */

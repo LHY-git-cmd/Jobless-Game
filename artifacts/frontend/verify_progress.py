@@ -77,7 +77,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 @contextmanager
-def browser(profile, log):
+def browser(profile, log, command_timeout=10):
     """启动独立无头浏览器，允许同一配置目录被关闭后重新打开。"""
     port_file = Path(profile) / "DevToolsActivePort"
     port_file.unlink(missing_ok=True)
@@ -93,7 +93,7 @@ def browser(profile, log):
         port = port_file.read_text().splitlines()[0]
         with urlopen(f"http://127.0.0.1:{port}/json/list", timeout=5) as response:
             page = next(tab for tab in json.load(response) if tab["type"] == "page")
-        connection = websocket.create_connection(page["webSocketDebuggerUrl"], suppress_origin=True, timeout=10)
+        connection = websocket.create_connection(page["webSocketDebuggerUrl"], suppress_origin=True, timeout=command_timeout)
         serial = 0
         errors = []
 

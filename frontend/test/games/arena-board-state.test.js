@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createArenaBoardState } from '../../src/games/arena-board-state.js';
+import { arenaBoardSize } from '../../src/games/arena-board.js';
 
 const sudoku={rows:9,cols:9,values:Array.from({length:81},(_,i)=>i===0?1:0)};
 test('数独笔记不进入提交，撤回恢复数值和笔记，给定数不可修改',()=>{
@@ -47,4 +48,25 @@ test('刷新恢复数独后仍可撤回最近的实际输入',()=>{
   const restored=createArenaBoardState('sudoku',sudoku,first.snapshot());
   restored.undo();assert.equal(restored.payload().values[1],2);
   restored.undo();assert.equal(restored.payload().values[1],0);
+});
+
+test('三种棋盘同时受可用宽高约束，边框和格间距也计入完整棋盘',()=>{
+  for(const rows of [9,10])for(const [width,height] of [[276,190],[330,440],[390,260]]){
+    const result=arenaBoardSize({rows,cols:rows,width,height,gap:rows===10?1:0,border:rows===10?2:6,maxCell:52});
+    assert.ok(result.width<=width);assert.ok(result.height<=height);assert.ok(result.cell>0);
+  }
+  const narrow=arenaBoardSize({rows:10,cols:10,width:300,height:180,maxCell:52});
+  const tall=arenaBoardSize({rows:10,cols:10,width:300,height:500,maxCell:52});
+  assert.ok(narrow.cell<tall.cell);
+});
+
+test('刷新恢复的合法终盘可识别自动提交，错误或未完成草稿不提交',()=>{
+  const puzzle={rows:4,cols:4,values:[1,0,3,4,3,4,0,2,2,1,4,3,4,3,2,1]};
+  const answer=[1,2,3,4,3,4,1,2,2,1,4,3,4,3,2,1];
+  assert.equal(createArenaBoardState('sudoku',puzzle,{values:answer}).isComplete(),true);
+  assert.equal(createArenaBoardState('sudoku',puzzle).isComplete(),false);
+  const wrong=[...answer];wrong[1]=1;
+  assert.equal(createArenaBoardState('sudoku',puzzle,{values:wrong}).isComplete(),false);
+  assert.equal(createArenaBoardState('akari',{rows:1,cols:2,map:['..']},{bulbs:[0]}).isComplete(),true);
+  assert.equal(createArenaBoardState('akari',{rows:1,cols:2,map:['..']},{bulbs:[0,1]}).isComplete(),false);
 });

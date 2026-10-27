@@ -35,6 +35,7 @@ def main():
     """所有浏览器与服务进程均有有界等待，并在finally释放临时测试资源。"""
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--gzip',action='store_true',help='通过真实Nginx JSON压缩验证弱ETag与准备')
+    parser.add_argument('--ready-only',action='store_true',help='只复验准备/取消、开局跳转和手机首屏布局')
     args=parser.parse_args()
     checks=[];proxy_name=None
     with tempfile.TemporaryDirectory(prefix='arena-flow-browser-') as temporary:
@@ -100,7 +101,7 @@ http {
             scheduler.start()
             with ExitStack() as stack:
                 logs=[stack.enter_context((ROOT/f'artifacts/frontend/arena-flow-chrome-{i}.log').open('w')) for i in (1,2)]
-                clients=[stack.enter_context(browser(str(Path(temporary)/f'chrome{i}'),logs[i-1])) for i in (1,2)]
+                clients=[stack.enter_context(browser(str(Path(temporary)/f'chrome{i}'),logs[i-1],command_timeout=30 if args.gzip else 10)) for i in (1,2)]
                 def wait(ev,expression,seconds=None):
                     """失败只附当前地址和页面提示，不输出Cookie或整个HTML。"""
                     # 压缩代理额外叠加页面恢复与有界读取重试，等待预算覆盖12秒请求超时。
@@ -126,6 +127,7 @@ http {
                         return row.room_id,row.puzzle['puzzle']
                 def start(game):
                     """自动匹配仍要求双方准备，倒计时结束才跳转。"""
+                    clients[0][0]('Emulation.setDeviceMetricsOverride',{'width':375,'height':667,'deviceScaleFactor':1,'mobile':False})
                     for _,ev in clients:ev(f"document.getElementById('arena-mode').value='{game}'")
                     for _,ev in clients:click(ev,'#arena-action')
                     for _,ev in clients:wait(ev,"document.getElementById('arena-action')?.textContent==='准备'")
@@ -141,12 +143,16 @@ http {
                         wait(ev,"document.getElementById('arena-action')?.textContent==='开始匹配'&&!document.getElementById('arena-action').disabled&&document.getElementById('arena-own-id').textContent.includes('ID')")
                 def mobile(cmd,ev,game):
                     """检查手机棋盘整体可见和页面无横向溢出，然后恢复桌面尺寸。"""
-                    for width in (375,320):
-                        cmd('Emulation.setDeviceMetricsOverride',{'width':width,'height':950,'deviceScaleFactor':1,'mobile':False})
+                    for width,height in ((375,667),(320,568),(390,664)):
+                        cmd('Emulation.setDeviceMetricsOverride',{'width':width,'height':height,'deviceScaleFactor':1,'mobile':False})
                         ev('scrollTo(0,0)');time.sleep(.12)
                         shot(cmd,f'arena-flow-{game}-{width}.png')
+                        assert ev("!document.querySelector('.landing-header,.site-nav,[data-player-profile],.arena-heading,#arena-submit')"),'对局不再显示公共顶部或手动提交'
+                        assert ev("Boolean(document.getElementById('arena-clock').closest('#arena-game .section-heading'))"),'计时放在原双方同题位置'
                         assert ev('document.documentElement.scrollWidth<=innerWidth'),(game,width,ev("[...document.querySelectorAll('body *')].filter(n=>n.getBoundingClientRect().right>innerWidth+1).slice(-12).map(n=>({tag:n.tagName,id:n.id,cls:n.className,width:n.getBoundingClientRect().width,right:n.getBoundingClientRect().right}))"))
-                        assert ev("(()=>{const b=document.querySelector('#arena-board [role=group]').getBoundingClientRect();return b.left>=0&&b.right<=innerWidth})()"),game
+                        assert ev("(()=>{const b=document.querySelector('#arena-board [role=group]').getBoundingClientRect();return b.left>=0&&b.right<=innerWidth&&b.top>=0&&b.bottom<=innerHeight})()"),(game,width,'整盘首次可见')
+                        if game=='sudoku':
+                            assert ev("document.querySelector('#arena-board .sudoku-board').getBoundingClientRect().width>=180"),'小屏数独保留可读棋盘'
                         shot(cmd,f'arena-flow-{game}-{width}.png')
                     cmd('Emulation.setDeviceMetricsOverride',{'width':1280,'height':1000,'deviceScaleFactor':1,'mobile':False})
 
@@ -162,6 +168,8 @@ http {
                 e1("document.getElementById('arena-search-query').value='flowtwo';document.getElementById('arena-search-form').requestSubmit()")
                 click(e1,'.arena-search-result button');click(e2,'#arena-incoming-list button')
                 for _,ev in clients:wait(ev,"document.getElementById('arena-action')?.textContent==='准备'")
+                # 首次开局前就使用手机尺寸，验证进入时无需额外缩放或旋转即可整盘可见。
+                c1('Emulation.setDeviceMetricsOverride',{'width':390,'height':664,'deviceScaleFactor':1,'mobile':False})
                 if args.gzip:
                     # 以浏览器自己的Accept-Encoding读取真实代理，验证确实命中弱标签路径。
                     c1('Runtime.evaluate',{'expression':"fetch('/api/v1/me/arena/state').then(r=>r.json()).then(v=>fetch(v.room.links.self)).then(r=>{window.qaRoomTag=r.headers.get('ETag')})",'awaitPromise':True})
@@ -180,6 +188,9 @@ http {
                 for _,ev in clients:wait(ev,"location.pathname.endsWith('/pk-game.html')&&document.querySelectorAll('.mine-square').length===100")
                 rid,puzzle=playing();first_mines=puzzle['mine_indices'];mine=first_mines[0]
                 mobile(c1,e1,'mine');shot(c1,'arena-flow-mine-desktop.png')
+                if args.ready_only:
+                    print('PASS: ready/cancel + both-player countdown + game navigation + compact first mobile board.'+(' Real Nginx gzip weak ETag validated; raw weak If-Match rejected.' if args.gzip else ''))
+                    return
                 click(e2,f'#arena-board [data-index="{mine}"]');assert e2("!document.getElementById('arena-result-dialog').open")
                 click(e2,'#arena-board [data-action="mark"]');assert e2(f'document.querySelector(\'[data-index="{mine}"]\').classList.contains("mine-flagged")')
                 c2('Page.reload');wait(e2,f'document.querySelector(\'[data-index="{mine}"]\')?.classList.contains("mine-flagged")')
@@ -203,17 +214,23 @@ http {
                 c1('Page.reload');wait(e1,f'document.querySelector(\'[data-index="{blank}"] .sudoku-notes\')?.textContent.includes("3")')
                 click(e1,'[data-action="notes"]');click(e1,f'[data-digit="{answer[blank]}"]');click(e1,'[data-action="undo"]')
                 assert e1(f'document.querySelector(\'[data-index="{blank}"] .sudoku-notes\')?.textContent.includes("3")')
+                # 无提交按钮时，首次发送失败必须自动重试相同终盘，不能要求玩家再点击提交。
+                e1("window.qaSubmitBodies=[];window.qaFetch=window.fetch;window.fetch=(url,options)=>{if(String(url).endsWith('/submissions/me')){window.qaSubmitBodies.push(options.body);if(window.qaSubmitBodies.length===1)return Promise.reject(new TypeError('isolated network interruption'));}return window.qaFetch(url,options)}")
                 for index,value in enumerate(puzzle['values']):
                     if not value:
                         click(e1,f'#arena-board [data-index="{index}"]');click(e1,f'[data-digit="{answer[index]}"]')
                 wait(e1,"document.getElementById('arena-result-dialog')?.open");wait(e2,"document.getElementById('arena-result-dialog')?.open")
                 assert e1("document.getElementById('arena-result-title').textContent")=='本局胜利'
-                leave_results();checks.append('sudoku keypad + notes + undo + reload + automatic verified completion')
+                assert e1('window.qaSubmitBodies.length===2&&window.qaSubmitBodies[0]===window.qaSubmitBodies[1]')
+                leave_results();checks.append('sudoku keypad + notes + undo + reload + automatic completion and network retry')
                 start('akari');rid,puzzle=playing();mobile(c1,e1,'akari');answer=akari_solutions(puzzle['map'])[0]
+                # 首次提交故障后刷新，页面从同局草稿自动恢复终盘并提交。
+                e1("window.qaFetch=window.fetch;window.qaSubmitFailed=false;window.fetch=(url,options)=>{if(String(url).endsWith('/submissions/me')){window.qaSubmitFailed=true;return Promise.reject(new TypeError('isolated reload recovery'));}return window.qaFetch(url,options)}")
                 for index in answer:click(e1,f'#arena-board [data-index="{index}"]')
+                wait(e1,'window.qaSubmitFailed');c1('Page.reload')
                 wait(e1,"document.getElementById('arena-result-dialog')?.open");wait(e2,"document.getElementById('arena-result-dialog')?.open")
                 assert e1("document.getElementById('arena-result-title').textContent")=='本局胜利'
-                leave_results();checks.append('akari campaign layout + constraint feedback + automatic verified completion')
+                leave_results();checks.append('akari complete draft reload + constraint feedback + automatic verified completion')
                 start('sudoku');rid,_=playing()
                 # 仅在隔离库推进到真实服务端截止，不让浏览器伪造胜负。
                 with runtime.lock,sessions() as db:
